@@ -3,7 +3,7 @@ let
   inherit (inputs) nixpkgs nixpkgs-unstable;
 in
 {
-  users.users.alex.home = "/Users/alex";
+  users.users.hodgesd.home = "/Users/hodgesd";
 
   nix = {
     settings = {

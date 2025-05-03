@@ -650,7 +650,7 @@
 			<key>Columns</key>
 			<integer>120</integer>
 			<key>Command</key>
-			<string>/etc/profiles/per-user/alex/bin/zsh</string>
+			<string>/etc/profiles/per-user/hodgesd/bin/zsh</string>
 			<key>Cursor Color</key>
 			<dict>
 				<key>Alpha Component</key>
@@ -845,7 +845,7 @@
 			<key>Window Type</key>
 			<integer>0</integer>
 			<key>Working Directory</key>
-			<string>/Users/alex</string>
+			<string>/Users/hodgesd</string>
 		</dict>
 		<dict>
 			<key>ASCII Anti Aliased</key>
@@ -1155,7 +1155,7 @@
 			<key>Window Type</key>
 			<integer>0</integer>
 			<key>Working Directory</key>
-			<string>/Users/alex</string>
+			<string>/Users/hodgesd</string>
 		</dict>
 	</array>
 	<key>OnlyWhenMoreTabs</key>
