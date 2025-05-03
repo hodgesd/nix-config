@@ -67,128 +67,89 @@ in
   homebrew = {
     enable = true;
     onActivation = {
-      cleanup = "zap";
+      cleanup = "none";                 # set to "zap" once brew list is set
       autoUpdate = true;
       upgrade = true;
     };
     global.autoUpdate = true;
 
     brews = [
-      "bitwarden-cli"
-      #"borders"
+  # "bitwarden-cli"                      # CLI for Bitwarden password manager
+  # "borders"                          # (not installed) Window border styling tool
     ];
+
     taps = [
-      #"FelixKratz/formulae" #sketchybar
+      # "FelixKratz/formulae"             # (not tapped) Source for sketchybar, a macOS status bar customizer
     ];
+
     casks = [
-      "screenflow"
-      "cleanshot"
-      "adobe-creative-cloud"
-      #"nikitabobko/tap/aerospace"
-      "alacritty"
-      "alcove"
-      "audacity"
-      #"balenaetcher"
-      "bambu-studio"
-      "bentobox"
-      #"clop"
-      "discord"
-      "displaylink"
-      #"docker"
-      "element"
-      "elgato-camera-hub"
-      "elgato-control-center"
-      "elgato-stream-deck"
-      "firefox"
-      "flameshot"
-      "font-fira-code"
-      "font-fira-code-nerd-font"
-      "font-fira-mono-for-powerline"
-      "font-hack-nerd-font"
-      "font-jetbrains-mono-nerd-font"
-      "font-meslo-lg-nerd-font"
-      "ghostty"
-      "google-chrome"
-      "iina"
-      "istat-menus"
-      "iterm2"
-      "jordanbaird-ice"
-      "lm-studio"
-      "logitech-options"
-      "macwhisper"
-      "marta"
-      "mqtt-explorer"
-      "music-decoy" # github/FuzzyIdeas/MusicDecoy
-      "nextcloud"
-      "notion"
-      "obs"
-      "obsidian"
-      "ollama"
-      "omnidisksweeper"
-      "orbstack"
-      "openscad"
-      "openttd"
-      "plexamp"
-      "popclip"
-      "prusaslicer"
-      "raycast"
-      "signal"
-      "shortcat"
-      "slack"
-      "spotify"
-      "steam"
-      "tailscale"
-      #"wireshark"
-      "viscosity"
-      "visual-studio-code"
-      "vlc"
-      # "lm-studio"
+    #  "cleanshot"                          # Screenshot and annotation tool
+      # "nikitabobko/tap/aerospace"       # (not installed) Tiling window manager
+    #  "alacritty"                          # Fast GPU terminal emulator
+    #  "alcove"                             # Minimal window manager
+      # "balenaetcher"                    # (not installed) Flash OS images to USB
+      # "bentobox"                           # A window manager
+      # "clop"                            # (not installed) Clipboard manager
+      "discord"                            # Chat and community app
+      # "docker"                          # (not installed) Container management
+    #  "element"                            # Decentralized Matrix messaging client
+      "elgato-stream-deck"                # Macro pad management
+      "flameshot"                          # Screenshot tool with annotation
+      "font-fira-code"                    # Monospaced font with ligatures
+      "font-fira-code-nerd-font"          # Fira Code with dev icons
+      "font-fira-mono-for-powerline"      # Fira Mono font for shell prompts
+      "font-hack-nerd-font"               # Hack font with icons
+      "font-jetbrains-mono-nerd-font"     # JetBrains Mono with Nerd icons
+      "font-meslo-lg-nerd-font"           # Meslo LG for terminal themes
+    #  "ghostty"                            # Modern GPU-accelerated terminal
+      # "google-chrome"                     # Google web browser
+      # "iina"                               # Sleek macOS video player
+      "istat-menus"                        # Menu bar system monitor
+      "iterm2"                             # Advanced terminal emulator
+      "jordanbaird-ice"                   # Organize/hide menu bar icons
+      # "lm-studio"                          # Run local AI models
+      # "macwhisper"                         # Local Whisper transcription
+      # "marta"                              # Dual-pane file manager
+      # "music-decoy"                        # Stops Apple Music auto-launch
+      # "nextcloud"                          # Sync with self-hosted cloud
+      "obsidian"                           # Markdown-based knowledge base
+      "ollama"                             # Run local LLMs
+    #  "omnidisksweeper"                    # Find large files and free space
+      "orbstack"                           # Dev-friendly Docker + VMs
+      # "openttd"                            # Open-source transport sim game
+      "popclip"                            # Inline text actions
+      "raycast"                            # Spotlight with power tools
+      # "signal"                             # Encrypted messaging app
+      # "shortcat"                           # Keyboard-driven UI navigation
+      "steam"                              # Game platform
+      "tailscale"                          # Peer-to-peer VPN
+      "vlc"                                # Media player for any format
 
-      # # rogue amoeba
-      "audio-hijack"
-      "farrago"
-      "loopback"
-      "soundsource"
     ];
+
     masApps = {
-      "Amphetamine" = 937984704;
-      "AutoMounter" = 1160435653;
-      "Bitwarden" = 1352778147;
-      "Creator's Best Friend" = 1524172135;
-      "DaVinci Resolve" = 571213070;
-      "Disk Speed Test" = 425264550;
-      "Fantastical" = 975937182;
-      "Ivory for Mastodon by Tapbots" = 6444602274;
-      "Home Assistant Companion" = 1099568401;
-      "Microsoft Remote Desktop" = 1295203466;
-      "Perplexity" = 6714467650;
-      "Resize Master" = 102530679;
-      "rCmd" = 1596283165;
-      "Snippety" = 1530751461;
-      #"Tailscale" = 1475387142;
-      "Telegram" = 747648890;
-      "The Unarchiver" = 425424353;
-      "Todoist" = 585829637;
-      "UTM" = 1538878817;
-      "Wireguard" = 1451685025;
+    #  "Amphetamine" = 937984704;           # Prevent Mac from sleeping
+    #  "Bitwarden" = 1352778147;            # GUI password manager
+    #  "Disk Speed Test" = 425264550;       # Measure disk performance
+      "Fantastical" = 975937182;           # Smart calendar and task manager
+    #  "Home Assistant Companion" = 1099568401; # Smart home control app
+    #  "Perplexity" = 6714467650;           # AI-powered search assistant
+      "Resize Master" = 102530679;         # Batch resize and export images
+    #  "rCmd" = 1596283165;                 # Remote Mac launcher
+    #  "Snippety" = 1530751461;             # Text expansion/snippet manager
+      # "Tailscale" = 1475387142;          # (duplicate) VPN with WireGuard
+    #  "Telegram" = 747648890;              # Fast, encrypted messenger
+    #  "UTM" = 1538878817;                  # Virtual machines on Mac
 
-      "Final Cut Pro" = 424389933;
-
-      # these apps only available via uk apple id
-      #"Logic Pro" = 634148309;
-      #"MainStage" = 634159523;
-      #"Garageband" = 682658836;
-      #"ShutterCount" = 720123827;
-      #"Teleprompter" = 1533078079;
-
-      "Keynote" = 409183694;
-      "Numbers" = 409203825;
-      "Pages" = 409201541;
+      # Apple productivity apps
+      "Keynote" = 409183694;               # Presentations
+      "Numbers" = 409203825;               # Spreadsheets
+      "Pages" = 409201541;                 # Word processing
     };
   };
 
   # Keyboard
-  system.keyboard.enableKeyMapping = true;
+#  system.keyboard.enableKeyMapping = true;
   system.keyboard.remapCapsLockToEscape = false;
 
   # Add ability to used TouchID for sudo authentication
@@ -200,23 +161,22 @@ in
     /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
   '';
   system.defaults = {
-    NSGlobalDomain.AppleShowAllExtensions = true;
-    NSGlobalDomain.AppleShowScrollBars = "Always";
-    NSGlobalDomain.NSUseAnimatedFocusRing = false;
-    NSGlobalDomain.NSNavPanelExpandedStateForSaveMode = true;
-    NSGlobalDomain.NSNavPanelExpandedStateForSaveMode2 = true;
-    NSGlobalDomain.PMPrintingExpandedStateForPrint = true;
-    NSGlobalDomain.PMPrintingExpandedStateForPrint2 = true;
-    NSGlobalDomain.NSDocumentSaveNewDocumentsToCloud = false;
-    NSGlobalDomain.ApplePressAndHoldEnabled = false;
-    NSGlobalDomain.InitialKeyRepeat = 25;
-    NSGlobalDomain.KeyRepeat = 2;
-    NSGlobalDomain."com.apple.mouse.tapBehavior" = 1;
-    NSGlobalDomain.NSWindowShouldDragOnGesture = true;
-    NSGlobalDomain.NSAutomaticSpellingCorrectionEnabled = false;
-    LaunchServices.LSQuarantine = false; # disables "Are you sure?" for new apps
-    loginwindow.GuestEnabled = false;
-    finder.FXPreferredViewStyle = "Nlsv";
+    NSGlobalDomain.AppleShowAllExtensions = true;                     # Show all file extensions — helpful for clarity.
+    NSGlobalDomain.AppleShowScrollBars = "Always";                   # Always-visible scrollbars — good for visibility.
+    NSGlobalDomain.NSUseAnimatedFocusRing = false;                   # Disables animated focus ring — minor visual polish.
+    NSGlobalDomain.NSNavPanelExpandedStateForSaveMode = true;        # Always expand save dialogs — very useful.
+    NSGlobalDomain.NSNavPanelExpandedStateForSaveMode2 = true;       # Same as above, modern version — good.
+    NSGlobalDomain.PMPrintingExpandedStateForPrint = true;           # Always expand print dialogs — saves clicks.
+    NSGlobalDomain.PMPrintingExpandedStateForPrint2 = true;          # Same as above, modern version — good.
+    NSGlobalDomain.ApplePressAndHoldEnabled = false;                 # Enables key repeat instead of accent menu — preferred by coders.
+    NSGlobalDomain.InitialKeyRepeat = 25;                            # Short delay before key repeat starts — snappy typing.
+    NSGlobalDomain.KeyRepeat = 2;                                    # Fast key repeat rate — nice for navigation/editing.
+    NSGlobalDomain."com.apple.mouse.tapBehavior" = 1;                # Enable tap-to-click — standard for trackpads.
+    NSGlobalDomain.NSWindowShouldDragOnGesture = true;               # Allows dragging windows with a three-finger gesture — useful.
+    NSGlobalDomain.NSAutomaticSpellingCorrectionEnabled = false;     # No auto-correct — avoids coding headaches.
+    LaunchServices.LSQuarantine = false;                             # Skip "Are you sure you want to open?" — power-user move.
+    loginwindow.GuestEnabled = false;                                # Disable guest account — good for security.
+    finder.FXPreferredViewStyle = "Nlsv";                            # Use list view in Finder — widely preferred.
   };
 
   system.defaults.CustomUserPreferences = {
@@ -282,12 +242,12 @@ in
       "com.apple.ImageCapture".disableHotPlug = true;
       # Turn on app auto-update
       "com.apple.commerce".AutoUpdate = true;
-      "com.googlecode.iterm2".PromptOnQuit = false;
-      "com.google.Chrome" = {
-        AppleEnableSwipeNavigateWithScrolls = true;
-        DisablePrintPreview = true;
-        PMPrintingExpandedStateForPrint2 = true;
-      };
+#      "com.googlecode.iterm2".PromptOnQuit = false;
+#      "com.google.Chrome" = {
+#        AppleEnableSwipeNavigateWithScrolls = true;
+#        DisablePrintPreview = true;
+#        PMPrintingExpandedStateForPrint2 = true;
+#      };
   };
 
 }
