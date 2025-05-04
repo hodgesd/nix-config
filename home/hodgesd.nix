@@ -1,6 +1,11 @@
+# hodgesd.nix - Fixed syntax error
 { config, inputs, pkgs, lib, unstablePkgs, ... }:
 {
   home.stateVersion = "23.11";
+  # Add these lines for SSL certificate configuration
+  home.sessionVariables = {
+    NIX_SSL_CERT_FILE = "/Users/hodgesd/.certs/macos-certs.pem";
+  };
 
   # list of programs
   # https://mipmip.github.io/home-manager-option-search
@@ -57,6 +62,10 @@
       };
       pull = {
         rebase = true;
+      };
+      # ADD THIS SECTION for SSL certificate configuration
+      http = {
+        sslCAinfo = "/Users/hodgesd/.certs/macos-certs.pem";
       };
     };
   };
@@ -151,7 +160,7 @@
   programs.ssh = {
     enable = true;
     extraConfig = ''
-  StrictHostKeyChecking no
+      StrictHostKeyChecking no
     '';
     matchBlocks = {
       # ~/.ssh/config
