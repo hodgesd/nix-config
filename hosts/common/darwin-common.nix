@@ -98,9 +98,9 @@ in
       "font-fira-code"                    # Monospaced font with ligatures
       "font-fira-code-nerd-font"          # Fira Code with dev icons
       "font-fira-mono-for-powerline"      # Fira Mono font for shell prompts
-      "font-hack-nerd-font"               # Hack font with icons
-      "font-jetbrains-mono-nerd-font"     # JetBrains Mono with Nerd icons
-      "font-meslo-lg-nerd-font"           # Meslo LG for terminal themes
+#      "font-hack-nerd-font"               # Hack font with icons
+#      "font-jetbrains-mono-nerd-font"     # JetBrains Mono with Nerd icons
+#      "font-meslo-lg-nerd-font"           # Meslo LG for terminal themes
     #  "ghostty"                            # Modern GPU-accelerated terminal
       # "google-chrome"                     # Google web browser
       # "iina"                               # Sleek macOS video player
@@ -128,7 +128,7 @@ in
     ];
 
     masApps = {
-    #  "Amphetamine" = 937984704;           # Prevent Mac from sleeping
+      "Amphetamine" = 937984704;           # Prevent Mac from sleeping
     #  "Bitwarden" = 1352778147;            # GUI password manager
     #  "Disk Speed Test" = 425264550;       # Measure disk performance
       "Fantastical" = 975937182;           # Smart calendar and task manager
