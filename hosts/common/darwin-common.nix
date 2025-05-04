@@ -102,7 +102,6 @@ in
 #      "font-jetbrains-mono-nerd-font"     # JetBrains Mono with Nerd icons
 #      "font-meslo-lg-nerd-font"           # Meslo LG for terminal themes
     #  "ghostty"                            # Modern GPU-accelerated terminal
-      # "google-chrome"                     # Google web browser
       # "iina"                               # Sleek macOS video player
       "istat-menus"                        # Menu bar system monitor
       "iterm2"                             # Advanced terminal emulator
