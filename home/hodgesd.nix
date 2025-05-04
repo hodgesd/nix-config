@@ -4,7 +4,7 @@
   home.stateVersion = "23.11";
   # Add these lines for SSL certificate configuration
   home.sessionVariables = {
-    NIX_SSL_CERT_FILE = "/Users/hodgesd/.certs/macos-certs.pem";
+    NIX_SSL_CERT_FILE = "/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt";
   };
 
   # list of programs
@@ -65,7 +65,7 @@
       };
       # ADD THIS SECTION for SSL certificate configuration
       http = {
-        sslCAinfo = "/Users/hodgesd/.certs/macos-certs.pem";
+        sslCAinfo = "/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt";
       };
     };
   };

@@ -88,7 +88,7 @@ in
     #  "alacritty"                          # Fast GPU terminal emulator
     #  "alcove"                             # Minimal window manager
       # "balenaetcher"                    # (not installed) Flash OS images to USB
-      # "bentobox"                           # A window manager
+       "bentobox"                           # A window manager
       # "clop"                            # (not installed) Clipboard manager
       "discord"                            # Chat and community app
       # "docker"                          # (not installed) Container management
@@ -111,7 +111,6 @@ in
       # "macwhisper"                         # Local Whisper transcription
       # "marta"                              # Dual-pane file manager
       # "music-decoy"                        # Stops Apple Music auto-launch
-      # "nextcloud"                          # Sync with self-hosted cloud
       "obsidian"                           # Markdown-based knowledge base
       "ollama"                             # Run local LLMs
     #  "omnidisksweeper"                    # Find large files and free space
