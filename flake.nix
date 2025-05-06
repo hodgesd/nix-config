@@ -16,10 +16,6 @@
 
     home-manager.url = "github:nix-community/home-manager/release-24.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
-
-
-
-
   };
 
   outputs = { ... }@inputs:
@@ -34,8 +30,8 @@
 
       darwinConfigurations = {
         mbp = libx.mkDarwin { hostname = "mbp"; };
-#        mini = libx.mkDarwin { hostname = "mini"; };
-#        air = libx.mkDarwin { hostname = "air"; };
+        mini = libx.mkDarwin { hostname = "mini"; };
+        air = libx.mkDarwin { hostname = "air"; };
       };
 
       colmena = {

@@ -74,26 +74,20 @@ in
     global.autoUpdate = true;
 
     brews = [
-  # "bitwarden-cli"                      # CLI for Bitwarden password manager
-  # "borders"                          # (not installed) Window border styling tool
     ];
 
     taps = [
-      # "FelixKratz/formulae"             # (not tapped) Source for sketchybar, a macOS status bar customizer
     ];
 
     casks = [
     #  "cleanshot"                          # Screenshot and annotation tool
-      # "nikitabobko/tap/aerospace"       # (not installed) Tiling window manager
-    #  "alacritty"                          # Fast GPU terminal emulator
     #  "alcove"                             # Minimal window manager
       # "balenaetcher"                    # (not installed) Flash OS images to USB
-       "bentobox"                           # A window manager
+      "bentobox"                           # A window manager
       # "clop"                            # (not installed) Clipboard manager
       "discord"                            # Chat and community app
       # "docker"                          # (not installed) Container management
     #  "element"                            # Decentralized Matrix messaging client
-      "elgato-stream-deck"                # Macro pad management
       "flameshot"                          # Screenshot tool with annotation
       "font-fira-code"                    # Monospaced font with ligatures
       "font-fira-code-nerd-font"          # Fira Code with dev icons
@@ -101,10 +95,8 @@ in
 #      "font-hack-nerd-font"               # Hack font with icons
 #      "font-jetbrains-mono-nerd-font"     # JetBrains Mono with Nerd icons
 #      "font-meslo-lg-nerd-font"           # Meslo LG for terminal themes
-    #  "ghostty"                            # Modern GPU-accelerated terminal
-      # "iina"                               # Sleek macOS video player
+      "iina"                               # Sleek macOS video player
       "istat-menus"                        # Menu bar system monitor
-      "iterm2"                             # Advanced terminal emulator
       "jordanbaird-ice"                   # Organize/hide menu bar icons
       # "lm-studio"                          # Run local AI models
       # "macwhisper"                         # Local Whisper transcription
@@ -112,7 +104,7 @@ in
       # "music-decoy"                        # Stops Apple Music auto-launch
       "obsidian"                           # Markdown-based knowledge base
       "ollama"                             # Run local LLMs
-    #  "omnidisksweeper"                    # Find large files and free space
+      "omnidisksweeper"                    # Find large files and free space
       "orbstack"                           # Dev-friendly Docker + VMs
       # "openttd"                            # Open-source transport sim game
       "popclip"                            # Inline text actions
@@ -121,8 +113,7 @@ in
       # "shortcat"                           # Keyboard-driven UI navigation
       "steam"                              # Game platform
       "tailscale"                          # Peer-to-peer VPN
-      "vlc"                                # Media player for any format
-
+      "warp"
     ];
 
     masApps = {
@@ -132,7 +123,7 @@ in
       "Fantastical" = 975937182;           # Smart calendar and task manager
     #  "Home Assistant Companion" = 1099568401; # Smart home control app
     #  "Perplexity" = 6714467650;           # AI-powered search assistant
-      "Resize Master" = 102530679;         # Batch resize and export images
+#      "Resize Master" = 102530679;         # Batch resize and export images
     #  "rCmd" = 1596283165;                 # Remote Mac launcher
     #  "Snippety" = 1530751461;             # Text expansion/snippet manager
       # "Tailscale" = 1475387142;          # (duplicate) VPN with WireGuard
@@ -168,10 +159,10 @@ in
     NSGlobalDomain.PMPrintingExpandedStateForPrint2 = true;          # Same as above, modern version — good.
     NSGlobalDomain.ApplePressAndHoldEnabled = false;                 # Enables key repeat instead of accent menu — preferred by coders.
     NSGlobalDomain.InitialKeyRepeat = 25;                            # Short delay before key repeat starts — snappy typing.
-    NSGlobalDomain.KeyRepeat = 2;                                    # Fast key repeat rate — nice for navigation/editing.
-    NSGlobalDomain."com.apple.mouse.tapBehavior" = 1;                # Enable tap-to-click — standard for trackpads.
+    NSGlobalDomain.KeyRepeat = 2;
+    NSGlobalDomain."com.apple.mouse.tapBehavior" = 1;
     NSGlobalDomain.NSWindowShouldDragOnGesture = true;               # Allows dragging windows with a three-finger gesture — useful.
-    NSGlobalDomain.NSAutomaticSpellingCorrectionEnabled = false;     # No auto-correct — avoids coding headaches.
+    NSGlobalDomain.NSAutomaticSpellingCorrectionEnabled = false;
     LaunchServices.LSQuarantine = false;                             # Skip "Are you sure you want to open?" — power-user move.
     loginwindow.GuestEnabled = false;                                # Disable guest account — good for security.
     finder.FXPreferredViewStyle = "Nlsv";                            # Use list view in Finder — widely preferred.
@@ -228,11 +219,8 @@ in
       };
       "com.apple.SoftwareUpdate" = {
         AutomaticCheckEnabled = true;
-        # Check for software updates daily, not just once per week
         ScheduleFrequency = 1;
-        # Download newly available updates in background
         AutomaticDownload = 1;
-        # Install System data files & security updates
         CriticalUpdateInstall = 1;
       };
       "com.apple.TimeMachine".DoNotOfferNewDisksForBackup = true;
@@ -240,12 +228,7 @@ in
       "com.apple.ImageCapture".disableHotPlug = true;
       # Turn on app auto-update
       "com.apple.commerce".AutoUpdate = true;
-#      "com.googlecode.iterm2".PromptOnQuit = false;
-#      "com.google.Chrome" = {
-#        AppleEnableSwipeNavigateWithScrolls = true;
-#        DisablePrintPreview = true;
-#        PMPrintingExpandedStateForPrint2 = true;
-#      };
+
   };
 
 }

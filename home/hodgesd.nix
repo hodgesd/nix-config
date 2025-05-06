@@ -72,7 +72,7 @@
 
   programs.htop = {
     enable = true;
-    settings.show_program_path = true;
+    settings.show_program_cpath = true;
   };
 
   programs.lf.enable = true;

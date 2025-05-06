@@ -8,7 +8,7 @@
 #      "/Applications/Ivory.app"
       "/Applications/Obsidian.app"
       "/Applications/Fantastical.app"
-#      "/Applications/Ghostty.app"
+      "/Applications/Warp.app"
     ];
   };
 }

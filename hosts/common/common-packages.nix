@@ -12,7 +12,6 @@ in
 
     # From unstable channel: tools not yet in stable
     nixpkgs-unstable.legacyPackages.${pkgs.system}.beszel     # Tool from unstable, context-specific
-    nixpkgs-unstable.legacyPackages.${pkgs.system}.talosctl   # CLI for Talos Linux (K8s-focused OS)
 
     ## Stable packages ##
     act               # Run GitHub Actions locally
@@ -51,15 +50,12 @@ in
     skopeo            # Work with remote container images
     smartmontools     # Monitor HDD/SSD health using SMART
     television        # Fun terminal utility (e.g. video playback)
-#    terraform         # Infrastructure as Code (IaC) tool
     tree              # Visualize directory trees
     unzip             # Extract ZIP archives
     watch             # Re-run a command periodically
     wget              # Command-line downloader
-#    wireguard-tools   # VPN tools for WireGuard
     zoxide            # Smarter `cd` command replacement
 
     # Requires `nixpkgs.config.allowUnfree = true`
-    vscode-extensions.ms-vscode-remote.remote-ssh  # VS Code remote SSH extension
   ];
 }
