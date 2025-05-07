@@ -49,7 +49,6 @@ in
     ripgrep           # Fast grep alternative
     skopeo            # Work with remote container images
     smartmontools     # Monitor HDD/SSD health using SMART
-    television        # Fun terminal utility (e.g. video playback)
     tree              # Visualize directory trees
     unzip             # Extract ZIP archives
     watch             # Re-run a command periodically

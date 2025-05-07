@@ -111,8 +111,6 @@
   programs.home-manager.enable = true;
   programs.nix-index.enable = true;
 
-  programs.alacritty.enable = true;
-
   programs.bat.enable = true;
   programs.bat.config.theme = "Nord";
   #programs.zsh.shellAliases.cat = "${pkgs.bat}/bin/bat";

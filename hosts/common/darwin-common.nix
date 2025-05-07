@@ -67,81 +67,65 @@ in
   homebrew = {
     enable = true;
     onActivation = {
-      cleanup = "none";                 # set to "zap" once brew list is set
+      cleanup = "zap";                 # set to "zap" once brew list is set
       autoUpdate = true;
       upgrade = true;
     };
     global.autoUpdate = true;
-
     brews = [
     ];
-
     taps = [
     ];
-
     casks = [
-    #  "cleanshot"                          # Screenshot and annotation tool
-    #  "alcove"                             # Minimal window manager
-      # "balenaetcher"                    # (not installed) Flash OS images to USB
+      "alcove"                             # Minimal window manager
       "bentobox"                           # A window manager
-      # "clop"                            # (not installed) Clipboard manager
+      "cleanshot"                          # Screenshot and annotation tool
+      "default-folder-x"
       "discord"                            # Chat and community app
-      # "docker"                          # (not installed) Container management
-    #  "element"                            # Decentralized Matrix messaging client
-      "flameshot"                          # Screenshot tool with annotation
-      "font-fira-code"                    # Monospaced font with ligatures
-      "font-fira-code-nerd-font"          # Fira Code with dev icons
-      "font-fira-mono-for-powerline"      # Fira Mono font for shell prompts
-#      "font-hack-nerd-font"               # Hack font with icons
-#      "font-jetbrains-mono-nerd-font"     # JetBrains Mono with Nerd icons
-#      "font-meslo-lg-nerd-font"           # Meslo LG for terminal themes
       "iina"                               # Sleek macOS video player
       "istat-menus"                        # Menu bar system monitor
       "jordanbaird-ice"                   # Organize/hide menu bar icons
-      # "lm-studio"                          # Run local AI models
-      # "macwhisper"                         # Local Whisper transcription
-      # "marta"                              # Dual-pane file manager
-      # "music-decoy"                        # Stops Apple Music auto-launch
+      "launchbar"
+      "licecap"
       "obsidian"                           # Markdown-based knowledge base
       "ollama"                             # Run local LLMs
       "omnidisksweeper"                    # Find large files and free space
       "orbstack"                           # Dev-friendly Docker + VMs
-      # "openttd"                            # Open-source transport sim game
       "popclip"                            # Inline text actions
-      "raycast"                            # Spotlight with power tools
-      # "signal"                             # Encrypted messaging app
-      # "shortcat"                           # Keyboard-driven UI navigation
-      "steam"                              # Game platform
-      "tailscale"                          # Peer-to-peer VPN
+      "raycast"
+      "rectangle"
+      "sf-symbols"
+      "steam"
+      "swiftbar"
+      "syntax-highlight"
+      "tailscale"
+      "vivaldi"
       "warp"
+      # "clop"                            # (not installed) Clipboard manager
+      # "docker"                          # (not installed) Container management
+      # "lm-studio"                          # Run local AI models
+      # "macwhisper"                         # Local Whisper transcription
+      # "marta"                              # Dual-pane file manager
+      # "shortcat"                           # Keyboard-driven UI navigation
     ];
-
     masApps = {
+      "Affinity Photo" = 824183456;
+      "Affinity Publisher" = 881418622;
       "Amphetamine" = 937984704;           # Prevent Mac from sleeping
-    #  "Bitwarden" = 1352778147;            # GUI password manager
-    #  "Disk Speed Test" = 425264550;       # Measure disk performance
+      "Drafts" = 1435957248;
+      "Dynamo" = 1445910651;
       "Fantastical" = 975937182;           # Smart calendar and task manager
-    #  "Home Assistant Companion" = 1099568401; # Smart home control app
-    #  "Perplexity" = 6714467650;           # AI-powered search assistant
-#      "Resize Master" = 102530679;         # Batch resize and export images
-    #  "rCmd" = 1596283165;                 # Remote Mac launcher
-    #  "Snippety" = 1530751461;             # Text expansion/snippet manager
-      # "Tailscale" = 1475387142;          # (duplicate) VPN with WireGuard
-    #  "Telegram" = 747648890;              # Fast, encrypted messenger
+      "Keynote" = 409183694;
+      "Mona" = 1659154653;
+      "Numbers" = 409203825;
+      "Pages" = 409201541;
+      "RegEx Lab" = 1252988123;
     #  "UTM" = 1538878817;                  # Virtual machines on Mac
-
-      # Apple productivity apps
-      "Keynote" = 409183694;               # Presentations
-      "Numbers" = 409203825;               # Spreadsheets
-      "Pages" = 409201541;                 # Word processing
+    #  "rCmd" = 1596283165;                 # Remote Mac launcher
+#      "Snippety" = 1530751461;             # Text expansion/snippet manager
     };
   };
 
-  # Keyboard
-#  system.keyboard.enableKeyMapping = true;
-  system.keyboard.remapCapsLockToEscape = false;
-
-  # Add ability to used TouchID for sudo authentication
   security.pam.enableSudoTouchIdAuth = true;
 
   # macOS configuration
