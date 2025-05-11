@@ -22,15 +22,19 @@ in
 
   environment.systemPackages = with pkgs; [
     ## unstable
-    unstablePkgs.yt-dlp
-    unstablePkgs.get_iplayer
     unstablePkgs.colmena
+    unstablePkgs.ollama
+    unstablePkgs.yt-dlp
+    unstablePkgs.rustdesk
 
     ## stable CLI
     pkgs.comma
+    pkgs.iina
     pkgs.just
     pkgs.lima
     pkgs.nix
+
+#    pkgs.net-news-wire
   ];
 
   fonts.packages = [
@@ -82,13 +86,12 @@ in
       "cleanshot"                          # Screenshot and annotation tool
       "default-folder-x"
       "discord"                            # Chat and community app
-      "iina"                               # Sleek macOS video player
       "istat-menus"                        # Menu bar system monitor
       "jordanbaird-ice"                   # Organize/hide menu bar icons
       "launchbar"
       "licecap"
       "obsidian"                           # Markdown-based knowledge base
-      "ollama"                             # Run local LLMs
+#      "ollama"                             # Run local LLMs
       "omnidisksweeper"                    # Find large files and free space
       "orbstack"                           # Dev-friendly Docker + VMs
       "popclip"                            # Inline text actions
@@ -120,6 +123,7 @@ in
       "Numbers" = 409203825;
       "Pages" = 409201541;
       "RegEx Lab" = 1252988123;
+      "Strategery" = 298908505;
     #  "UTM" = 1538878817;                  # Virtual machines on Mac
     #  "rCmd" = 1596283165;                 # Remote Mac launcher
 #      "Snippety" = 1530751461;             # Text expansion/snippet manager

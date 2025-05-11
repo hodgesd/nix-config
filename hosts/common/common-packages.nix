@@ -34,14 +34,11 @@ in
     fira-mono         # Fira Mono font (non-ligature version)
     gh                # GitHub CLI
     git-crypt         # Encrypt secrets in Git repos
-    gnused            # GNU version of sed (stream editor)
     go                # Go programming language
     iperf3            # Network performance measurement
     ipmitool          # Manage IPMI-enabled devices (server management)
     jetbrains-mono    # JetBrains programming font
-    jq                # Command-line JSON processor
     just              # Command runner (like Make, but simpler)
-    mc                # Midnight Commander, a text-based file manager
     mosh              # Mobile shell that keeps sessions alive
     nerdfonts         # Popular fonts patched with Nerd Font symbols
     nmap              # Network scanner and mapper

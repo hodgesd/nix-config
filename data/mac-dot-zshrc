@@ -19,10 +19,8 @@ export LSCOLORS=gxfxcxdxbxgggdabagacad
 # path fix for homebrew
 export PATH=$PATH:/opt/homebrew/bin/
 export PATH=$PATH:/Users/hodgesd/go/bin
-#export EDITOR=vi
-#export VISUAL=/etc/profiles/per-user/alex/bin/nvim
-#export EDITOR=/etc/profiles/per-user/alex/bin/nvim
-#export TERM=xterm
+export EDITOR=nano
+export TERM=xterm-256color
 
 # Nix
 if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
@@ -50,6 +48,5 @@ alias ........='cd ../../../../../../..'
 
 eval "$(starship init zsh)"
 #alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
-#alias ghostty="/Applications/Ghostty.app/Contents/MacOS/ghostty"
 
-#/Users/hodgesd/go/bin/figurine -f "Doom.flf" mbp
+/Users/hodgesd/go/bin/figurine -f "Doom.flf" mbp
