@@ -25,7 +25,7 @@ in
     unstablePkgs.colmena
     unstablePkgs.ollama
     unstablePkgs.yt-dlp
-    unstablePkgs.rustdesk
+#    unstablePkgs.rustdesk
 
     ## stable CLI
     pkgs.comma
@@ -33,6 +33,7 @@ in
     pkgs.just
     pkgs.lima
     pkgs.nix
+#    pkgs.rustdesk   #
 
 #    pkgs.net-news-wire
   ];
@@ -89,7 +90,6 @@ in
       "istat-menus"                        # Menu bar system monitor
       "jordanbaird-ice"                   # Organize/hide menu bar icons
       "launchbar"
-      "licecap"
       "obsidian"                           # Markdown-based knowledge base
 #      "ollama"                             # Run local LLMs
       "omnidisksweeper"                    # Find large files and free space
