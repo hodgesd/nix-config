@@ -91,7 +91,6 @@ in
       "jordanbaird-ice"                   # Organize/hide menu bar icons
       "launchbar"
       "obsidian"                           # Markdown-based knowledge base
-#      "ollama"                             # Run local LLMs
       "omnidisksweeper"                    # Find large files and free space
       "orbstack"                           # Dev-friendly Docker + VMs
       "popclip"                            # Inline text actions
@@ -110,6 +109,7 @@ in
       # "macwhisper"                         # Local Whisper transcription
       # "marta"                              # Dual-pane file manager
       # "shortcat"                           # Keyboard-driven UI navigation
+#      "ollama"                             # Run local LLMs
     ];
     masApps = {
       "Affinity Photo" = 824183456;
