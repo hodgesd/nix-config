@@ -84,7 +84,6 @@ in
     casks = [
       "alcove"                             # Minimal window manager
       "bentobox"                           # A window manager
-      "cleanshot"                          # Screenshot and annotation tool
       "default-folder-x"
       "discord"                            # Chat and community app
       "istat-menus"                        # Menu bar system monitor
@@ -92,8 +91,8 @@ in
       "launchbar"
       "obsidian"                           # Markdown-based knowledge base
       "omnidisksweeper"                    # Find large files and free space
-      "orbstack"                           # Dev-friendly Docker + VMs
-      "popclip"                            # Inline text actions
+      "orbstack"
+      "popclip"
       "raycast"
       "rectangle"
       "sf-symbols"
@@ -103,6 +102,7 @@ in
       "tailscale"
       "vivaldi"
       "warp"
+      "xnapper"
       # "clop"                            # (not installed) Clipboard manager
       # "docker"                          # (not installed) Container management
       # "lm-studio"                          # Run local AI models
