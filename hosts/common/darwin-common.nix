@@ -82,13 +82,14 @@ in
     taps = [
     ];
     casks = [
-      "alcove"                             # Minimal window manager
+      "alcove"
       "bentobox"                           # A window manager
       "default-folder-x"
       "discord"                            # Chat and community app
       "istat-menus"                        # Menu bar system monitor
       "jordanbaird-ice"                   # Organize/hide menu bar icons
       "launchbar"
+      "netnewswire"
       "obsidian"                           # Markdown-based knowledge base
       "omnidisksweeper"                    # Find large files and free space
       "orbstack"
@@ -117,11 +118,13 @@ in
       "Amphetamine" = 937984704;           # Prevent Mac from sleeping
       "Drafts" = 1435957248;
       "Dynamo" = 1445910651;
-      "Fantastical" = 975937182;           # Smart calendar and task manager
+      "Fantastical" = 975937182;
+      "Goodnotes" = 1444383602;
       "Keynote" = 409183694;
       "Mona" = 1659154653;
       "Numbers" = 409203825;
       "Pages" = 409201541;
+      "PDF Expert" = 1055273043;
       "RegEx Lab" = 1252988123;
       "Strategery" = 298908505;
     #  "UTM" = 1538878817;                  # Virtual machines on Mac
