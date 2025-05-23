@@ -4,6 +4,29 @@ default: switch
 hostname := `hostname | cut -d "." -f 1`
 
 ### macos
+
+# Set system name to a given argument and show old/new values
+set-name name:
+    @if [ -z "{{name}}" ]; then
+        echo "❌ Error: hostname cannot be empty"
+        echo "Usage: set-name <hostname>"
+        exit 1
+    fi
+    echo "🔍 Current hostname values:"
+    echo -n "ComputerName:     " && scutil --get ComputerName || echo "(not set)"
+    echo -n "LocalHostName:    " && scutil --get LocalHostName || echo "(not set)"
+    echo -n "HostName:         " && scutil --get HostName || echo "(not set)"
+    echo -n "hostname (shell): " && hostname
+    echo "\n⚙️  Setting all hostnames to '{{name}}'..."
+    sudo scutil --set ComputerName "{{name}}"
+    sudo scutil --set LocalHostName "{{name}}"
+    sudo scutil --set HostName "{{name}}"
+    echo "\n✅ Updated hostname values:"
+    echo -n "ComputerName:     " && scutil --get ComputerName
+    echo -n "LocalHostName:    " && scutil --get LocalHostName
+    echo -n "HostName:         " && scutil --get HostName
+    echo -n "hostname (shell): " && hostname
+
 # Build the nix-darwin system configuration without switching to it
 [macos]
 build target_host=hostname flags="":
