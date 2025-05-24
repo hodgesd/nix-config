@@ -24,27 +24,13 @@
             })
           ];
         }
-        # Fix CA certificate configuration
+        # Use system certificates for SSL/TLS connections
         {
-          # Explicitly configure Nix to use proper certificate settings
-          nix.extraOptions = ''
-            # Explicitly override any ca-file settings
-            ssl-cert-file = /Users/hodgesd/.certs/macos-certs.pem
-          '';
-
+          # Configure Nix settings without custom certificate path
           nix.settings = {
-            ssl-cert-file = "/Users/hodgesd/.certs/macos-certs.pem";
             trusted-users = [ "root" username ];
             experimental-features = [ "nix-command" "flakes" ];
           };
-
-          # Ensure CA certificates are installed
-          environment.systemPackages = with inputs.nixpkgs.legacyPackages.${system}; [
-            cacert
-          ];
-
-          # Link certificate to standard location using mkForce to override default
-          environment.etc."ssl/certs/ca-certificates.crt".source = inputs.nixpkgs.lib.mkForce "/Users/hodgesd/.certs/macos-certs.pem";
         }
         inputs.home-manager.darwinModules.home-manager {
             networking.hostName = hostname;

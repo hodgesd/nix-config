@@ -73,10 +73,10 @@ in
     enable = true;
     onActivation = {
       cleanup = "zap";                 # set to "zap" once brew list is set
-      autoUpdate = true;
-      upgrade = true;
+      autoUpdate = false;              # Prevent automatic updates on every switch
+      upgrade = false;                 # Prevent automatic upgrades on every switch
     };
-    global.autoUpdate = true;
+    global.autoUpdate = false;         # Prevent automatic updates
     brews = [
     ];
     taps = [
@@ -200,11 +200,9 @@ in
         SortColumn = "CPUUsage";
         SortDirection = 0;
       };
-      "com.apple.Safari" = {
-        # Privacy: don’t send search queries to Apple
-        UniversalSearchEnabled = false;
-        SuppressSearchSuggestions = true;
-      };
+      # Safari preferences removed to fix permissions error
+      # These need to be configured manually through Safari preferences
+      # or using a different approach that supports containerized apps
       "com.apple.AdLib" = {
         allowApplePersonalizedAdvertising = false;
       };
