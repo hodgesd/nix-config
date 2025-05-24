@@ -200,6 +200,12 @@ in
         SortColumn = "CPUUsage";
         SortDirection = 0;
       };
+
+#      "com.apple.Safari" = {
+#        # Privacy: don’t send search queries to Apple
+#        UniversalSearchEnabled = false;
+#        SuppressSearchSuggestions = true;
+#      };
       # Safari preferences removed to fix permissions error
       # These need to be configured manually through Safari preferences
       # or using a different approach that supports containerized apps
