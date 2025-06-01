@@ -72,16 +72,17 @@ in
   homebrew = {
     enable = true;
     onActivation = {
-      cleanup = "zap";                 # set to "zap" once brew list is set
-      autoUpdate = false;              # Prevent automatic updates on every switch
-      upgrade = false;                 # Prevent automatic upgrades on every switch
+      cleanup = "zap";                
+      autoUpdate = true;
+      upgrade = true;
     };
-    global.autoUpdate = false;         # Prevent automatic updates
+    global.autoUpdate = true;
     brews = [
     ];
     taps = [
     ];
     casks = [
+#     "nikitabobko/tap/aerospace"
       "alcove"
       "bentobox"                           # A window manager
       "default-folder-x"
@@ -105,12 +106,12 @@ in
       "warp"
       "xnapper"
       # "clop"                            # (not installed) Clipboard manager
-      # "docker"                          # (not installed) Container management
       # "lm-studio"                          # Run local AI models
       # "macwhisper"                         # Local Whisper transcription
       # "marta"                              # Dual-pane file manager
       # "shortcat"                           # Keyboard-driven UI navigation
 #      "ollama"                             # Run local LLMs
+
     ];
     masApps = {
       "Affinity Photo" = 824183456;
@@ -126,7 +127,8 @@ in
       "Pages" = 409201541;
       "PDF Expert" = 1055273043;
       "RegEx Lab" = 1252988123;
-      "Strategery" = 298908505;
+
+#      "Strategery" = 298908505;            # mas doesnt yet work with ios apps.
     #  "UTM" = 1538878817;                  # Virtual machines on Mac
     #  "rCmd" = 1596283165;                 # Remote Mac launcher
 #      "Snippety" = 1530751461;             # Text expansion/snippet manager
