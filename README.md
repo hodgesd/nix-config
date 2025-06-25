@@ -41,3 +41,11 @@ git clone https://github.com/hodgesd/nix-config.git
 ```
 
 ### 6. Run [Determinate Nix Installer](https://determinate.systems/posts/determinate-nix-installer/)
+
+### 7. Manually Installed Apps
+- [llm](https://llm.datasette.io/en/stable/)
+  - `uv tool install llm`  
+  - `llm install llm-mlx` # MLX plugin  
+  - `llm mlx download-model mlx-community/Mistral-7B-Instruct-v0.3-4bit`    # mlx model
+  - `llm aliases set m7b mlx-community/Mistral-7B-Instruct-v0.3-4bit`
+  - `llm models default m7b`

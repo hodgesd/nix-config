@@ -33,6 +33,7 @@ in
     pkgs.just
     pkgs.lima
     pkgs.nix
+#    pkgs.llm        # too complex, erases downloaded plugins and models.
 #    pkgs.rustdesk   #
 
 #    pkgs.net-news-wire
