@@ -12,7 +12,8 @@ in
     };
     channel.enable = false;
   };
-  services.nix-daemon.enable = true;
+#  services.nix-daemon.enable = true;
+  nix.enable = true;
   system.stateVersion = 5;
 
   nixpkgs = {
@@ -33,6 +34,7 @@ in
     pkgs.just
     pkgs.lima
     pkgs.nix
+#    pkgs.tailscale
 #    pkgs.llm        # too complex, erases downloaded plugins and models.
 #    pkgs.rustdesk   #
 
@@ -40,14 +42,10 @@ in
   ];
 
   fonts.packages = [
-    (pkgs.nerdfonts.override {
-      fonts = [
-        "FiraCode"
-        "FiraMono"
-        "Hack"
-        "JetBrainsMono"
-      ];
-    })
+  pkgs.nerd-fonts.fira-code
+  pkgs.nerd-fonts.fira-mono
+  pkgs.nerd-fonts.hack
+  pkgs.nerd-fonts.jetbrains-mono
   ];
 
   # pins to stable as unstable updates very often
@@ -102,7 +100,7 @@ in
       "steam"
       "swiftbar"
       "syntax-highlight"
-      "tailscale"
+#      "tailscale"
       "vivaldi"
       "warp"
       "xnapper"
@@ -136,12 +134,14 @@ in
     };
   };
 
-  security.pam.enableSudoTouchIdAuth = true;
-
+  system.primaryUser = "hodgesd";
+#  security.pam.enableSudoTouchIdAuth = true;
+   security.pam.services.sudo_local.touchIdAuth = true;
   # macOS configuration
-  system.activationScripts.postUserActivation.text = ''
-    # Following line should allow us to avoid a logout/login cycle
-    /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
+
+  system.activationScripts.activateSettings.text = ''
+  # Apply user settings without logout/login cycle
+  /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
   '';
   system.defaults = {
     NSGlobalDomain.AppleShowAllExtensions = true;                     # Show all file extensions — helpful for clarity.

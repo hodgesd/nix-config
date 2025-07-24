@@ -30,7 +30,6 @@ in
     ffmpeg            # Multimedia framework for video/audio conversion
     figurine          # Pretty print small text banners
     fira-code         # Font with ligatures for coding
-    fira-code-nerdfont # Fira Code with added Nerd Font symbols
     fira-mono         # Fira Mono font (non-ligature version)
     gh                # GitHub CLI
     git-crypt         # Encrypt secrets in Git repos
@@ -40,7 +39,6 @@ in
     jetbrains-mono    # JetBrains programming font
     just              # Command runner (like Make, but simpler)
     mosh              # Mobile shell that keeps sessions alive
-    nerdfonts         # Popular fonts patched with Nerd Font symbols
     nmap              # Network scanner and mapper
     qemu              # Hardware virtualization (VMs, emulation)
     ripgrep           # Fast grep alternative
