@@ -1,3 +1,6 @@
 result
 com.googlecode.iterm2.plist
 .direnv
+
+docker/**/.env
+**/.env
