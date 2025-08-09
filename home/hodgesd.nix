@@ -1,7 +1,7 @@
-# hodgesd.nix - Fixed syntax error
+# hodgesd.nix
 { config, inputs, pkgs, lib, unstablePkgs, ... }:
 {
-  home.stateVersion = "23.11";
+  home.stateVersion = "24.05";
   # Add these lines for SSL certificate configuration
   home.sessionVariables = {
     NIX_SSL_CERT_FILE = "/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt";
@@ -142,7 +142,11 @@
     '';
   };
 
-  programs.zoxide.enable = true;
+  programs.zoxide = {
+    enable = true;
+    enableZshIntegration = true;  # or `enableBashIntegration`, `enableFishIntegration`
+    options = [ "--cmd" "cd" ];   # use 'cd' instead of 'z'
+  };
 
   programs.ssh = {
     enable = true;

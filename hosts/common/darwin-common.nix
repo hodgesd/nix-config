@@ -1,3 +1,5 @@
+# darwin-common.nix
+
 { inputs, outputs, config, lib, hostname, system, username, pkgs, unstablePkgs, ... }:
 let
   inherit (inputs) nixpkgs nixpkgs-unstable;
@@ -34,6 +36,9 @@ in
     pkgs.just
     pkgs.lima
     pkgs.nix
+    pkgs.micro
+    pkgs.lazydocker
+    pkgs.brave
 #    pkgs.tailscale
 #    pkgs.llm        # too complex, erases downloaded plugins and models.
 #    pkgs.rustdesk   #

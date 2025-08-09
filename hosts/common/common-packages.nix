@@ -1,3 +1,5 @@
+# common-packages.nix
+
 { inputs, pkgs, unstablePkgs, ... }:
 
 let
@@ -48,7 +50,6 @@ in
     unzip             # Extract ZIP archives
     watch             # Re-run a command periodically
     wget              # Command-line downloader
-    zoxide            # Smarter `cd` command replacement
 
     # Requires `nixpkgs.config.allowUnfree = true`
   ];
