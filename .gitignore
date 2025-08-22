@@ -4,3 +4,4 @@ com.googlecode.iterm2.plist
 
 docker/**/.env
 **/.env
+*.DS_Store
