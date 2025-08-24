@@ -164,4 +164,10 @@
       };
     };
   };
-}
+
+  # home/hodgesd.nix
+  home.packages = with pkgs; [ jankyborders ];
+  
+    # Write AeroSpace config (replaces defaults)
+  home.file.".aerospace.toml".source = ./aerospace/aerospace.toml;
+  }

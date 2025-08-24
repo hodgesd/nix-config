@@ -6,6 +6,8 @@ in
 {
   imports = [
     inputs.home-manager.darwinModules.home-manager
+    ./skhd.nix
+    ./karabiner.nix
   ];
 
   users.users.hodgesd.home = "/Users/hodgesd";
@@ -33,9 +35,11 @@ in
     pkgs.aerospace
     pkgs.comma
     pkgs.iina
+    # pkgs.jankyborders
     pkgs.just
     pkgs.lima
     pkgs.nix
+    pkgs.nixpkgs-fmt
     pkgs.micro
     pkgs.lazydocker
     pkgs.brave
@@ -59,9 +63,23 @@ in
     enable = true;
     enableCompletion = true;
     promptInit = builtins.readFile ./../../data/mac-dot-zshrc;
+  
+    # Run neofetch only once per session
+    loginShellInit = ''
+      if [[ -z "$NEOFETCH_RAN" ]] && command -v neofetch >/dev/null 2>&1; then
+        export NEOFETCH_RAN=1
+        neofetch
+      fi
+    '';
+  
+    interactiveShellInit = ''
+      if [[ -z "$NEOFETCH_RAN" ]] && command -v neofetch >/dev/null 2>&1; then
+        export NEOFETCH_RAN=1
+        neofetch
+      fi
+    '';
   };
 
-  services.skhd.enable = true;
 
   homebrew = {
     enable = true;
@@ -76,6 +94,8 @@ in
     casks = [
       "alcove"
       "bentobox"
+      "brave-browser"
+      "chatgpt"
       "default-folder-x"
       "discord"
       "istat-menus"
@@ -197,51 +217,6 @@ in
 
     users.hodgesd = { pkgs, ... }: {
       home.stateVersion = "24.05";
-
-      home.file.".skhdrc".text = ''
-        hyper - s : open -a "Safari"
-        hyper - d : open -a "Drafts"
-        hyper - c : open -a "ChatGPT"
-        hyper - t : open -a "Warp"
-        hyper - p : open -a "PyCharm"
-        hyper - f : open -a "Finder"
-      '';
-
-      xdg.configFile."karabiner/karabiner.json" = {
-        text = ''
-        {
-          "global": { "check_for_updates_on_startup": true },
-          "profiles": [
-            {
-              "name": "Default",
-              "selected": true,
-              "complex_modifications": {
-                "rules": [
-                  {
-                                  "description": "Caps Lock: tap = toggle, hold = hyper",
-                                  "manipulators": [
-                                      {
-                                          "from": { "key_code": "caps_lock" },
-                                          "to": [{ 
-                                              "key_code": "left_shift",
-                                              "modifiers": ["left_control", "left_option", "left_command"] 
-                                          }],
-                                          "to_if_alone": [{ 
-                                              "key_code": "caps_lock",
-                                              "hold_down_milliseconds": 200
-                                          }],
-                                          "type": "basic"
-                                      }
-                                  ]
-                              }
-                ]
-              }
-            }
-          ]
-        }
-        '';
-        force = true;
-      };
     };
   };
 }
