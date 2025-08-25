@@ -73,6 +73,27 @@
     settings = pkgs.lib.importTOML ./starship/starship.toml;
   };
 
+  programs.swiftbar = {
+      enable = true;
+      autostart = true;
+  
+      # use your GitHub repo as the source
+      repoPath  = inputs.swiftbar-plugins;
+      repoFiles = [
+        #"airport-wx.py"
+        #"techmeme.60m.py"
+        "stl_today_news_uv.6hr.py"
+        # add/remove as you wish
+      ];
+    };
+  
+    # If your plugins import Python libs, provide them here:
+    #home.packages = (config.home.packages or []) ++ [
+    #  (pkgs.python311.withPackages (ps: with ps; [
+    #    requests beautifulsoup4 feedparser lxml
+    #  ]))
+    #];
+
   programs.bash.enable = true;
 
   programs.zsh = {

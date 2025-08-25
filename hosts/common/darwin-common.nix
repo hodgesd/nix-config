@@ -30,6 +30,7 @@ in
   environment.systemPackages = with pkgs; [
     unstablePkgs.colmena
     unstablePkgs.ollama
+    unstablePkgs.uv
     unstablePkgs.yt-dlp
 
     pkgs.aerospace
@@ -110,7 +111,7 @@ in
       "rectangle"
       "sf-symbols"
       "steam"
-      "swiftbar"
+      #"swiftbar"
       "syntax-highlight"
       "vivaldi"
       "warp"
@@ -212,11 +213,16 @@ in
   home-manager.backupFileExtension = lib.mkForce "hm-backup";
   
   home-manager = {
-    useGlobalPkgs = true;
-    useUserPackages = true;
-
-    users.hodgesd = { pkgs, ... }: {
-      home.stateVersion = "24.05";
+      useGlobalPkgs = true;
+      useUserPackages = true;
+  
+      # 👇 make flake inputs available inside your HM user config (hodgesd.nix)
+      extraSpecialArgs = { inherit inputs; };
+  
+      # (A) point HM to your user config
+      users.hodgesd = import ../../home/hodgesd.nix;
+  
+      # (B) optional: share modules (e.g., the SwiftBar module file)
+      sharedModules = [ ../../modules/swiftbar.nix ];
     };
-  };
 }

@@ -132,7 +132,24 @@
         "nix-homebrew": "nix-homebrew",
         "nixpkgs": "nixpkgs",
         "nixpkgs-darwin": "nixpkgs-darwin",
-        "nixpkgs-unstable": "nixpkgs-unstable"
+        "nixpkgs-unstable": "nixpkgs-unstable",
+        "swiftbar-plugins": "swiftbar-plugins"
+      }
+    },
+    "swiftbar-plugins": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1756085905,
+        "narHash": "sha256-siR6PHTuxtCNX+cCcWUY9zRTdv++DYbfkvHrVomo0w0=",
+        "owner": "hodgesd",
+        "repo": "swiftbar_plugins",
+        "rev": "a299e1e7578d2dd039aa0e7d316c86d02abd3bd5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hodgesd",
+        "repo": "swiftbar_plugins",
+        "type": "github"
       }
     }
   },
