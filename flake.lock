@@ -133,17 +133,17 @@
         "nixpkgs": "nixpkgs",
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nixpkgs-unstable": "nixpkgs-unstable",
-        "swiftbar-plugins": "swiftbar-plugins"
+        "swiftbar_plugins": "swiftbar_plugins"
       }
     },
-    "swiftbar-plugins": {
+    "swiftbar_plugins": {
       "flake": false,
       "locked": {
-        "lastModified": 1756085905,
-        "narHash": "sha256-siR6PHTuxtCNX+cCcWUY9zRTdv++DYbfkvHrVomo0w0=",
+        "lastModified": 1756091002,
+        "narHash": "sha256-W2FDzwcsXScn5P9MU1huzROc55HmbhJent9dg4TVoNI=",
         "owner": "hodgesd",
         "repo": "swiftbar_plugins",
-        "rev": "a299e1e7578d2dd039aa0e7d316c86d02abd3bd5",
+        "rev": "47c0d0e00a0c09f3e89e5820643dc35ee13e85dc",
         "type": "github"
       },
       "original": {

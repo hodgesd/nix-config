@@ -78,11 +78,12 @@
       autostart = true;
   
       # use your GitHub repo as the source
-      repoPath  = inputs.swiftbar-plugins;
+      repoPath  = inputs.swiftbar_plugins;
       repoFiles = [
         #"airport-wx.py"
         #"techmeme.60m.py"
         "stl_today_news_uv.6hr.py"
+        "tech_news_uv.py"
         # add/remove as you wish
       ];
     };
