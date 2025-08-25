@@ -208,6 +208,11 @@ in
     "com.apple.TimeMachine".DoNotOfferNewDisksForBackup = true;
     "com.apple.ImageCapture".disableHotPlug = true;
     "com.apple.commerce".AutoUpdate = true;
+
+    #SwiftBar default plugin directory
+    "com.ameba.SwiftBar" = {
+        PluginsDirectory = "${config.users.users.hodgesd.home}/Library/Application Support/SwiftBar/Plugins";
+      };
   };
 
   home-manager.backupFileExtension = lib.mkForce "hm-backup";

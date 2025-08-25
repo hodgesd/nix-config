@@ -61,9 +61,12 @@ in
     ) cfg.plugins);
 
     # Auto-start at login (nix-darwin)
-    launchd.user.agents.swiftbar = mkIf cfg.autostart {
-      serviceConfig = {
-        ProgramArguments = [ "${cfg.package}/Applications/SwiftBar.app/Contents/MacOS/SwiftBar" ];
+    launchd.agents.swiftbar = mkIf cfg.autostart {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          "${cfg.package}/Applications/SwiftBar.app/Contents/MacOS/SwiftBar"
+        ];
         KeepAlive = true;
         RunAtLoad = true;
       };
