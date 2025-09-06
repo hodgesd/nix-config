@@ -50,4 +50,4 @@ alias ........='cd ../../../../../../..'
 eval "$(starship init zsh)"
 #alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
 
-/Users/hodgesd/go/bin/figurine -f "Doom.flf" mbp
+figurine -f "Doom.flf" mbp
