@@ -84,28 +84,6 @@
     "daily_news_uv.2hr.py"
     ];
   };
-#  programs.swiftbar = {
-#      enable = true;
-#      autostart = true;
-#
-#      # use your GitHub repo as the source
-#      repoPath  = inputs.swiftbar_plugins;
-#      repoFiles = [
-#        #"airport-wx.py"
-#        #"techmeme.60m.py"
-#        #"stl_today_news_uv.6hr.py"
-#        #"tech_news_uv.py"
-#        "daily_news_uv.2hr.py"
-#        # add/remove as you wish
-#      ];
-#    };
-  
-    # If your plugins import Python libs, provide them here:
-    #home.packages = (config.home.packages or []) ++ [
-    #  (pkgs.python311.withPackages (ps: with ps; [
-    #    requests beautifulsoup4 feedparser lxml
-    #  ]))
-    #];
 
   programs.bash.enable = true;
 
@@ -126,7 +104,6 @@
     historyLimit = 10000;
     plugins = with pkgs.tmuxPlugins; [
       gruvbox
-      vim-tmux-navigator
     ];
     extraConfig = ''
       new-session -s main
@@ -140,44 +117,6 @@
   programs.bat.enable = true;
   programs.bat.config.theme = "Nord";
   #programs.zsh.shellAliases.cat = "${pkgs.bat}/bin/bat";
-
-  programs.neovim = {
-    enable = true;
-    viAlias = true;
-    vimAlias = true;
-    vimdiffAlias = true;
-    plugins = with pkgs.vimPlugins; [
-      ## regular
-      comment-nvim
-      lualine-nvim
-      nvim-web-devicons
-      vim-tmux-navigator
-
-      ## with config
-      # {
-      #   plugin = gruvbox-nvim;
-      #   config = "colorscheme gruvbox";
-      # }
-
-      {
-        plugin = catppuccin-nvim;
-        config = "colorscheme catppuccin";
-      }
-
-      ## telescope
-      {
-        plugin = telescope-nvim;
-        type = "lua";
-        config = builtins.readFile ./nvim/plugins/telescope.lua;
-      }
-      telescope-fzf-native-nvim
-
-    ];
-    extraLuaConfig = ''
-      ${builtins.readFile ./nvim/options.lua}
-      ${builtins.readFile ./nvim/keymap.lua}
-    '';
-  };
 
   programs.zoxide = {
     enable = true;
