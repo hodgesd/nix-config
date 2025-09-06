@@ -194,7 +194,7 @@ in
 
     #SwiftBar default plugin directory
     "com.ameba.SwiftBar" = {
-        PluginsDirectory = "${config.users.users.hodgesd.home}/Library/Application Support/SwiftBar/Plugins";
+        PluginDirectory = "${config.users.users.hodgesd.home}/Library/Application Support/SwiftBar/Plugins";
       };
   };
 
