@@ -2,50 +2,36 @@
 
 ## 💻 Machines
 
-| Hostname | Model                  | Storage (Ram/HD) | Cores (CPU/GPU) |
-|----------|------------------------|------------------|-----------------|
-| `mini`   | Mac Mini M2 Pro        | —                |                 |
-| `mbp`    | MacBook Pro M3 Pro 14" | 18GB / 1TB       | 12 / 18         |
-| `air`    | MacBook Air M1 13"     | —                |                 |
+| Hostname  | Model                  | Storage (RAM/SSD) | OS   |
+|-----------|------------------------|-------------------|:----:|
+| `mini`    | Mac Mini M2 Pro        | 16GB / 512GB      |     |
+| `mbp`     | MacBook Pro M3 Pro 14" | 18GB / 1TB        |     |
+| `air`     | MacBook Air M1 13"     | 8GB / 256GB       |     |
+| `air-nix` | MacBook Air i7 13"     | 8GB / 512GB       | ❄️   |
 
 ## 🍎 Mac Fresh Install Checklist
 
-### 1. Create User
+### 1. Set machine name (mini / mbp / air)
+```chmod +x set_mac_name.sh && ./set_mac_name.sh```
 
-- [ ] Create user `hodgesd`
+### 2. Install Nix (Determinate Systems)
+```sh <(curl -L https://install.determinate.systems/nix)```
 
-### 2. Update macOS
+### 3. Clone repo + enter
+```git clone https://github.com/hodgesd/nix-config.git && cd nix-config```
 
-- [ ] Open **System Settings**  
-  → **Software Update**  
-  → **Download Updates**  
-  → **Upgrade Now**
-
-### 3. Install [Xcode Command Line Tools](https://developer.apple.com/xcode/resources/)
-
-```bash
-xcode-select --install
+### 4. Bootstrap essentials and apply config
+```
+brew install just
+just macos:bootstrap
+just
 ```
 
-### 4. Set machine name... to one of the [names above](#machines)
-
-```shell
-chmod +x set_mac_name.sh
-./set_mac_name.sh
-```
-
-### 5. Clone Nix-Config Repo
-
-```shell
-git clone https://github.com/hodgesd/nix-config.git
-```
-
-### 6. Run [Determinate Nix Installer](https://determinate.systems/posts/determinate-nix-installer/)
-
-### 7. Manually Installed Apps
-- [llm](https://llm.datasette.io/en/stable/)
-  - `uv tool install llm`  
-  - `llm install llm-mlx` # MLX plugin  
-  - `llm mlx download-model mlx-community/Mistral-7B-Instruct-v0.3-4bit`    # mlx model
-  - `llm aliases set m7b mlx-community/Mistral-7B-Instruct-v0.3-4bit`
-  - `llm models default m7b`
+### 5. Manually Installed Apps
+- [ ] [llm](https://llm.datasette.io/en/stable/)  
+  ```bash
+  uv tool install llm
+  llm install llm-mlx   # MLX plugin
+  llm mlx download-model mlx-community/Mistral-7B-Instruct-v0.3-4bit  # mlx model
+  llm aliases set m7b mlx-community/Mistral-7B-Instruct-v0.3-4bit
+  llm models default m7b
