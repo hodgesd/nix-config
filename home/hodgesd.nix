@@ -82,8 +82,9 @@
       repoFiles = [
         #"airport-wx.py"
         #"techmeme.60m.py"
-        "stl_today_news_uv.6hr.py"
-        "tech_news_uv.py"
+        #"stl_today_news_uv.6hr.py"
+        #"tech_news_uv.py"
+        "daily_news_uv.2hr.py"
         # add/remove as you wish
       ];
     };
@@ -101,9 +102,12 @@
     enable = true;
     enableCompletion = true;
     autosuggestion.enable = true;
-    #initExtra = (builtins.readFile ../mac-dot-zshrc);
+  
+    initExtra = ''
+      ${builtins.readFile ../data/mac-dot-zshrc}
+    '';
   };
-
+  
   programs.tmux = {
     enable = true;
     #keyMode = "vi";
@@ -167,7 +171,7 @@
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;  # or `enableBashIntegration`, `enableFishIntegration`
-    options = [ "--cmd" "cd" ];   # use 'cd' instead of 'z'
+    options = lib.mkForce [ "--cmd" "cd" ];  # use 'cd' instead of 'z'
   };
 
   programs.ssh = {

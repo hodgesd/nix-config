@@ -61,26 +61,9 @@ in
   programs.nix-index.enable = true;
 
   programs.zsh = {
-    enable = true;
-    enableCompletion = true;
-    promptInit = builtins.readFile ./../../data/mac-dot-zshrc;
-  
-    # Run neofetch only once per session
-    loginShellInit = ''
-      if [[ -z "$NEOFETCH_RAN" ]] && command -v neofetch >/dev/null 2>&1; then
-        export NEOFETCH_RAN=1
-        neofetch
-      fi
-    '';
-  
-    interactiveShellInit = ''
-      if [[ -z "$NEOFETCH_RAN" ]] && command -v neofetch >/dev/null 2>&1; then
-        export NEOFETCH_RAN=1
-        neofetch
-      fi
-    '';
+  enable = true;
+  enableCompletion = true;
   };
-
 
   homebrew = {
     enable = true;
