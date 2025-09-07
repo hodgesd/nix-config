@@ -1,8 +1,8 @@
 # ~/.aerospace.toml
 
-# Start JankyBorders with white active / no inactive border
+# Start JankyBorders with green active / no inactive border
 after-startup-command = [
-  'exec-and-forget /etc/profiles/per-user/hodgesd/bin/borders active_color=0xff00ff00 inactive_color=0xff444444 width=5.0'
+  'exec-and-forget /etc/profiles/per-user/hodgesd/bin/borders active_color=0xff00ff00 inactive_color=0xff444444 width=8.0'
 ]
 
 # ----- Layout / gaps -----
