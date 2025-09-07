@@ -36,7 +36,6 @@ in
     pkgs.aerospace
     pkgs.comma
     pkgs.iina
-    # pkgs.jankyborders
     pkgs.just
     pkgs.lima
     pkgs.nix

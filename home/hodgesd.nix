@@ -10,6 +10,11 @@
   # list of programs
   # https://mipmip.github.io/home-manager-option-search
 
+  imports = [
+  ./starship/starship.nix
+  ./swiftbar/swiftbar.nix
+  ./eza/eza.nix
+  ];
 
   programs.gpg.enable = true;
 
@@ -18,17 +23,6 @@
     nix-direnv.enable = true;
   };
 
-  programs.eza = {
-    enable = true;
-    enableZshIntegration = true;
-    icons = "auto";
-    git = true;
-    extraOptions = [
-      "--group-directories-first"
-      "--header"
-      "--color=auto"
-    ];
-  };
 
   programs.fzf = {
     enable = true;
@@ -65,25 +59,6 @@
   };
 
   programs.lf.enable = true;
-
-  programs.starship = {
-    enable = true;
-    enableZshIntegration = true;
-    enableBashIntegration = true;
-    settings = pkgs.lib.importTOML ./starship/starship.toml;
-  };
-
-
-  programs.swiftbar = {
-  enable = true;
-  # optional: override; relative is fine now
-  pluginsDir = "Library/Application Support/SwiftBar/Plugins";
-
-  repoPath  = inputs.swiftbar_plugins;
-  repoFiles = [
-    "daily_news_uv.2hr.py"
-    ];
-  };
 
   programs.bash.enable = true;
 
