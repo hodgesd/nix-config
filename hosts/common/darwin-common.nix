@@ -75,8 +75,8 @@ in
     brews = [ ];
     taps  = [ ];
     casks = [
-      "alcove"
       "bentobox"
+      "TheBoredTeam/boring-notch/boring-notch"# "alcove"
       "brave-browser"
       "chatgpt"
       "default-folder-x"

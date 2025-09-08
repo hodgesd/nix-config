@@ -14,6 +14,7 @@
   ./starship/starship.nix
   ./swiftbar/swiftbar.nix
   ./eza/eza.nix
+  ./ssh/ssh.nix
   ];
 
   programs.gpg.enable = true;
@@ -97,23 +98,6 @@
     enable = true;
     enableZshIntegration = true;  # or `enableBashIntegration`, `enableFishIntegration`
     options = lib.mkForce [ "--cmd" "cd" ];  # use 'cd' instead of 'z'
-  };
-
-  programs.ssh = {
-    enable = true;
-    extraConfig = ''
-      StrictHostKeyChecking no
-    '';
-    matchBlocks = {
-      # ~/.ssh/config
-      "github.com" = {
-        hostname = "ssh.github.com";
-        port = 443;
-      };
-      "*" = {
-        user = "root";
-      };
-    };
   };
 
   # home/hodgesd.nix
