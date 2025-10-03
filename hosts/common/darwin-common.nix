@@ -1,7 +1,11 @@
 # hosts/common/darwin-common.nix
-{ inputs, outputs, config, lib, hostname, system, username, pkgs, unstablePkgs, ... }:
+{ inputs, outputs, config, lib, hostname, system, username, pkgs, ... }:
 let
-  inherit (inputs) nixpkgs nixpkgs-unstable;
+  # Define unstablePkgs here
+  unstablePkgs = import inputs.nixpkgs-unstable {
+    inherit system;
+    config.allowUnfree = true;
+  };
 in
 {
   imports = [
@@ -10,7 +14,7 @@ in
     ./karabiner.nix
   ];
 
-  users.users.hodgesd.home = "/Users/hodgesd";
+users.users.hodgesd.home = "/Users/${username}";
 
   nix = {
     settings = {
@@ -38,11 +42,9 @@ in
     pkgs.iina
     pkgs.just
     pkgs.lima
-    pkgs.nix
     pkgs.nixpkgs-fmt
     pkgs.micro
     pkgs.lazydocker
-    pkgs.brave
   ];
 
   fonts.packages = [
@@ -75,7 +77,6 @@ in
     brews = [ ];
     taps  = [ ];
     casks = [
-      "bentobox"
       "TheBoredTeam/boring-notch/boring-notch"# "alcove"
       "brave-browser"
       "chatgpt"
