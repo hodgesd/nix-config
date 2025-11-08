@@ -60,10 +60,5 @@
     lazydocker        # Docker TUI
     qemu              # Hardware virtualization
     skopeo            # Work with remote container images
-
-    # Fonts
-    fira-code         # Font with ligatures
-    fira-mono         # Fira Mono font
-    jetbrains-mono    # JetBrains programming font
   ];
 }
