@@ -68,7 +68,7 @@
     enableCompletion = true;
     autosuggestion.enable = true;
   
-    initExtra = ''
+    initContent = ''
       ${builtins.readFile ../data/mac-dot-zshrc}
     '';
   };

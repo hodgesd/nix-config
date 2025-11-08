@@ -14,7 +14,7 @@ in
     ./karabiner.nix
   ];
 
-users.users.hodgesd.home = "/Users/${username}";
+  users.users.hodgesd.home = "/Users/${username}";
 
   nix = {
     settings = {
@@ -32,19 +32,10 @@ users.users.hodgesd.home = "/Users/${username}";
   };
 
   environment.systemPackages = with pkgs; [
-    unstablePkgs.colmena
-    unstablePkgs.ollama
-    unstablePkgs.uv
-    unstablePkgs.yt-dlp
-
+    # Darwin-only packages
     pkgs.aerospace
-    pkgs.comma
     pkgs.iina
-    pkgs.just
     pkgs.lima
-    pkgs.nixpkgs-fmt
-    pkgs.micro
-    pkgs.lazydocker
   ];
 
   fonts.packages = [
@@ -62,8 +53,8 @@ users.users.hodgesd.home = "/Users/${username}";
   programs.nix-index.enable = true;
 
   programs.zsh = {
-  enable = true;
-  enableCompletion = true;
+    enable = true;
+    enableCompletion = true;
   };
 
   homebrew = {
@@ -74,33 +65,51 @@ users.users.hodgesd.home = "/Users/${username}";
       upgrade = true;
     };
     global.autoUpdate = true;
+
     brews = [ ];
-    taps  = [ ];
+    taps = [ ];
+
     casks = [
-      "TheBoredTeam/boring-notch/boring-notch"# "alcove"
-      "brave-browser"
-      "chatgpt"
+      # --- Mac Utilities ---
       "default-folder-x"
-      "discord"
       "istat-menus"
-      "jordanbaird-ice"
-      "launchbar"
-      "netnewswire"
-      "obsidian"
       "omnidisksweeper"
-      "orbstack"
-      "popclip"
-      "raycast"
       "rectangle"
-      "sf-symbols"
-      "steam"
-      #"swiftbar"
-      "syntax-highlight"
-      "vivaldi"
-      "warp"
-      "xnapper"
+      "TheBoredTeam/boring-notch/boring-notch"
       # "karabiner-elements"
+
+      # --- Developer & Power Tools ---
+      "ghostty"
+      "launchbar"
+      "raycast"
+      "sf-symbols"
+      "syntax-highlight"
+      "warp"
+
+      # --- Communication & Productivity ---
+      "chatgpt"
+      "discord"
+      "obsidian"
+      "netnewswire"
+      "popclip"
+      "reminders-menubar"
+
+      # --- Browsers ---
+      "brave-browser"
+      "vivaldi"
+
+      # --- Media & Gaming ---
+      "steam"
+      "whisky"
+      "xnapper"
+
+      # --- Virtualization / System Management ---
+      "orbstack"
+      "balenaetcher"
+      "jordanbaird-ice"
     ];
+
+
     masApps = {
       "Amphetamine" = 937984704;
       "Drafts" = 1435957248;
@@ -194,23 +203,23 @@ users.users.hodgesd.home = "/Users/${username}";
 
     #SwiftBar default plugin directory
     "com.ameba.SwiftBar" = {
-        PluginDirectory = "${config.users.users.hodgesd.home}/Library/Application Support/SwiftBar/Plugins";
-      };
+      PluginDirectory = "${config.users.users.hodgesd.home}/Library/Application Support/SwiftBar/Plugins";
+    };
   };
 
   home-manager.backupFileExtension = lib.mkForce "hm-backup";
-  
+
   home-manager = {
-      useGlobalPkgs = true;
-      useUserPackages = true;
-  
-      # 👇 make flake inputs available inside your HM user config (hodgesd.nix)
-      extraSpecialArgs = { inherit inputs; };
-  
-      # (A) point HM to your user config
-      users.hodgesd = import ../../home/hodgesd.nix;
-  
-      # (B) optional: share modules (e.g., the SwiftBar module file)
-      sharedModules = [ ../../modules/swiftbar.nix ];
-    };
+    useGlobalPkgs = true;
+    useUserPackages = true;
+
+    # 👇 make flake inputs available inside your HM user config (hodgesd.nix)
+    extraSpecialArgs = { inherit inputs; };
+
+    # (A) point HM to your user config
+    users.hodgesd = import ../../home/hodgesd.nix;
+
+    # (B) optional: share modules (e.g., the SwiftBar module file)
+    sharedModules = [ ../../modules/swiftbar.nix ];
+  };
 }
