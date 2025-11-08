@@ -1,15 +1,19 @@
 # helpers.nix
 { inputs, outputs, stateVersion, ... }:
+let
+  machines = import ./machines.nix;
+in
 {
   mkDarwin = { hostname, username ? "hodgesd", system ? "aarch64-darwin", }:
     let
       inherit (inputs.nixpkgs) lib;
       unstablePkgs = inputs.nixpkgs-unstable.legacyPackages.${system};
+      machine = machines.${hostname};
       customConfPath = ./../hosts/darwin/${hostname};
       customConf = if builtins.pathExists (customConfPath) then (customConfPath + "/default.nix") else ./../hosts/common/darwin-common-dock.nix;
     in
     inputs.nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit system inputs username unstablePkgs; };
+      specialArgs = { inherit system inputs username unstablePkgs machine; };
       modules = [
         ../hosts/common/common-packages.nix
         ../hosts/common/darwin-common.nix
@@ -49,6 +53,7 @@
     let
       inherit (inputs.nixpkgs) lib;
       unstablePkgs = inputs.nixpkgs-unstable.legacyPackages.${system};
+      machine = machines.${hostname};
       customConfPath = ./../hosts/nixos/${hostname}/default.nix;
       # Check if the actual file exists, not just the directory
       hostSpecificModules =
@@ -58,7 +63,7 @@
     in
     inputs.nixpkgs.lib.nixosSystem {
       inherit system;
-      specialArgs = { inherit inputs outputs stateVersion username unstablePkgs; };
+      specialArgs = { inherit inputs outputs stateVersion username unstablePkgs machine; };
       modules = [
         ../hosts/common/common-packages.nix
         ../hosts/common/nixos-common.nix
