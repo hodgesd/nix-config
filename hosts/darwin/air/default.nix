@@ -1,13 +1,7 @@
 { ... }:
+let
+  dockPresets = import ../../common/darwin/dock-presets.nix;
+in
 {
-  system.defaults.dock.persistent-apps = [
-    "/Applications/Firefox.app"
-    "/Applications/Google Chrome.app"
-    "/Applications/Telegram.app"
-    "/Applications/Obsidian.app"
-    "/Applications/Visual Studio Code.app"
-    "/Applications/OBS.app"
-    "/Applications/Ghostty.app"
-    "/Applications/iTerm.app"
-  ];
+  system.defaults.dock.persistent-apps = dockPresets.developer;
 }

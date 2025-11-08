@@ -10,7 +10,7 @@ in
       unstablePkgs = inputs.nixpkgs-unstable.legacyPackages.${system};
       machine = machines.${hostname};
       customConfPath = ./../hosts/darwin/${hostname};
-      customConf = if builtins.pathExists (customConfPath) then (customConfPath + "/default.nix") else ./../hosts/common/darwin-common-dock.nix;
+      customConf = if builtins.pathExists (customConfPath) then (customConfPath + "/default.nix") else { };
     in
     inputs.nix-darwin.lib.darwinSystem {
       specialArgs = { inherit system inputs username unstablePkgs machine; };
