@@ -2,12 +2,12 @@
 
 ## 💻 Machines
 
-| Hostname | Model                  | Storage (Ram/HD) | Cores (CPU/GPU) |
-|----------|------------------------|------------------|-----------------|
-| `mini`   | Mac Mini M2 Pro        | —                |                 |
-| `mbp`    | MacBook Pro M3 Pro 14" | 18GB / 1TB       | 12 / 18         |
-| `air`    | MacBook Air M1 13"     | 16GB / 500GB     | 8 / 7           |
-| `nixair`  | MacBook Air i7-5650U   | 8GB / 500GB      | 2 / 1           |
+| Hostname    | OS | Model                  | Storage (Ram/HD) | Cores (CPU/GPU) |
+|-------------|--|------------------------|------------------|-----------------|
+| `mini`      | 🍏 | Mac Mini M2 Pro        | —                |                 |
+| `mbp`       | 🍏 | MacBook Pro M3 Pro 14" | 18GB / 1TB       | 12 / 18         |
+| `air`       | 🍏 | MacBook Air M1 13"     | 16GB / 500GB     | 8 / 7           |
+| `nixos-air` | ❄️ | MacBook Air i7-5650U   | 8GB / 500GB      | 2 / 1           |
 
 ## 🍎 Mac Fresh Install Checklist
 
