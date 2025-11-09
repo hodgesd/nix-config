@@ -4,7 +4,9 @@
 {
   system.defaults.CustomUserPreferences = {
     "com.apple.dock" = {
-      autohide = false;
+      autohide = true;
+      autohide-delay = 0.0;
+      autohide-time-modifier = 0.2;
       launchanim = false;
       static-only = false;
       show-recents = false;

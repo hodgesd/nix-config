@@ -8,11 +8,12 @@
       hyper - s : open -a "Safari"
       hyper - d : open -a "Drafts"
       hyper - c : open -a "ChatGPT"
-      hyper - t : open -a "Warp"
+      hyper - t : open -a "Ghostty"
       hyper - o : open -a "Obsidian"
       hyper - p : open -a "PyCharm"
       hyper - f : open -a "Finder"
       hyper - m : open -b com.apple.MobileSMS
+      hyper - 0x2B : open -a "System Settings"  # hyper-,
 
       # Safari web apps
       # hyper - e : open -b com.apple.Safari.WebApp.6C8E09D1-46FD-4C8D-A150-DDF60FBBB46C  # hey.com

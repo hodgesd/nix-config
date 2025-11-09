@@ -45,7 +45,6 @@
 
       # --- Media & Gaming ---
       "steam"
-      "whisky"
       "xnapper"
 
       # --- Virtualization / System Management ---
