@@ -21,7 +21,7 @@
       "omnidisksweeper"
       "rectangle"
       "TheBoredTeam/boring-notch/boring-notch"
-      # "karabiner-elements"
+      "karabiner-elements"
 
       # --- Developer & Power Tools ---
       "ghostty"

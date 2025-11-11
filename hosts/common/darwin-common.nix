@@ -8,6 +8,8 @@
     ./darwin/system-defaults.nix
     ./darwin/fonts.nix
     ./darwin/packages.nix
+    ./darwin/skhd.nix
+    ./darwin/karabiner.nix
   ];
 
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-darwin";

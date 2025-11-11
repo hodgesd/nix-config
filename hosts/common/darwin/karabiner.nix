@@ -14,15 +14,15 @@
               "complex_modifications": {
                 "rules": [
                   {
-                    "description": "Caps Lock: tap = toggle, hold = hyper",
+                    "description": "Caps Lock: tap = toggle, hold = meh",
                     "manipulators": [
                       {
                         "from": { "key_code": "caps_lock" },
-                        "to": [{ 
+                        "to": [{
                           "key_code": "left_shift",
-                          "modifiers": ["left_control", "left_option", "left_command"] 
+                          "modifiers": ["left_control", "left_option"]
                         }],
-                        "to_if_alone": [{ 
+                        "to_if_alone": [{
                           "key_code": "caps_lock",
                           "hold_down_milliseconds": 200
                         }],

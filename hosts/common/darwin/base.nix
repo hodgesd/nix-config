@@ -2,10 +2,7 @@
 # Core Nix settings and user configuration for Darwin systems
 { inputs, username, system, ... }:
 {
-  imports = [
-    ./skhd.nix
-    ./karabiner.nix
-  ];
+  imports = [];
 
   users.users.hodgesd.home = "/Users/${username}";
 
