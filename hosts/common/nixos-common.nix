@@ -1,6 +1,12 @@
 # hosts/common/nixos-common.nix
-{ pkgs, unstablePkgs, lib, inputs, username, ... }:
 {
+  pkgs,
+  unstablePkgs,
+  lib,
+  inputs,
+  username,
+  ...
+}: {
   imports = [
     inputs.home-manager.nixosModules.home-manager
   ];
@@ -12,7 +18,7 @@
   users.users.${username} = {
     isNormalUser = true;
     description = username;
-    extraGroups = [ "wheel" "docker" "networkmanager" ];
+    extraGroups = ["wheel" "docker" "networkmanager"];
     shell = pkgs.zsh;
   };
 
@@ -22,9 +28,9 @@
   # Nix configuration
   nix = {
     settings = {
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = ["nix-command" "flakes"];
       warn-dirty = false;
-      trusted-users = [ "root" username ];
+      trusted-users = ["root" username];
     };
     channel.enable = false;
 
@@ -41,8 +47,14 @@
 
   # Nix registry (matching Darwin)
   nix.registry = {
-    n.to = { type = "path"; path = inputs.nixpkgs; };
-    u.to = { type = "path"; path = inputs.nixpkgs-unstable; };
+    n.to = {
+      type = "path";
+      path = inputs.nixpkgs;
+    };
+    u.to = {
+      type = "path";
+      path = inputs.nixpkgs-unstable;
+    };
   };
 
   # Enable nix-index (matching Darwin)
@@ -52,13 +64,10 @@
   virtualisation.docker = {
     enable = true;
     autoPrune = {
-
-
       enable = true;
       dates = "weekly";
     };
   };
-
 
   # Enable SSH
   services.openssh = {

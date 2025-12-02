@@ -1,7 +1,6 @@
 # hosts/common/darwin/defaults/dock.nix
 # Dock and Activity Monitor preferences
-{ ... }:
-{
+{...}: {
   system.defaults.CustomUserPreferences = {
     "com.apple.dock" = {
       autohide = true;

@@ -1,7 +1,6 @@
 # hosts/common/darwin/defaults/finder.nix
 # Finder preferences and desktop services
-{ config, ... }:
-{
+{config, ...}: {
   system.defaults = {
     finder.FXPreferredViewStyle = "Nlsv";
   };

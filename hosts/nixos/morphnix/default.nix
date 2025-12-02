@@ -1,15 +1,20 @@
-{ config, inputs, pkgs, name, ... }:
 {
+  config,
+  inputs,
+  pkgs,
+  name,
+  ...
+}: {
   imports = [
-      ./hardware-configuration.nix
-      (builtins.fetchTarball {
-        url = "https://github.com/nix-community/nixos-vscode-server/tarball/master";
-        sha256 = "09j4kvsxw1d5dvnhbsgih0icbrxqv90nzf0b589rb5z6gnzwjnqf";
-      })
-      ./../../common/nixos-common.nix
-      ./../../common/common-packages.nix
-      ./beszel.nix
-    ];
+    ./hardware-configuration.nix
+    (builtins.fetchTarball {
+      url = "https://github.com/nix-community/nixos-vscode-server/tarball/master";
+      sha256 = "09j4kvsxw1d5dvnhbsgih0icbrxqv90nzf0b589rb5z6gnzwjnqf";
+    })
+    ./../../common/nixos-common.nix
+    ./../../common/common-packages.nix
+    ./beszel.nix
+  ];
 
   ## DEPLOYMENT
   deployment = {
@@ -21,15 +26,15 @@
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.kernelModules = [ "drivetemp" ];
+  boot.kernelModules = ["drivetemp"];
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
   boot.kernelParams = [
     "i915.fastboot=1"
     "i915.enable_guc=3"
   ];
 
-  boot.supportedFilesystems = [ "zfs" ];
-  boot.zfs.extraPools = [ "nvme-appdata" "ssd4tb" "bigrust" ];
+  boot.supportedFilesystems = ["zfs"];
+  boot.zfs.extraPools = ["nvme-appdata" "ssd4tb" "bigrust"];
   services.zfs.autoScrub.enable = true;
 
   time.timeZone = "America/New_York";
@@ -37,10 +42,10 @@
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
   #home-manager.backupFileExtension = "bak";
-  home-manager.users.alex = { imports = [ ./../../../home/alex.nix ]; };
+  home-manager.users.alex = {imports = [./../../../home/alex.nix];};
   users.users.alex = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "docker" "render" "video"];
+    extraGroups = ["wheel" "docker" "render" "video"];
     packages = with pkgs; [
       home-manager
     ];
@@ -91,27 +96,27 @@
   ];
 
   ## quicksync
-  hardware.firmware = [ pkgs.linux-firmware ];
+  hardware.firmware = [pkgs.linux-firmware];
   hardware.opengl = {
     enable = true;
     extraPackages = with pkgs; [
-    # VA-API drivers
-    intel-media-driver  # LIBVA_DRIVER_NAME=iHD
-    intel-vaapi-driver
-    libvdpau-va-gl
+      # VA-API drivers
+      intel-media-driver # LIBVA_DRIVER_NAME=iHD
+      intel-vaapi-driver
+      libvdpau-va-gl
 
-    # OpenCL and compute support
-    intel-compute-runtime
-    intel-gmmlib
-    onevpl-intel-gpu
+      # OpenCL and compute support
+      intel-compute-runtime
+      intel-gmmlib
+      onevpl-intel-gpu
 
-    # VA-API utilities and libraries
-    libva
-    libva-utils
+      # VA-API utilities and libraries
+      libva
+      libva-utils
 
-    # Diagnostic tools
-    glxinfo
-    pciutils
+      # Diagnostic tools
+      glxinfo
+      pciutils
     ];
   };
   environment.sessionVariables = {
@@ -127,17 +132,19 @@
     interfaces = {
       enp6s0 = {
         useDHCP = false;
-        ipv4.addresses = [ {
-          address = "10.42.1.10";
-          prefixLength = 21;
-        } ];
+        ipv4.addresses = [
+          {
+            address = "10.42.1.10";
+            prefixLength = 21;
+          }
+        ];
       };
     };
     defaultGateway = "10.42.0.254";
-    nameservers = [ "10.42.0.253" ];
-  localCommands = ''
-    ip rule add to 10.42.0.0/21 priority 2500 lookup main || true
-  '';
+    nameservers = ["10.42.0.253"];
+    localCommands = ''
+      ip rule add to 10.42.0.0/21 priority 2500 lookup main || true
+    '';
   };
 
   virtualisation = {
@@ -185,7 +192,6 @@
   #   };
   #   commonArgs = [ "--debug"];
   # };
-
 
   services.snapraid = {
     enable = true;
@@ -262,8 +268,8 @@
 
   nix = {
     settings = {
-        experimental-features = [ "nix-command" "flakes" ];
-        warn-dirty = false;
+      experimental-features = ["nix-command" "flakes"];
+      warn-dirty = false;
     };
   };
 }

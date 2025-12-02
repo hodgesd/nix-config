@@ -1,8 +1,8 @@
-{ lib, ... }: {
+{lib, ...}: {
   # This file was populated at runtime with the networking
   # details gathered from the active system.
   networking = {
-    nameservers = [ "1.1.1.1" ];
+    nameservers = ["1.1.1.1"];
     defaultGateway = "172.31.1.1";
     defaultGateway6 = {
       address = "";
@@ -13,11 +13,18 @@
     interfaces = {
       eth0 = {
         ipv4.addresses = [
-          { address="5.161.220.163"; prefixLength=32; }
+          {
+            address = "5.161.220.163";
+            prefixLength = 32;
+          }
         ];
-        ipv4.routes = [ { address = "172.31.1.1"; prefixLength = 32; } ];
+        ipv4.routes = [
+          {
+            address = "172.31.1.1";
+            prefixLength = 32;
+          }
+        ];
       };
-
     };
   };
   services.udev.extraRules = ''

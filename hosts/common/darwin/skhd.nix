@@ -1,6 +1,9 @@
-{ config, lib, pkgs, ... }:
-
 {
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
   # This configuration uses SKHD.ZIG (the Zig rewrite of skhd).
 
   # Disable the default skhd service to avoid conflict with the Zig version.
@@ -8,8 +11,8 @@
 
   homebrew = {
     enable = true;
-    taps = [ "jackielii/tap" ];
-    brews = [ "jackielii/tap/skhd-zig" ];
+    taps = ["jackielii/tap"];
+    brews = ["jackielii/tap/skhd-zig"];
   };
 
   home-manager.users.hodgesd = {

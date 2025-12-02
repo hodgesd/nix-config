@@ -1,9 +1,11 @@
 # modules/beszel-agent.nix
-{ config, lib, pkgs, ... }:
-
-with lib;
-
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+with lib; let
   cfg = config.services.beszel-agent;
 in {
   options.services.beszel-agent = {
@@ -71,8 +73,8 @@ in {
 
     systemd.services.beszel-agent = {
       description = "Beszel Agent Service";
-      after = [ "network.target" ];
-      wantedBy = [ "multi-user.target" ];
+      after = ["network.target"];
+      wantedBy = ["multi-user.target"];
 
       serviceConfig = {
         Environment = [

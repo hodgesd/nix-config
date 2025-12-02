@@ -1,10 +1,12 @@
-{ config, pkgs, ... }:
-
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  config,
+  pkgs,
+  ...
+}: {
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+  ];
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -21,7 +23,7 @@
 
   services.xserver = {
     enable = false;
-    videoDrivers = [ "nvidia" ];
+    videoDrivers = ["nvidia"];
   };
   #services.xserver.displayManager.gdm.enable = true;
   #services.xserver.desktopManager.gnome.enable = true;
@@ -29,7 +31,7 @@
   users.users.alex = {
     isNormalUser = true;
     description = "alex";
-    extraGroups = [ "networkmanager" "wheel" "docker" ];
+    extraGroups = ["networkmanager" "wheel" "docker"];
     packages = with pkgs; [];
   };
 
@@ -42,9 +44,11 @@
     pciutils
 
     # ansible
-    (python3.withPackages(ps: [
-         ps.ansible ps.pip ps.requests
-         ]))
+    (python3.withPackages (ps: [
+      ps.ansible
+      ps.pip
+      ps.requests
+    ]))
   ];
 
   hardware.opengl.enable = true;
@@ -76,9 +80,8 @@
   fileSystems."/mnt/jbod" = {
     device = "//10.42.1.10/jbod";
     fsType = "cifs";
-    options = [ "username=alex" "password=awdpign23" "x-systemd.automount" "noauto" ];
+    options = ["username=alex" "password=awdpign23" "x-systemd.automount" "noauto"];
   };
 
   system.stateVersion = "23.11"; # Did you read the comment?
-
 }

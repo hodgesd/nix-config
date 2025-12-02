@@ -1,6 +1,9 @@
 # hosts/common/darwin-common.nix
-{ inputs, lib, ... }:
 {
+  inputs,
+  lib,
+  ...
+}: {
   imports = [
     inputs.home-manager.darwinModules.home-manager
     ./darwin/base.nix
@@ -17,5 +20,5 @@
   home-manager.backupFileExtension = lib.mkForce "hm-backup";
 
   # Share SwiftBar module with home-manager
-  home-manager.sharedModules = [ ../../modules/swiftbar.nix ];
+  home-manager.sharedModules = [../../modules/swiftbar.nix];
 }

@@ -1,7 +1,6 @@
 # hosts/common/darwin/defaults/general.nix
 # General macOS system preferences (NSGlobalDomain)
-{ ... }:
-{
+{...}: {
   system.defaults = {
     NSGlobalDomain.AppleShowAllExtensions = true;
     NSGlobalDomain.AppleShowScrollBars = "Always";

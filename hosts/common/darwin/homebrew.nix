@@ -1,6 +1,5 @@
 # hosts/common/darwin/homebrew.nix
-{ ... }:
-{
+{...}: {
   homebrew = {
     enable = true;
     onActivation = {
@@ -13,7 +12,7 @@
     brews = [
       "opencode"
     ];
-    taps = [ ];
+    taps = [];
 
     casks = [
       "balenaetcher"

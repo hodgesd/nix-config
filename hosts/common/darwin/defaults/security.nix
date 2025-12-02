@@ -1,7 +1,6 @@
 # hosts/common/darwin/defaults/security.nix
 # Security, privacy, and system update preferences
-{ ... }:
-{
+{...}: {
   system.defaults.CustomUserPreferences = {
     "com.apple.AdLib".allowApplePersonalizedAdvertising = false;
     "com.apple.SoftwareUpdate" = {

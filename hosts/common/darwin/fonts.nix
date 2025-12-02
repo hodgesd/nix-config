@@ -1,7 +1,6 @@
 # hosts/common/darwin/fonts.nix
 # Font packages for Darwin systems
-{ pkgs, ... }:
-{
+{pkgs, ...}: {
   fonts.packages = [
     pkgs.nerd-fonts.fira-code
     pkgs.nerd-fonts.fira-mono

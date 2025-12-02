@@ -1,24 +1,27 @@
-{ config, pkgs, ... }:
 {
+  config,
+  pkgs,
+  ...
+}: {
   imports = [
-      ./hardware-configuration.nix
-      (fetchTarball "https://github.com/nix-community/nixos-vscode-server/tarball/master")
-    ];
+    ./hardware-configuration.nix
+    (fetchTarball "https://github.com/nix-community/nixos-vscode-server/tarball/master")
+  ];
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.kernelModules = [ "drivetemp" ];
+  boot.kernelModules = ["drivetemp"];
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
   boot.kernelParams = ["i915.fastboot=1"];
 
-  boot.supportedFilesystems = [ "zfs" ];
-  boot.zfs.extraPools = [ "nvme-appdata" "ssd4tb" "bigrust18" ];
+  boot.supportedFilesystems = ["zfs"];
+  boot.zfs.extraPools = ["nvme-appdata" "ssd4tb" "bigrust18"];
   services.zfs.autoScrub.enable = true;
 
   time.timeZone = "America/New_York";
   users.users.alex = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "docker" ];
+    extraGroups = ["wheel" "docker"];
   };
   users.defaultUserShell = pkgs.bash;
   programs.bash.interactiveShellInit = "figurine -f \"3d.flf\" morphnix";
@@ -75,17 +78,19 @@
     interfaces = {
       enp13s0 = {
         useDHCP = false;
-        ipv4.addresses = [ {
-          address = "10.42.1.10";
-          prefixLength = 20;
-        } ];
+        ipv4.addresses = [
+          {
+            address = "10.42.1.10";
+            prefixLength = 20;
+          }
+        ];
       };
     };
     defaultGateway = "10.42.0.254";
-    nameservers = [ "10.42.0.253" ];
-  localCommands = ''
-    ip rule add to 10.42.0.0/20 priority 2500 lookup main || true
-  '';
+    nameservers = ["10.42.0.253"];
+    localCommands = ''
+      ip rule add to 10.42.0.0/20 priority 2500 lookup main || true
+    '';
   };
 
   services.fstrim.enable = true;
@@ -109,10 +114,10 @@
     };
 
     datasets."bigrust18/media" = {
-      useTemplate = [ "backupmedia" ];
+      useTemplate = ["backupmedia"];
       recursive = true;
     };
-    extraArgs = [ "--debug" ];
+    extraArgs = ["--debug"];
   };
 
   services.syncoid = {
@@ -122,11 +127,11 @@
     commands = {
       "bigrust18/media" = {
         target = "root@deepthought:bigrust20/media";
-        extraArgs = [ "--sshoption=StrictHostKeyChecking=off" ];
+        extraArgs = ["--sshoption=StrictHostKeyChecking=off"];
         recursive = true;
       };
     };
-    commonArgs = [ "--debug"];
+    commonArgs = ["--debug"];
   };
 
   virtualisation = {
@@ -156,16 +161,16 @@
       load printers = no
     '';
     shares = let
-    mkShare = path: {
-      path = path;
-      browseable = "yes";
-      "read only" = "no";
-      "guest ok" = "yes";
-      "create mask" = "0644";
-      "directory mask" = "0755";
-      "force user" = "alex";
-      "force group" = "users";
-    };
+      mkShare = path: {
+        path = path;
+        browseable = "yes";
+        "read only" = "no";
+        "guest ok" = "yes";
+        "create mask" = "0644";
+        "directory mask" = "0755";
+        "force user" = "alex";
+        "force group" = "users";
+      };
     in {
       jbod = mkShare "/mnt/jbod";
       bigrust18 = mkShare "/mnt/bigrust18";
@@ -175,8 +180,8 @@
 
   nix = {
     settings = {
-        experimental-features = [ "nix-command" "flakes" ];
-        warn-dirty = false;
+      experimental-features = ["nix-command" "flakes"];
+      warn-dirty = false;
     };
   };
   system.copySystemConfiguration = true;

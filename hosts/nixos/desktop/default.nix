@@ -1,11 +1,14 @@
-{ config, lib, pkgs, ... }:
 {
-  imports =
-    [
-      ./hardware-configuration.nix
-      ./../../common/nixos-common.nix
-      ./../../common/common-packages.nix
-    ];
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
+  imports = [
+    ./hardware-configuration.nix
+    ./../../common/nixos-common.nix
+    ./../../common/common-packages.nix
+  ];
 
   ## DEPLOYMENT
   deployment = {
@@ -26,26 +29,28 @@
     interfaces = {
       enp2s0 = {
         useDHCP = false;
-        ipv4.addresses = [ {
-          address = "10.42.1.15";
-          prefixLength = 21;
-        } ];
+        ipv4.addresses = [
+          {
+            address = "10.42.1.15";
+            prefixLength = 21;
+          }
+        ];
       };
     };
     defaultGateway = "10.42.0.254";
-    nameservers = [ "10.42.0.253" ];
-  localCommands = ''
-    ip rule add to 10.42.0.0/21 priority 2500 lookup main
-  '';
+    nameservers = ["10.42.0.253"];
+    localCommands = ''
+      ip rule add to 10.42.0.0/21 priority 2500 lookup main
+    '';
   };
 
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
-  home-manager.users.alex = { imports = [ ./../../../home/alex.nix ]; };
+  home-manager.users.alex = {imports = [./../../../home/alex.nix];};
   users.users.alex = {
     isNormalUser = true;
     description = "alex";
-    extraGroups = [ "wheel" "docker"];
+    extraGroups = ["wheel" "docker"];
     packages = with pkgs; [
       home-manager
       steam
@@ -68,11 +73,11 @@
 
   services.xserver = {
     enable = true;
-    videoDrivers = [ "nvidia" ];
+    videoDrivers = ["nvidia"];
   };
   services.displayManager.sddm = {
-      enable = true;
-      wayland.enable = true;
+    enable = true;
+    wayland.enable = true;
   };
   services.desktopManager.plasma6.enable = true;
 
@@ -99,22 +104,21 @@
   nixpkgs.config.allowUnfree = true;
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "yes";
-  services.tailscale.enable = true;  
+  services.tailscale.enable = true;
 
-#   system.copySystemConfiguration = true;
-#   nix = {
-#     settings = {
-#         experimental-features = [ "nix-command" "flakes" ];
-#         warn-dirty = false;
-#     };
-#     # Automate garbage collection
-#     gc = {
-#       automatic = true;
-#       dates = "weekly";
-#       options = "--delete-older-than 5";
-#     };
-#   };
+  #   system.copySystemConfiguration = true;
+  #   nix = {
+  #     settings = {
+  #         experimental-features = [ "nix-command" "flakes" ];
+  #         warn-dirty = false;
+  #     };
+  #     # Automate garbage collection
+  #     gc = {
+  #       automatic = true;
+  #       dates = "weekly";
+  #       options = "--delete-older-than 5";
+  #     };
+  #   };
 
   system.stateVersion = "24.05"; # Did you read the comment?
-
 }

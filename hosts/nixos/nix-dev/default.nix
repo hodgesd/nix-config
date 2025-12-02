@@ -1,10 +1,14 @@
-{ config, pkgs, unstablePkgs, customArgs, ... }:
-
 {
+  config,
+  pkgs,
+  unstablePkgs,
+  customArgs,
+  ...
+}: {
   imports = [
-      ./hardware-configuration.nix
-      ./../../common/common-packages.nix
-    ];
+    ./hardware-configuration.nix
+    ./../../common/common-packages.nix
+  ];
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
@@ -16,7 +20,7 @@
   users.users.${customArgs.username} = {
     group = customArgs.username;
     isNormalUser = true;
-    extraGroups = [ "wheel" "docker" ];
+    extraGroups = ["wheel" "docker"];
     packages = with pkgs; [
       firefox
       google-chrome

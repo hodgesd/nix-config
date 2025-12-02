@@ -1,14 +1,18 @@
 # hosts/common/darwin/base.nix
 # Core Nix settings and user configuration for Darwin systems
-{ inputs, username, system, ... }:
 {
+  inputs,
+  username,
+  system,
+  ...
+}: {
   imports = [];
 
   users.users.hodgesd.home = "/Users/${username}";
 
   nix = {
     settings = {
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = ["nix-command" "flakes"];
       warn-dirty = false;
     };
     channel.enable = false;
@@ -21,8 +25,14 @@
 
   # Nix registry shortcuts
   nix.registry = {
-    n.to = { type = "path"; path = inputs.nixpkgs; };
-    u.to = { type = "path"; path = inputs.nixpkgs-unstable; };
+    n.to = {
+      type = "path";
+      path = inputs.nixpkgs;
+    };
+    u.to = {
+      type = "path";
+      path = inputs.nixpkgs-unstable;
+    };
   };
 
   programs.nix-index.enable = true;

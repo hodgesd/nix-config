@@ -8,8 +8,8 @@
 
   systemd.services.beszel-agent = {
     description = "Beszel Agent Service";
-    after = [ "network.target" ];
-    wantedBy = [ "multi-user.target" ];
+    after = ["network.target"];
+    wantedBy = ["multi-user.target"];
 
     serviceConfig = {
       Environment = [
