@@ -1,11 +1,12 @@
-# hosts/common/karabiner.nix
+# hosts/common/darwin/karabiner.nix
 {
   config,
   lib,
   pkgs,
+  username,
   ...
 }: {
-  home-manager.users.hodgesd = {
+  home-manager.users.${username} = {
     xdg.configFile."karabiner/karabiner.json" = {
       text = ''
         {

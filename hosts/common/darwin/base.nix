@@ -8,7 +8,7 @@
 }: {
   imports = [];
 
-  users.users.hodgesd.home = "/Users/${username}";
+  users.users.${username}.home = "/Users/${username}";
 
   nix = {
     settings = {
@@ -42,7 +42,7 @@
     enableCompletion = true;
   };
 
-  system.primaryUser = "hodgesd";
+  system.primaryUser = username;
   security.pam.services.sudo_local.touchIdAuth = true;
 
   system.activationScripts.activateSettings.text = ''

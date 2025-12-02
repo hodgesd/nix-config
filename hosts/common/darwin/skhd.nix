@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  username,
   ...
 }: {
   # This configuration uses SKHD.ZIG (the Zig rewrite of skhd).
@@ -15,7 +16,7 @@
     brews = ["jackielii/tap/skhd-zig"];
   };
 
-  home-manager.users.hodgesd = {
+  home-manager.users.${username} = {
     # The focus-hey.sh script is an external script to avoid AppleScript parsing issues.
     home.file."bin/focus-hey.sh" = {
       text = ''
