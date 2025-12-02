@@ -70,8 +70,8 @@ darwin-rebuild switch --flake .#<hostname>
 
 ### 8. Manually Installed Apps
 - [llm](https://llm.datasette.io/en/stable/)
-  - `uv tool install llm`
-  - `llm install llm-mlx` # MLX plugin
+  - `uv tool install llm --with sentencepiece` # sentencepiece: python tokenizer
+  - `llm install llm-mlx llm-hacker-news` # plugins
   - `llm mlx download-model mlx-community/Mistral-7B-Instruct-v0.3-4bit`    # mlx model
   - `llm aliases set m7b mlx-community/Mistral-7B-Instruct-v0.3-4bit`
   - `llm models default m7b`
