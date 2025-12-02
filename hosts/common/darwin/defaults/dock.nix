@@ -1,6 +1,10 @@
 # hosts/common/darwin/defaults/dock.nix
 # Dock and Activity Monitor preferences
 {...}: {
+  # Dock persistent apps (pinned applications)
+  # Empty list = no pinned apps, managed manually by user
+  system.defaults.dock.persistent-apps = [];
+
   system.defaults.CustomUserPreferences = {
     "com.apple.dock" = {
       autohide = true;
