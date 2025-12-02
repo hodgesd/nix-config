@@ -7,12 +7,21 @@
       autoUpdate = true;
       upgrade = true;
     };
-    global.autoUpdate = true;
+    global = {
+      autoUpdate = true;
+      brewfile = true;
+    };
 
     brews = [
       "opencode"
+      {
+        name = "jackielii/tap/skhd-zig";
+        start_service = true;
+      }
     ];
-    taps = [];
+    taps = [
+      "jackielii/tap"
+    ];
 
     casks = [
       "balenaetcher"

@@ -3,10 +3,9 @@
   config,
   pkgs,
   lib,
-  username,
   ...
 }: {
-  home-manager.users.${username} = {
+  home-manager.users.${config.majordouble.user} = {
     home.file.".aerospace.toml".source = ./aerospace.toml;
   };
 }

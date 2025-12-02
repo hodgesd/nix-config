@@ -3,10 +3,9 @@
   config,
   lib,
   pkgs,
-  username,
   ...
 }: {
-  home-manager.users.${username} = {
+  home-manager.users.${config.majordouble.user} = {
     xdg.configFile."karabiner/karabiner.json" = {
       text = ''
         {

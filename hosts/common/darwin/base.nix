@@ -2,13 +2,13 @@
 # Core Nix settings and user configuration for Darwin systems
 {
   inputs,
-  username,
+  config,
   system,
   ...
 }: {
   imports = [];
 
-  users.users.${username}.home = "/Users/${username}";
+  users.users.${config.majordouble.user}.home = "/Users/${config.majordouble.user}";
 
   nix = {
     settings = {
@@ -42,7 +42,7 @@
     enableCompletion = true;
   };
 
-  system.primaryUser = username;
+  system.primaryUser = config.majordouble.user;
   security.pam.services.sudo_local.touchIdAuth = true;
 
   system.activationScripts.activateSettings.text = ''

@@ -4,10 +4,9 @@
   pkgs,
   lib,
   inputs,
-  username,
   ...
 }: {
-  home-manager.users.${username} = {
+  home-manager.users.${config.majordouble.user} = {
     programs.swiftbar = {
       enable = true;
 

@@ -1,6 +1,6 @@
 # hosts/common/darwin/defaults/finder.nix
 # Finder preferences and desktop services
-{config, username, ...}: {
+{config, ...}: {
   system.defaults = {
     finder.FXPreferredViewStyle = "Nlsv";
   };
@@ -15,7 +15,7 @@
       FXDefaultSearchScope = "SCcf";
       DisableAllAnimations = true;
       NewWindowTarget = "PfDe";
-      NewWindowTargetPath = "file://${config.users.users.${username}.home}/Desktop/";
+      NewWindowTargetPath = "file://${config.users.users.${config.majordouble.user}.home}/Desktop/";
       AppleShowAllExtensions = true;
       FXEnableExtensionChangeWarning = false;
       ShowStatusBar = true;

@@ -24,6 +24,18 @@ in {
     inputs.nix-darwin.lib.darwinSystem {
       specialArgs = {inherit system inputs username unstablePkgs machine;};
       modules = [
+        # Import custom options module
+        ./options.nix
+        # Set majordouble config values
+        {
+          config.majordouble = {
+            user = username;
+            machine = {
+              inherit (machine) hostname type formFactor primaryUse chip;
+              specs = machine.specs or {};
+            };
+          };
+        }
         ../hosts/common/common-packages.nix
         ../hosts/common/darwin-common.nix
         customConf
@@ -78,6 +90,18 @@ in {
       specialArgs = {inherit inputs outputs stateVersion username unstablePkgs machine;};
       modules =
         [
+          # Import custom options module
+          ./options.nix
+          # Set majordouble config values
+          {
+            config.majordouble = {
+              user = username;
+              machine = {
+                inherit (machine) hostname type formFactor primaryUse chip;
+                specs = machine.specs or {};
+              };
+            };
+          }
           ../hosts/common/common-packages.nix
           ../hosts/common/nixos-common.nix
           {

@@ -11,10 +11,7 @@
     ./darwin/system-defaults.nix
     ./darwin/fonts.nix
     ./darwin/packages.nix
-    ./darwin/skhd.nix
-    ./darwin/karabiner.nix
-    ./darwin/swiftbar.nix
-    ./darwin/aerospace.nix
+    ./darwin/desktop
   ];
 
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-darwin";

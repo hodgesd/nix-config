@@ -2,21 +2,15 @@
   config,
   lib,
   pkgs,
-  username,
   ...
 }: {
   # This configuration uses SKHD.ZIG (the Zig rewrite of skhd).
+  # The brew is installed via homebrew.nix with start_service = true
 
   # Disable the default skhd service to avoid conflict with the Zig version.
   services.skhd.enable = false;
 
-  homebrew = {
-    enable = true;
-    taps = ["jackielii/tap"];
-    brews = ["jackielii/tap/skhd-zig"];
-  };
-
-  home-manager.users.${username} = {
+  home-manager.users.${config.majordouble.user} = {
     # The focus-hey.sh script is an external script to avoid AppleScript parsing issues.
     home.file."bin/focus-hey.sh" = {
       text = ''
@@ -43,19 +37,6 @@
 
       # Open Vivaldi in a private window
       shift + ctrl + alt - x : open -a "Vivaldi" --args --incognito
-    '';
-
-    # Home Manager activation script to start skhd-zig automatically.
-    home.activation.startSkhdZig = lib.mkAfter ''
-      BREW="/opt/homebrew/bin/brew"
-      if [ -x "$BREW" ]; then
-        if ! "$BREW" services list | grep -q "jackielii/tap/skhd-zig.*started"; then
-          echo "Starting skhd-zig via brew services..."
-          "$BREW" services start jackielii/tap/skhd-zig || true
-        fi
-      else
-        echo "Warning: brew not found at /opt/homebrew/bin — skipping skhd-zig startup."
-      fi
     '';
   };
 }
