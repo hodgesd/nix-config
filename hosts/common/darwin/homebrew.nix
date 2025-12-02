@@ -1,5 +1,4 @@
 # hosts/common/darwin/homebrew.nix
-# Homebrew packages and Mac App Store apps
 { ... }:
 {
   homebrew = {
@@ -11,46 +10,35 @@
     };
     global.autoUpdate = true;
 
-    brews = [ ];
+    brews = [
+      "opencode"
+    ];
     taps = [ ];
 
     casks = [
-      # --- Mac Utilities ---
-      "default-folder-x"
-      "istat-menus"
-      "omnidisksweeper"
-      "rectangle"
-      "TheBoredTeam/boring-notch/boring-notch"
-      "karabiner-elements"
-
-      # --- Developer & Power Tools ---
-      "ghostty"
-      "launchbar"
-      "raycast"
-      "sf-symbols"
-      "syntax-highlight"
-      "warp"
-
-      # --- Communication & Productivity ---
-      "chatgpt"
-      "discord"
-      "obsidian"
-      "netnewswire"
-      "popclip"
-      "reminders-menubar"
-
-      # --- Browsers ---
-      "brave-browser"
-      "vivaldi"
-
-      # --- Media & Gaming ---
-      "steam"
-      "xnapper"
-
-      # --- Virtualization / System Management ---
-      "orbstack"
       "balenaetcher"
+      "brave-browser"
+      "chatgpt"
+      "default-folder-x"
+      "discord"
+      "ghostty"
+      "istat-menus"
       "jordanbaird-ice"
+      "karabiner-elements"
+      "launchbar"
+      "netnewswire"
+      "obsidian"
+      "orbstack"
+      "popclip"
+      "raycast"
+      "rectangle"
+      "reminders-menubar"
+      "sf-symbols"
+      "steam"
+      "syntax-highlight"
+      "TheBoredTeam/boring-notch/boring-notch"
+      "vivaldi"
+      "xnapper"
     ];
 
     masApps = {

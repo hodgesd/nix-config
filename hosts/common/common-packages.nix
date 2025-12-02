@@ -8,7 +8,6 @@
   environment.systemPackages = with pkgs; [
     # From unstable channel
     unstablePkgs.beszel
-    unstablePkgs.ollama
     unstablePkgs.uv
     unstablePkgs.yt-dlp
 
