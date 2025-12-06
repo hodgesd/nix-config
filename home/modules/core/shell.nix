@@ -9,15 +9,10 @@
     enable = true;
     enableCompletion = true;
     autosuggestion.enable = true;
+    autocd = true; # Type .. to go up (no need for cd)
 
     shellAliases = {
-      ".." = "cd ..";
       "..." = "cd ../..";
-      "...." = "cd ../../..";
-      "....." = "cd ../../../..";
-      "......" = "cd ../../../../..";
-      "......." = "cd ../../../../../..";
-      "........" = "cd ../../../../../../..";
     };
 
     initExtra = ''
