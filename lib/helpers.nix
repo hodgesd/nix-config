@@ -15,30 +15,30 @@ in {
     inherit (inputs.nixpkgs) lib;
     unstablePkgs = inputs.nixpkgs-unstable.legacyPackages.${system};
     machine = machines.${hostname};
-    customConfPath = ./../hosts/darwin/${hostname};
-    customConf =
+    customConfPath = ./../hosts/darwin/${hostname}/default.nix;
+    hostSpecificModules =
       if builtins.pathExists customConfPath
-      then (customConfPath + "/default.nix")
-      else {};
+      then [customConfPath]
+      else [];
   in
     inputs.nix-darwin.lib.darwinSystem {
       specialArgs = {inherit system inputs username unstablePkgs machine;};
-      modules = [
-        # Import custom options module
-        ./options.nix
-        # Set majordouble config values
-        {
-          config.majordouble = {
-            user = username;
-            machine = {
-              inherit (machine) hostname type formFactor primaryUse chip;
-              specs = machine.specs or {};
+      modules =
+        [
+          # Import custom options module
+          ./options.nix
+          # Set majordouble config values
+          {
+            config.majordouble = {
+              user = username;
+              machine = {
+                inherit (machine) hostname type formFactor primaryUse chip;
+                specs = machine.specs or {};
+              };
             };
-          };
-        }
-        ../hosts/common/common-packages.nix
-        ../hosts/common/darwin-common.nix
-        customConf
+          }
+          ../hosts/common/common-packages.nix
+          ../hosts/common/darwin-common.nix
         # Configure Nix settings
         {
           nix.settings = {
@@ -57,17 +57,18 @@ in {
             imports = [./../home/default.nix];
           };
         }
-        inputs.nix-homebrew.darwinModules.nix-homebrew
-        {
-          nix-homebrew = {
-            enable = true;
-            enableRosetta = true;
-            autoMigrate = true;
-            mutableTaps = true;
-            user = "${username}";
-          };
-        }
-      ];
+          inputs.nix-homebrew.darwinModules.nix-homebrew
+          {
+            nix-homebrew = {
+              enable = true;
+              enableRosetta = true;
+              autoMigrate = true;
+              mutableTaps = true;
+              user = username;
+            };
+          }
+        ]
+        ++ hostSpecificModules;
     };
 
   mkNixos = {
