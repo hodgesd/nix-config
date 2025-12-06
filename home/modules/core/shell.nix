@@ -9,19 +9,14 @@
     enable = true;
     enableCompletion = true;
     autosuggestion.enable = true;
-    autocd = true; # Type .. to go up (no need for cd)
+    autocd = true;
 
     shellAliases = {
       "..." = "cd ../..";
     };
 
-    initExtra = ''
-      # Comma function for nix-index
-      , () {
-        nix run nixpkgs#comma -- "$@"
-      }
-
-      # ASCII art banner
+    # Only show banner on login shells (not every subshell)
+    loginExtra = ''
       ${pkgs.figurine}/bin/figurine -f "Doom.flf" mbp
     '';
   };
@@ -29,17 +24,8 @@
   # Environment variables
   home.sessionVariables = {
     EDITOR = "micro";
-    TERM = "xterm-256color";
     LLM_MODEL = "m7b";
-    CLICOLOR = "1";
-    LSCOLORS = "gxfxcxdxbxgggdabagacad";
   };
-
-  # PATH additions
-  home.sessionPath = [
-    "/opt/homebrew/bin"
-    "$HOME/go/bin"
-  ];
 
   programs.bash.enable = true;
 }
