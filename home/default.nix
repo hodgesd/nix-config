@@ -18,6 +18,7 @@
     ./modules/cli/fzf.nix
     ./modules/cli/eza.nix
     ./modules/cli/starship.nix
+    ./modules/cli/zoxide.nix
     ./modules/services/ssh.nix
     # Note: darwin-specific modules (swiftbar, aerospace) are in hosts/common/darwin/
   ];
