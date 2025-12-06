@@ -41,7 +41,6 @@
     wget # Command-line downloader
 
     # File & text utilities
-    comma # Run programs without installing them
     coreutils # GNU core utilities
     diffr # Side-by-side diffs with syntax highlighting
     difftastic # Structural diff tool
