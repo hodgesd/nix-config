@@ -160,7 +160,6 @@
   services.fstrim.enable = true;
   services.fwupd.enable = true;
   services.openssh.enable = true;
-  services.tailscale.enable = true;
 
   # services.sanoid = {
   #   enable = true;
@@ -263,13 +262,6 @@
       jbod = mkShare "/mnt/jbod";
       bigrust18 = mkShare "/mnt/bigrust18";
       downloads = mkShare "/mnt/downloads";
-    };
-  };
-
-  nix = {
-    settings = {
-      experimental-features = ["nix-command" "flakes"];
-      warn-dirty = false;
     };
   };
 }

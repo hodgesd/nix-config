@@ -44,8 +44,6 @@
     '';
   };
 
-  home-manager.useGlobalPkgs = true;
-  home-manager.useUserPackages = true;
   home-manager.users.alex = {imports = [./../../../home/alex.nix];};
   users.users.alex = {
     isNormalUser = true;
@@ -89,22 +87,10 @@
   hardware.nvidia.powerManagement.enable = true;
   hardware.nvidia-container-toolkit.enable = true;
 
-  virtualisation = {
-    docker = {
-      enable = true;
-      package = pkgs.docker_27;
-      #enableNvidia = true;
-      autoPrune = {
-        enable = true;
-        dates = "weekly";
-      };
-    };
-  };
+  virtualisation.docker.package = pkgs.docker_27;
 
-  nixpkgs.config.allowUnfree = true;
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "yes";
-  services.tailscale.enable = true;
 
   #   system.copySystemConfiguration = true;
   #   nix = {

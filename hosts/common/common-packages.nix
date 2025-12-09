@@ -4,9 +4,6 @@
   unstablePkgs,
   ...
 }: {
-  # Allow installation of non-free packages
-  nixpkgs.config.allowUnfree = true;
-
   # Globally installed packages on the system
   environment.systemPackages = with pkgs; [
     # From unstable channel

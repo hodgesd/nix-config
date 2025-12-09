@@ -35,6 +35,12 @@ in {
     repoPath = mkOption {
       type = types.nullOr types.path;
       default = null;
+      description = "Flake input path to the plugin repository (used as fallback)";
+    };
+    repoLocalPath = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = "Local filesystem path to the plugin repository (bypasses Nix store caching)";
     };
     repoFiles = mkOption {
       type = types.listOf types.str;
@@ -71,16 +77,19 @@ in {
 
     home.file =
       # (A) Files from your repo
-      (lib.optionalAttrs (cfg.repoPath != null && cfg.repoFiles != []) (
+      (lib.optionalAttrs ((cfg.repoLocalPath != null || cfg.repoPath != null) && cfg.repoFiles != []) (
+        let
+          # Use local path if provided (bypasses Nix caching), otherwise use flake input
+          sourcePath = if cfg.repoLocalPath != null then cfg.repoLocalPath else cfg.repoPath;
+          useOutOfStore = cfg.repoLocalPath != null;
+        in
         builtins.listToAttrs (map
-          (
-            fname:
-              lib.nameValuePair
-              "${pluginsDirAbs}/${fname}"
-              {
-                source = cfg.repoPath + "/${fname}";
-                executable = true;
-              }
+          (fname:
+            lib.nameValuePair
+            "${pluginsDirAbs}/${fname}"
+            (if useOutOfStore
+             then { source = config.lib.file.mkOutOfStoreSymlink "${sourcePath}/${fname}"; }
+             else { source = "${sourcePath}/${fname}"; executable = true; })
           )
           cfg.repoFiles)
       ))

@@ -35,7 +35,6 @@
     packages = with pkgs; [];
   };
 
-  nixpkgs.config.allowUnfree = true;
   environment.systemPackages = with pkgs; [
     htop
     tmux
@@ -62,19 +61,10 @@
   # List services that you want to enable:
   services.openssh.enable = true;
   services.qemuGuest.enable = true;
-  services.tailscale.enable = true;
 
   virtualisation = {
     containers.enable = true;
-    docker = {
-      enable = true;
-      package = pkgs.docker_27;
-      #enableNvidia = true;
-      autoPrune = {
-        enable = true;
-        dates = "weekly";
-      };
-    };
+    docker.package = pkgs.docker_27;
   };
 
   fileSystems."/mnt/jbod" = {

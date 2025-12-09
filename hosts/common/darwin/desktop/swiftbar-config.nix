@@ -1,4 +1,4 @@
-# hosts/common/darwin/swiftbar.nix
+# hosts/common/darwin/desktop/swiftbar-config.nix
 {
   config,
   pkgs,
@@ -17,11 +17,13 @@
       # Nix passes matching args to imported modules (same-behavior shown in the Flakes book).
       repoPath = inputs.swiftbar_plugins;
 
+      # Point to local git repo to bypass Nix store caching
+      repoLocalPath = "/Users/hodgesd/PycharmProjects/swiftbar_plugins";
+
       repoFiles = [
         "daily_news_uv.2hr.py"
         "bball.1d.py"
       ];
-      # Cache buster: 2025-12-06-18:05
     };
   };
 }

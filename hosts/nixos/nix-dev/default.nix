@@ -37,7 +37,6 @@
     settings.PermitRootLogin = "yes";
   };
   services.vscode-server.enable = true;
-  services.tailscale.enable = true;
   services.qemuGuest.enable = true;
 
   services.xserver.enable = true;

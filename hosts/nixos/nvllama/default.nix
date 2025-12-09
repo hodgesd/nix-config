@@ -83,11 +83,8 @@
   # List services that you want to enable:
   services.openssh.enable = true;
   services.qemuGuest.enable = true;
-  services.tailscale.enable = true;
 
   # userland
-  home-manager.useGlobalPkgs = true;
-  home-manager.useUserPackages = true;
   home-manager.users.alex = {imports = [./../../../home/alex.nix];};
   users.users.alex = {
     isNormalUser = true;
@@ -99,7 +96,6 @@
   };
 
   # System packages configuration
-  nixpkgs.config.allowUnfree = true;
   environment.systemPackages = with pkgs; [
     ansible
     colmena
@@ -126,15 +122,6 @@
       powerManagement.enable = true;
     };
     nvidia-container-toolkit.enable = true;
-  };
-
-  # Virtualisation configuration
-  virtualisation.docker = {
-    enable = true;
-    autoPrune = {
-      enable = true;
-      dates = "weekly";
-    };
   };
 
   # # Filesystem mounts

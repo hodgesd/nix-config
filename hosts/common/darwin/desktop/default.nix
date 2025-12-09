@@ -5,6 +5,6 @@
     ./karabiner.nix
     ./skhd.nix
     ./aerospace.nix
-    ./swiftbar.nix
+    ./swiftbar-config.nix
   ];
 }
