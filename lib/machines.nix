@@ -82,18 +82,4 @@
     primaryUse = "ai-inference";
   };
 
-  nixos-air = {
-    hostname = "nixos-air";
-    type = "nixos";
-    chip = "i7-5650u";
-    formFactor = "laptop";
-    primaryUse = "testing";
-    specs = {
-      ram = "8GB";
-      storage = "500GB";
-      cpu = 2;
-      gpu = 1;
-    };
-    screen = "13\"";
-  };
 }

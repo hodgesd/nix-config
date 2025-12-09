@@ -44,10 +44,10 @@
     '';
   };
 
-  home-manager.users.alex = {imports = [./../../../home/alex.nix];};
-  users.users.alex = {
+  home-manager.users.${username} = {imports = [./../../../home/default.nix];};
+  users.users.${username} = {
     isNormalUser = true;
-    description = "alex";
+    description = username;
     extraGroups = ["wheel" "docker"];
     packages = with pkgs; [
       home-manager

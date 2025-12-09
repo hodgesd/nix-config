@@ -36,13 +36,11 @@
 
   users.users.root.openssh.authorizedKeys.keys = [''ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7aI+bMjxTx7L9FRzJlk4UFCyYPzHs9Xs+vAhvPEYtk'' ''ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILkK1tv8BNtQJFt+n5yOJf6TQ/Ms9WkRi56MpyZOlWIk'' ''ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA2bSgQvelWzGLh4v1nv+OYx8YNijAikvVq4E9qXDWYN'' ''ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII+F3XpAIh4l8GfPgwoTqWQj0OdZRnnG9Ak4Z0wu0Upj''];
 
-  home-manager.useGlobalPkgs = true;
-  home-manager.useUserPackages = true;
-  home-manager.users.alex = {imports = [./../../../home/alex.nix];};
+  home-manager.users.${username} = {imports = [./../../../home/default.nix];};
 
-  users.users.alex = {
+  users.users.${username} = {
     isNormalUser = true;
-    description = "alex";
+    description = username;
     extraGroups = ["networkmanager" "wheel" "docker"];
     packages = with pkgs; [
       home-manager

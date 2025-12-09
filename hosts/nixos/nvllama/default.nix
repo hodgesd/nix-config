@@ -6,13 +6,10 @@
   ...
 }: {
   imports = [
-    inputs.sops-nix.nixosModules.sops
     ./hardware-configuration.nix
-    #./../../../home/alex.nix
     ./../../common/nixos-common.nix
     ./../../common/common-packages.nix
-    #./beszel.nix
-    ./../../../modules/beszel-agent.nix
+    ./beszel.nix
   ];
 
   ## DEPLOYMENT
@@ -85,10 +82,10 @@
   services.qemuGuest.enable = true;
 
   # userland
-  home-manager.users.alex = {imports = [./../../../home/alex.nix];};
-  users.users.alex = {
+  home-manager.users.${username} = {imports = [./../../../home/default.nix];};
+  users.users.${username} = {
     isNormalUser = true;
-    description = "alex";
+    description = username;
     extraGroups = ["networkmanager" "wheel" "docker"];
     packages = with pkgs; [
       home-manager
