@@ -20,6 +20,11 @@
       executable = true;
     };
 
+    # Reload skhd.zig after configuration changes
+    home.activation.reloadSkhd = ''
+      run /opt/homebrew/bin/skhd -r || echo "skhd reload failed (this is normal if skhd isn't running yet)"
+    '';
+
     home.file.".skhdrc".text = ''
       # Meh key (shift + ctrl + alt) shortcuts
       shift + ctrl + alt - s : open -a "Safari"

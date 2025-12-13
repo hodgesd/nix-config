@@ -42,7 +42,8 @@
           ]
         }
       '';
-      force = true;
+      # Don't force overwrite - let Karabiner manage device info
+      force = false;
     };
   };
 }
