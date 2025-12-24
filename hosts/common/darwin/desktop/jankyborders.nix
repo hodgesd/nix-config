@@ -12,7 +12,7 @@
       enable = true;
       config = {
         ProgramArguments = [
-          "/etc/profiles/per-user/${config.majordouble.user}/bin/borders"
+          "/run/current-system/sw/bin/borders"
           "active_color=0xff00ff00"
           "inactive_color=0xff444444"
           "width=8.0"
