@@ -27,6 +27,7 @@
       "balenaetcher"
       "brave-browser"
       "chatgpt"
+      "cursor"
       "default-folder-x"
       "discord"
       "ghostty"

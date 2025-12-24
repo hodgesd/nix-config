@@ -1,46 +1,51 @@
 # hosts/common/darwin/karabiner.nix
-{
-  config,
-  lib,
-  pkgs,
-  ...
+{ config
+, lib
+, pkgs
+, ...
 }: {
   home-manager.users.${config.majordouble.user} = {
     xdg.configFile."karabiner/karabiner.json" = {
       text = ''
-        {
-          "global": { "check_for_updates_on_startup": true },
-          "profiles": [
-            {
-              "name": "Default",
-              "selected": true,
-              "virtual_hid_keyboard": {
-              "keyboard_type": "ansi"
-              },
-              "complex_modifications": {
-                "rules": [
+              {
+                "global": {
+          "ask_for_confirmation_before_quitting": true,
+          "check_for_updates_on_startup": false,
+          "show_in_menu_bar": false,
+          "show_profile_name_in_menu_bar": false,
+          "unsafe_ui": false
+        },
+                "profiles": [
                   {
-                    "description": "Caps Lock: tap = toggle, hold = meh",
-                    "manipulators": [
-                      {
-                        "from": { "key_code": "caps_lock" },
-                        "to": [{
-                          "key_code": "left_shift",
-                          "modifiers": ["left_control", "left_option"]
-                        }],
-                        "to_if_alone": [{
-                          "key_code": "caps_lock",
-                          "hold_down_milliseconds": 200
-                        }],
-                        "type": "basic"
-                      }
-                    ]
+                    "name": "Default",
+                    "selected": true,
+                    "virtual_hid_keyboard": {
+                    "keyboard_type": "ansi"
+                    },
+                    "complex_modifications": {
+                      "rules": [
+                        {
+                          "description": "Caps Lock: tap = toggle, hold = meh",
+                          "manipulators": [
+                            {
+                              "from": { "key_code": "caps_lock" },
+                              "to": [{
+                                "key_code": "left_shift",
+                                "modifiers": ["left_control", "left_option"]
+                              }],
+                              "to_if_alone": [{
+                                "key_code": "caps_lock",
+                                "hold_down_milliseconds": 200
+                              }],
+                              "type": "basic"
+                            }
+                          ]
+                        }
+                      ]
+                    }
                   }
                 ]
               }
-            }
-          ]
-        }
       '';
       # Don't force overwrite - let Karabiner manage device info
       force = false;

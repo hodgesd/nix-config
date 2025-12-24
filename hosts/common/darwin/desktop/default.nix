@@ -4,7 +4,7 @@
   imports = [
     ./karabiner.nix
     ./skhd.nix
-    ./aerospace.nix
+    ./jankyborders.nix
     ./swiftbar-config.nix
   ];
 }

@@ -285,7 +285,7 @@ hosts/
   nixos/{hostname}/             # Per-host NixOS configs
 home/
   hodgesd.nix                   # User config entry point
-  {tool}/                       # Tool-specific configs (aerospace, nvim, etc.)
+  {tool}/                       # Tool-specific configs (nvim, etc.)
 modules/                        # Custom reusable modules
 docs/                           # Documentation
   STRUCTURE.md                  # Detailed directory layout

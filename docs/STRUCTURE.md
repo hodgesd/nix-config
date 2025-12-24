@@ -44,7 +44,6 @@ nix-config/
 │       └── ...
 ├── home/                  # Home Manager configurations
 │   ├── hodgesd.nix        # User configuration
-│   ├── aerospace/         # Aerospace configs
 │   ├── nvim/              # Neovim configs
 │   ├── starship/          # Starship prompt
 │   ├── ssh/               # SSH configs

@@ -20,7 +20,7 @@
     ./modules/cli/starship.nix
     ./modules/cli/zoxide.nix
     ./modules/services/ssh.nix
-    # Note: darwin-specific modules (swiftbar, aerospace) are in hosts/common/darwin/
+    # Note: darwin-specific modules (swiftbar, jankyborders) are in hosts/common/darwin/
   ];
 
   programs.home-manager.enable = true;
