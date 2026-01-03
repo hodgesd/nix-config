@@ -1,5 +1,11 @@
 # Host-specific configuration for mbp (M3 Pro Laptop)
 {machine, ...}: {
+  # Enable wallpaper management
+  majordouble.wallpaper = {
+    enable = true;
+    path = "/Users/hodgesd/Documents/Wallpapers/Gulfstream GV at Waimea.jpg";
+  };
+
   # Laptop-specific power management
   system.defaults.CustomUserPreferences = {
     "com.apple.menuextra.battery" = {

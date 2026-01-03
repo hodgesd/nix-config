@@ -29,6 +29,7 @@
       "chatgpt"
       "cursor"
       "default-folder-x"
+      "desktoppr" # Command-line wallpaper manager
       "discord"
       "ghostty"
       "istat-menus"

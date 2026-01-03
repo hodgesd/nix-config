@@ -62,6 +62,12 @@
     };
 
     wallpaper = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable automatic wallpaper rotation setup via AppleScript (may not work on all macOS versions)";
+      };
+
       path = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;

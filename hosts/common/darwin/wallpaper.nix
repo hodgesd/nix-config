@@ -12,13 +12,14 @@
     else "/Users/${config.majordouble.user}/Documents/Wallpapers";
   
   wallpaperConfig = {
+    enable = config.majordouble.wallpaper.enable;
     path = wallpaperPath;
     changeInterval = config.majordouble.wallpaper.changeInterval;
   };
 in {
   # Add wallpaper module to home-manager sharedModules
   home-manager.sharedModules = [
-    ../../modules/wallpaper.nix
+    ../../../modules/wallpaper.nix
   ];
 
   # Pass wallpaper config to home-manager via the user's _module.args

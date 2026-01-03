@@ -1,39 +1,30 @@
 # modules/wallpaper.nix
-# Home Manager module for macOS wallpaper rotation
+# Home Manager module for macOS wallpaper management using desktoppr
+# https://github.com/scriptingosx/desktoppr
 {
   config,
   lib,
+  pkgs,
   wallpaper ? null,
   ...
-}: lib.mkIf (wallpaper != null) {
-  # Use home-manager activation script to set wallpaper (runs as user)
+}: lib.mkIf (wallpaper != null && wallpaper.enable) {
+  # Set wallpaper during home-manager activation
   home.activation.setWallpaper = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    echo "Setting up wallpaper rotation for ${wallpaper.path}..."
+    echo "Setting wallpaper to ${wallpaper.path}..."
     WP_PATH="${wallpaper.path}"
-    WP_INTERVAL="${toString wallpaper.changeInterval}"
     
-    if [ -d "$WP_PATH" ]; then
-      echo "Wallpaper directory found: $WP_PATH"
-      /usr/bin/osascript <<EOT || true
-        tell application "System Events"
-          -- Convert the path to a format macOS automation understands
-          set wpFolder to POSIX file "$WP_PATH"
-          
-          repeat with aDesktop in every desktop
-            -- Set the folder for rotation
-            set picture folder of aDesktop to wpFolder
-            
-            -- Set change interval (default: 30 minutes / 1800 seconds)
-            set change interval of aDesktop to $WP_INTERVAL
-            
-            -- Match the screenshot: Check the 'Randomly' box
-            set random order of aDesktop to true
-          end repeat
-        end tell
-EOT
-      echo "Wallpaper rotation configured successfully."
+    if [ ! -f "$WP_PATH" ]; then
+      echo "Warning: Wallpaper file not found: $WP_PATH"
+      echo "Skipping wallpaper setup."
+    elif [ -x "/usr/local/bin/desktoppr" ]; then
+      # desktoppr is installed - set the wallpaper
+      echo "Setting wallpaper with desktoppr..."
+      $DRY_RUN_CMD /usr/local/bin/desktoppr "$WP_PATH"
+      echo "Wallpaper set successfully."
     else
-      echo "Warning: Wallpaper directory not found: $WP_PATH"
+      echo "Warning: desktoppr not found at /usr/local/bin/desktoppr"
+      echo "Install it with: brew install --cask desktoppr"
+      echo "Or run 'just switch' to install via Homebrew"
     fi
   '';
 }
