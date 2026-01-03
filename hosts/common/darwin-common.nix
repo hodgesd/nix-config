@@ -11,6 +11,7 @@
     ./darwin/system-defaults.nix
     ./darwin/fonts.nix
     ./darwin/packages.nix
+    ./darwin/wallpaper.nix
     ./darwin/desktop
   ];
 

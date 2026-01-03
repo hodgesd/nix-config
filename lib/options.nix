@@ -60,5 +60,19 @@
         };
       };
     };
+
+    wallpaper = {
+      path = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Path to wallpaper directory. Defaults to /Users/{username}/Documents/Wallpapers";
+      };
+
+      changeInterval = lib.mkOption {
+        type = lib.types.int;
+        default = 1800;
+        description = "Wallpaper change interval in seconds (default: 1800 = 30 minutes)";
+      };
+    };
   };
 }
