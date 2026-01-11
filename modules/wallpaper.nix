@@ -13,8 +13,8 @@
     echo "Setting wallpaper to ${wallpaper.path}..."
     WP_PATH="${wallpaper.path}"
     
-    if [ ! -f "$WP_PATH" ]; then
-      echo "Warning: Wallpaper file not found: $WP_PATH"
+    if [ ! -e "$WP_PATH" ]; then
+      echo "Warning: Wallpaper path not found: $WP_PATH"
       echo "Skipping wallpaper setup."
     elif [ -x "/usr/local/bin/desktoppr" ]; then
       # desktoppr is installed - set the wallpaper
