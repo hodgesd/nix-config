@@ -72,6 +72,40 @@ else
 fi
 echo ""
 
+echo "=== Identifying Non-Homebrew Apps ==="
+if command -v brew &> /dev/null; then
+    echo "Comparing installed apps with Homebrew casks..."
+    
+    # Get list of apps managed by Homebrew
+    homebrew_apps=$(brew list --cask 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -d ' -')
+    
+    # Get all installed apps
+    all_apps=$(find /Applications ~/Applications -maxdepth 2 -name "*.app" 2>/dev/null)
+    
+    non_homebrew_apps=()
+    while IFS= read -r app_path; do
+        if [ -n "$app_path" ]; then
+            app_name=$(basename "$app_path" .app)
+            app_normalized=$(echo "$app_name" | tr '[:upper:]' '[:lower:]' | tr -d ' -')
+            
+            # Check if this app is NOT in Homebrew list
+            if ! echo "$homebrew_apps" | grep -q "^${app_normalized}$"; then
+                non_homebrew_apps+=("$app_name")
+            fi
+        fi
+    done <<< "$all_apps"
+    
+    if [ ${#non_homebrew_apps[@]} -gt 0 ]; then
+        echo "Found ${#non_homebrew_apps[@]} apps not installed via Homebrew:"
+        printf '%s\n' "${non_homebrew_apps[@]}" | sort
+    else
+        echo "All apps appear to be managed by Homebrew"
+    fi
+else
+    echo "Homebrew not installed - cannot compare"
+fi
+echo ""
+
 echo "=== Next Steps ==="
 echo "1. Review the lists above"
 echo "2. Compare against hosts/common/darwin/homebrew.nix in the nix-config"
@@ -87,12 +121,72 @@ echo ""
 echo "5. After updating homebrew.nix, proceed with nix-darwin installation"
 echo ""
 
-# Optional: Save to file
-echo "💾 Save this output to a file? (y/n)"
+# Optional: Generate manual install list
+echo "📝 Generate a list of apps to manually install? (y/n)"
+read -r response
+if [[ "$response" =~ ^[Yy]$ ]]; then
+    manual_apps_file="$HOME/manual-apps-$(date +%Y%m%d-%H%M%S).md"
+    
+    echo "# Manually Installed Apps" > "$manual_apps_file"
+    echo "" >> "$manual_apps_file"
+    echo "Apps that need to be installed manually (not available via Homebrew/MAS):" >> "$manual_apps_file"
+    echo "" >> "$manual_apps_file"
+    
+    if command -v brew &> /dev/null && [ ${#non_homebrew_apps[@]} -gt 0 ]; then
+        echo "Select apps to track as manual installs (space-separated numbers, or 'all', or 'done'):"
+        echo ""
+        
+        # Display numbered list
+        i=1
+        for app in "${non_homebrew_apps[@]}"; do
+            echo "$i) $app"
+            ((i++))
+        done
+        echo ""
+        echo "Enter selection (e.g., '1 3 5' or 'all' or 'done' to skip):"
+        read -r selection
+        
+        selected_apps=()
+        if [[ "$selection" == "all" ]]; then
+            selected_apps=("${non_homebrew_apps[@]}")
+        elif [[ "$selection" != "done" ]] && [[ -n "$selection" ]]; then
+            for num in $selection; do
+                if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le ${#non_homebrew_apps[@]} ]; then
+                    idx=$((num - 1))
+                    selected_apps+=("${non_homebrew_apps[$idx]}")
+                fi
+            done
+        fi
+        
+        if [ ${#selected_apps[@]} -gt 0 ]; then
+            for app in "${selected_apps[@]}"; do
+                echo "- [ ] **$app**" >> "$manual_apps_file"
+                echo "  - Download: [Add URL]" >> "$manual_apps_file"
+                echo "  - Notes: " >> "$manual_apps_file"
+                echo "" >> "$manual_apps_file"
+            done
+            echo "✓ Manual apps list saved to: $manual_apps_file"
+            echo ""
+            echo "You can add this to your README or keep it as a reference."
+        else
+            echo "No apps selected."
+            rm "$manual_apps_file"
+        fi
+    else
+        echo "No non-Homebrew apps to track."
+        rm "$manual_apps_file"
+    fi
+fi
+echo ""
+
+# Optional: Save full audit to file
+echo "💾 Save full audit output to a file? (y/n)"
 read -r response
 if [[ "$response" =~ ^[Yy]$ ]]; then
     output_file="$HOME/mac-mini-audit-$(date +%Y%m%d-%H%M%S).txt"
-    $0 2>&1 | grep -v "Save this output" > "$output_file"
-    echo "✓ Saved to: $output_file"
+    # Re-run script without prompts and save
+    echo "✓ Saving audit to: $output_file"
+    # Note: This won't include the interactive parts
+    echo "Run script again and redirect output for complete capture: ./pre_install_audit.sh > output.txt"
 fi
 

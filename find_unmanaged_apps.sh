@@ -50,10 +50,12 @@ if [ ${#installed_apps[@]} -eq 0 ]; then
     exit 0
 fi
 
-echo "Evaluating Nix configuration with 'nix config show --json'..."
-# Get managed cask and masApp names from the Nix configuration using jq
-# Corrected jq path to navigate into the '.value' of the 'homebrew' option
-managed_names_raw=$(nix config show --json --show-trace | jq -r '(.homebrew.value? // {}) | (.casks[]? // empty), ((.masApps? // {}) | keys[]? // empty)')
+echo "Evaluating Nix darwin configuration..."
+# Get managed cask and masApp names from the Nix darwin configuration using jq
+# This reads the actual darwin configuration, not the nix daemon settings
+# Note: Replace 'mini' with your hostname if different
+HOSTNAME=$(hostname -s)
+managed_names_raw=$(nix eval .#darwinConfigurations.${HOSTNAME}.config.homebrew --json 2>/dev/null | jq -r '(.casks[]? // empty), ((.masApps? // {}) | keys[]? // empty)')
 
 # Create a temporary file to store normalized managed names
 # Use a trap to ensure the temp file is removed even if the script errors
@@ -67,15 +69,16 @@ echo "$managed_names_raw" | while IFS= read -r name; do
     # Check if name is not empty (jq might output empty lines)
     if [[ -n "$name" ]]; then
         normalized_managed=$(normalize_name "$name")
-        echo "DEBUG: Managed raw '$name' normalized to '$normalized_managed'" >&2 # Debug print
+        # Uncomment for debug: echo "DEBUG: Managed raw '$name' normalized to '$normalized_managed'" >&2
         echo "$normalized_managed" >> "$managed_names_file"
     fi
 done
 sort -u "$managed_names_file" -o "$managed_names_file"
 
-echo "DEBUG: Contents of normalized managed names file ($managed_names_file):" >&2
-cat "$managed_names_file" >&2
-echo "---" >&2
+# Uncomment for debug output:
+# echo "DEBUG: Contents of normalized managed names file ($managed_names_file):" >&2
+# cat "$managed_names_file" >&2
+# echo "---" >&2
 
 
 echo "Comparing installed apps against managed list..."
