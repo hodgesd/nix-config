@@ -27,6 +27,7 @@
       "balenaetcher"
       "brave-browser"
       "chatgpt"
+      "citrix-workspace"
       "cursor"
       "default-folder-x"
       "desktoppr" # Command-line wallpaper manager
