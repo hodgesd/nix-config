@@ -158,10 +158,10 @@ hostname -s
 Using the [official Nix installer](https://nixos.org/download.html):
 
 ```bash
-sh <(curl -L https://nixos.org/nix/install) --daemon
+sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)
 ```
 
-This installs Nix in multi-user mode (recommended for macOS) with:
+The installer automatically uses multi-user mode on macOS, which provides:
 - ✅ Flakes enabled automatically on macOS
 - ✅ Nix daemon for better performance
 - ✅ Proper permissions setup
