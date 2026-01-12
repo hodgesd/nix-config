@@ -178,8 +178,14 @@ First-time installation:
 
 ```bash
 cd ~/nix-config
-nix run nix-darwin -- switch --flake .#<hostname>
+sudo nix --extra-experimental-features "nix-command flakes" run nix-darwin -- switch --flake .#<hostname>
+
+# Examples:
+# nix --extra-experimental-features "nix-command flakes" run nix-darwin -- switch --flake .#mini
+# nix --extra-experimental-features "nix-command flakes" run nix-darwin -- switch --flake .#mbp
 ```
+
+⚠️ **Note:** Experimental features flags are required for first-time bootstrap. After installation, these are enabled automatically.
 
 ⏱️ **Expected time:** 15-30 minutes
 
