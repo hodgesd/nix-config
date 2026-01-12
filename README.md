@@ -20,12 +20,12 @@ A modular, well-documented Nix configuration managing both macOS (via nix-darwin
 
 ## 💻 Machines
 
-| Hostname    | OS | Model                  | Storage (Ram/HD) | Cores (CPU/GPU) |
-|-------------|--|------------------------|------------------|-----------------|
-| `mini`      | 🍏 | Mac Mini M2 Pro        | —                |                 |
-| `mbp`       | 🍏 | MacBook Pro M3 Pro 14" | 18GB / 1TB       | 12 / 18         |
-| `air`       | 🍏 | MacBook Air M1 13"     | 16GB / 500GB     | 8 / 7           |
-| `nixos-air` | ❄️ | MacBook Air i7-5650U   | 8GB / 500GB      | 2 / 1           |
+| Hostname    | OS | Model                  | User           | Storage (Ram/HD) | Cores (CPU/GPU) |
+|-------------|--|------------------------|----------------|------------------|-----------------|
+| `mini`      | 🍏 | Mac Mini M2 Pro        | `derrickhodges`| —                |                 |
+| `mbp`       | 🍏 | MacBook Pro M3 Pro 14" | `hodgesd`      | 18GB / 1TB       | 12 / 18         |
+| `air`       | 🍏 | MacBook Air M1 13"     | `hodgesd`      | 16GB / 500GB     | 8 / 7           |
+| `nixos-air` | ❄️ | MacBook Air i7-5650U   | `hodgesd`      | 8GB / 500GB      | 2 / 1           |
 
 ## 🍎 Mac Installation
 
@@ -38,7 +38,7 @@ Choose your installation path:
 ### Fresh Install
 
 **Prerequisites**
-- [ ] Create user `hodgesd`
+- [ ] Create user (see [Machines](#machines) table for username per host)
 - [ ] Update macOS: **System Settings** → **Software Update** → **Upgrade Now**
 
 **Step 1: Install Xcode Command Line Tools**
@@ -226,7 +226,7 @@ Set up wallpaper rotation manually via System Settings:
 
 2. Configure in System Settings:
    - Open **System Settings** > **Wallpaper**
-   - Add folder: `/Users/hodgesd/Documents/Wallpapers/`
+   - Add folder: `~/Documents/Wallpapers/`
    - Enable **"Change picture"** with desired interval
 
 **Manually Installed Apps**
