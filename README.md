@@ -155,13 +155,18 @@ hostname -s
 
 **Step B: Install Nix**
 
-Using the [Determinate Nix Installer](https://determinate.systems/posts/determinate-nix-installer/):
+Using the [official Nix installer](https://nixos.org/download.html):
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)
 ```
 
-Restart terminal or source:
+The installer automatically uses multi-user mode on macOS, which provides:
+- ✅ Flakes enabled automatically on macOS
+- ✅ Nix daemon for better performance
+- ✅ Proper permissions setup
+
+After installation completes, restart your terminal or source:
 
 ```bash
 . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
