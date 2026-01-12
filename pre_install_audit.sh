@@ -184,9 +184,116 @@ echo "💾 Save full audit output to a file? (y/n)"
 read -r response
 if [[ "$response" =~ ^[Yy]$ ]]; then
     output_file="$HOME/mac-mini-audit-$(date +%Y%m%d-%H%M%S).txt"
-    # Re-run script without prompts and save
+    
+    # Re-run the script non-interactively and capture output
     echo "✓ Saving audit to: $output_file"
-    # Note: This won't include the interactive parts
-    echo "Run script again and redirect output for complete capture: ./pre_install_audit.sh > output.txt"
+    
+    # Create a temporary script that answers 'n' to all prompts
+    {
+        echo "=== Mac Mini Pre-Install Audit ==="
+        echo "Run this before installing nix-darwin to inventory your current setup"
+        echo ""
+        
+        echo "=== Current Hostname ==="
+        hostname -s
+        echo ""
+        
+        echo "=== Homebrew Status ==="
+        if command -v brew &> /dev/null; then
+            echo "✓ Homebrew is installed"
+            echo "Version: $(brew --version | head -n1)"
+        else
+            echo "✗ Homebrew not installed"
+        fi
+        echo ""
+        
+        echo "=== Homebrew Casks (GUI Applications) ==="
+        if command -v brew &> /dev/null; then
+            cask_count=$(brew list --cask 2>/dev/null | wc -l | tr -d ' ')
+            echo "Found $cask_count casks:"
+            brew list --cask 2>/dev/null || echo "No casks installed"
+        else
+            echo "Homebrew not installed - skipping"
+        fi
+        echo ""
+        
+        echo "=== Homebrew Formulas (CLI Tools) ==="
+        if command -v brew &> /dev/null; then
+            formula_count=$(brew list --formula 2>/dev/null | wc -l | tr -d ' ')
+            echo "Found $formula_count formulas:"
+            brew list --formula 2>/dev/null || echo "No formulas installed"
+        else
+            echo "Homebrew not installed - skipping"
+        fi
+        echo ""
+        
+        echo "=== All Applications in /Applications ==="
+        app_count=$(find /Applications -maxdepth 2 -name "*.app" 2>/dev/null | wc -l | tr -d ' ')
+        echo "Found $app_count applications:"
+        find /Applications -maxdepth 2 -name "*.app" 2>/dev/null | sed 's|.*/||' | sed 's/.app$//' | sort
+        echo ""
+        
+        echo "=== All Applications in ~/Applications ==="
+        if [ -d ~/Applications ]; then
+            user_app_count=$(find ~/Applications -maxdepth 2 -name "*.app" 2>/dev/null | wc -l | tr -d ' ')
+            echo "Found $user_app_count applications:"
+            find ~/Applications -maxdepth 2 -name "*.app" 2>/dev/null | sed 's|.*/||' | sed 's/.app$//' | sort
+        else
+            echo "~/Applications directory does not exist"
+        fi
+        echo ""
+        
+        echo "=== Xcode Command Line Tools ==="
+        if xcode-select -p &> /dev/null; then
+            echo "✓ Installed at: $(xcode-select -p)"
+        else
+            echo "✗ Not installed"
+        fi
+        echo ""
+        
+        echo "=== Nix Status ==="
+        if command -v nix &> /dev/null; then
+            echo "✓ Nix is installed"
+            echo "Version: $(nix --version)"
+        else
+            echo "✗ Nix not installed"
+        fi
+        echo ""
+        
+        echo "=== Identifying Non-Homebrew Apps ==="
+        if command -v brew &> /dev/null; then
+            echo "Comparing installed apps with Homebrew casks..."
+            
+            homebrew_apps=$(brew list --cask 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -d ' -')
+            all_apps=$(find /Applications ~/Applications -maxdepth 2 -name "*.app" 2>/dev/null)
+            
+            non_homebrew_apps_list=()
+            while IFS= read -r app_path; do
+                if [ -n "$app_path" ]; then
+                    app_name=$(basename "$app_path" .app)
+                    app_normalized=$(echo "$app_name" | tr '[:upper:]' '[:lower:]' | tr -d ' -')
+                    
+                    if ! echo "$homebrew_apps" | grep -q "^${app_normalized}$"; then
+                        non_homebrew_apps_list+=("$app_name")
+                    fi
+                fi
+            done <<< "$all_apps"
+            
+            if [ ${#non_homebrew_apps_list[@]} -gt 0 ]; then
+                echo "Found ${#non_homebrew_apps_list[@]} apps not installed via Homebrew:"
+                printf '%s\n' "${non_homebrew_apps_list[@]}" | sort
+            else
+                echo "All apps appear to be managed by Homebrew"
+            fi
+        else
+            echo "Homebrew not installed - cannot compare"
+        fi
+        echo ""
+        
+        echo "=== Audit Complete ==="
+        echo "Saved: $(date)"
+    } > "$output_file"
+    
+    echo "✓ Saved to: $output_file"
 fi
 
