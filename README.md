@@ -240,6 +240,15 @@ Set up wallpaper rotation manually via System Settings:
    - Add folder: `~/Documents/Wallpapers/`
    - Enable **"Change picture"** with desired interval
 
+**Hotkeys (skhd + Karabiner Elements)**
+
+1. Launch Karabiner Elements: `open -a Karabiner-Elements`
+2. Grant Accessibility permissions: **System Settings** → **Privacy & Security** → **Accessibility** → Enable `skhd` and `Karabiner-Elements`
+3. Start skhd service: `brew services start skhd-zig`
+4. Test: Press `shift + ctrl + alt + y` (creates `~/skhd-test.log`)
+
+**Note:** Enable "Launch at login" in Karabiner Elements preferences.
+
 **Manually Installed Apps**
 
 Some apps are not available via Nix/Homebrew and must be installed manually:
