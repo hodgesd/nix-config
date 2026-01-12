@@ -29,7 +29,7 @@ A modular, well-documented Nix configuration managing both macOS (via nix-darwin
 
 ## 🍎 Mac Installation
 
-> **Note:** For **existing systems** with apps/data, see the [Safe Migration Guide](pre_install_audit.sh) to preserve your apps.
+> **Note:** For **existing systems** with apps/data, see [Existing System Migration](#existing-system-migration) below to preserve your apps.
 
 ### Fresh Install Checklist
 
@@ -113,33 +113,61 @@ darwin-rebuild switch --flake .#<hostname>
 
 ### Existing System Migration
 
-If you have an existing Mac with apps and data, use the migration workflow:
+If you have an existing Mac with apps and data, use this workflow to preserve your apps:
 
-**1. Run Pre-Install Audit**
+**1. Install Prerequisites**
 
 ```bash
-cd ~/nix-config
+xcode-select --install  # If not already installed
+```
+
+**2. Clone Repository**
+
+```bash
+cd ~
+git clone https://github.com/hodgesd/nix-config.git
+cd nix-config
+```
+
+**3. Run Pre-Install Audit**
+
+Audit your current system to identify apps to preserve:
+
+```bash
 ./pre_install_audit.sh
 ```
 
-**2. Review and Preserve Apps**
+This will:
+- List all installed Homebrew casks and formulas
+- Show all applications in /Applications
+- Identify apps NOT installed via Homebrew
+- Optionally generate a manual apps checklist
+
+**4. Review and Update Configuration**
 
 - Compare audit output with `hosts/common/darwin/homebrew.nix`
-- Add important apps to the config before installing
-- See migration plan for detailed steps
+- Add important Homebrew apps to `homebrew.casks` or `homebrew.brews`
+- Note apps that need manual reinstall (non-Homebrew/MAS apps are safe from removal)
 
-**3. Temporarily Disable Cleanup**
+**5. Temporarily Disable Cleanup**
 
-In `hosts/common/darwin/homebrew.nix`, set:
+Before the first build, edit `hosts/common/darwin/homebrew.nix`:
 
 ```nix
 onActivation = {
-  cleanup = "none";  # Prevents app removal during first install
+  cleanup = "none";  # Prevents Homebrew app removal during first install
+  autoUpdate = true;
+  upgrade = true;
+};
 ```
 
-**4. Follow Fresh Install Steps 3-9**
+**6. Follow Fresh Install Steps 5-9**
 
-After nix-darwin is installed, use `find_unmanaged_apps.sh` to identify remaining unmanaged apps.
+Continue with hostname setup, Nix install, and bootstrap from the Fresh Install section above.
+
+**7. Post-Install Cleanup (Optional)**
+
+After verifying everything works, use `find_unmanaged_apps.sh` to identify remaining unmanaged apps, then optionally re-enable cleanup in `homebrew.nix`.
 
 ### Post-Install Configuration
 
@@ -238,7 +266,11 @@ For more, see [CUSTOMIZATION.md](docs/CUSTOMIZATION.md).
 
 ## 📝 Helper Scripts
 
-- `pre_install_audit.sh` - Audit system before installing nix-darwin
-- `find_unmanaged_apps.sh` - Find apps not managed by nix after installation
-- `set_mac_name.sh` - Easily set hostname to match configuration
-- `find_unmanaged_apps.sh` - Identify apps not in your nix config
+- **`pre_install_audit.sh`** - Audit system BEFORE installing nix-darwin
+  - Lists all Homebrew casks/formulas
+  - Identifies non-Homebrew apps
+  - Generates manual app checklist
+- **`find_unmanaged_apps.sh`** - Find apps not managed by nix AFTER installation
+  - Compares installed apps with nix config
+  - Identifies apps to add to homebrew.nix
+- **`set_mac_name.sh`** - Set hostname to match configuration
