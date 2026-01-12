@@ -29,27 +29,25 @@ A modular, well-documented Nix configuration managing both macOS (via nix-darwin
 
 ## 🍎 Mac Installation
 
-> **Note:** For **existing systems** with apps/data, see [Existing System Migration](#existing-system-migration) below to preserve your apps.
+Choose your installation path:
+- **[Fresh Install](#fresh-install)** - Brand new Mac, no existing apps
+- **[Existing System](#existing-system)** - Mac with apps/data to preserve
 
-### Fresh Install Checklist
+---
 
-Use this for brand new Mac installations with no existing setup.
+### Fresh Install
 
-**1. Create User**
-
+**Prerequisites**
 - [ ] Create user `hodgesd`
+- [ ] Update macOS: **System Settings** → **Software Update** → **Upgrade Now**
 
-**2. Update macOS**
-
-- [ ] Open **System Settings** → **Software Update** → **Upgrade Now**
-
-**3. Install Xcode Command Line Tools**
+**Step 1: Install Xcode Command Line Tools**
 
 ```bash
 xcode-select --install
 ```
 
-**4. Clone Nix-Config Repo**
+**Step 2: Clone Repository**
 
 ```bash
 cd ~
@@ -57,20 +55,89 @@ git clone https://github.com/hodgesd/nix-config.git
 cd nix-config
 ```
 
-**5. Set Machine Hostname**
+**→ Go to [Common Installation Steps](#common-installation-steps)**
 
-Set to one of the [machine names above](#machines):
+---
+
+### Existing System
+
+**Prerequisites**
+- [ ] Time Machine backup recommended
+- [ ] Block out 1-2 hours for installation
+
+**Step 1: Install Xcode Command Line Tools**
+
+```bash
+xcode-select --install  # Skip if already installed
+```
+
+**Step 2: Clone Repository**
+
+```bash
+cd ~
+git clone https://github.com/hodgesd/nix-config.git
+cd nix-config
+```
+
+**Step 3: Run Pre-Install Audit**
+
+Identify apps to preserve:
+
+```bash
+./pre_install_audit.sh
+```
+
+This will:
+- List all Homebrew casks/formulas (⚠️ at risk of removal)
+- Show all applications
+- Identify non-Homebrew apps (✓ safe from removal)
+- Optionally generate manual app checklist
+
+**Step 4: Update Configuration**
+
+Edit `hosts/common/darwin/homebrew.nix`:
+
+1. **Add apps to preserve:**
+   ```nix
+   casks = [
+     # ... existing casks ...
+     "your-important-app"  # Add from audit
+   ];
+   ```
+
+2. **Disable cleanup temporarily:**
+   ```nix
+   onActivation = {
+     cleanup = "none";  # ← Change from "zap" to "none"
+     autoUpdate = true;
+     upgrade = true;
+   };
+   ```
+
+**→ Go to [Common Installation Steps](#common-installation-steps)**
+
+---
+
+### Common Installation Steps
+
+**Step A: Set Hostname**
+
+Set to one of the [machine names](#machines) (e.g., `mini`, `mbp`, `air`):
 
 ```bash
 chmod +x set_mac_name.sh
 ./set_mac_name.sh
+
 # Or manually:
-# sudo scutil --set HostName <hostname>
-# sudo scutil --set LocalHostName <hostname>
-# sudo scutil --set ComputerName <hostname>
+sudo scutil --set HostName <hostname>
+sudo scutil --set LocalHostName <hostname>
+sudo scutil --set ComputerName <hostname>
+
+# Verify:
+hostname -s
 ```
 
-**6. Install Nix**
+**Step B: Install Nix**
 
 Using the [Determinate Nix Installer](https://determinate.systems/posts/determinate-nix-installer/):
 
@@ -78,96 +145,57 @@ Using the [Determinate Nix Installer](https://determinate.systems/posts/determin
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 ```
 
-Restart your terminal or source the environment:
+Restart terminal or source:
 
 ```bash
 . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 ```
 
-**7. Bootstrap nix-darwin**
+**Step C: Bootstrap nix-darwin**
 
-First-time installation command:
+First-time installation:
 
 ```bash
 cd ~/nix-config
 nix run nix-darwin -- switch --flake .#<hostname>
 ```
 
-Replace `<hostname>` with your machine name (e.g., `mini`, `mbp`, `air`).
+⏱️ **Expected time:** 15-30 minutes
 
-This will take 15-30 minutes to download and install everything.
-
-**8. Restart Shell**
+**Step D: Restart Shell**
 
 ```bash
 exec zsh
 ```
 
-**9. Future Updates**
+**Step E: Future Updates**
 
-After the initial bootstrap, use:
-
-```bash
-darwin-rebuild switch --flake .#<hostname>
-```
-
-### Existing System Migration
-
-If you have an existing Mac with apps and data, use this workflow to preserve your apps:
-
-**1. Install Prerequisites**
+After initial bootstrap, use:
 
 ```bash
-xcode-select --install  # If not already installed
+darwin-rebuild switch --flake .
 ```
 
-**2. Clone Repository**
+---
 
-```bash
-cd ~
-git clone https://github.com/hodgesd/nix-config.git
-cd nix-config
-```
+### Post-Install (Existing Systems Only)
 
-**3. Run Pre-Install Audit**
+After verifying everything works:
 
-Audit your current system to identify apps to preserve:
+1. **Find remaining unmanaged apps:**
+   ```bash
+   ./find_unmanaged_apps.sh
+   ```
 
-```bash
-./pre_install_audit.sh
-```
+2. **Optional: Re-enable cleanup** in `homebrew.nix`:
+   ```nix
+   onActivation.cleanup = "zap";  # or "uninstall" or keep "none"
+   ```
 
-This will:
-- List all installed Homebrew casks and formulas
-- Show all applications in /Applications
-- Identify apps NOT installed via Homebrew
-- Optionally generate a manual apps checklist
-
-**4. Review and Update Configuration**
-
-- Compare audit output with `hosts/common/darwin/homebrew.nix`
-- Add important Homebrew apps to `homebrew.casks` or `homebrew.brews`
-- Note apps that need manual reinstall (non-Homebrew/MAS apps are safe from removal)
-
-**5. Temporarily Disable Cleanup**
-
-Before the first build, edit `hosts/common/darwin/homebrew.nix`:
-
-```nix
-onActivation = {
-  cleanup = "none";  # Prevents Homebrew app removal during first install
-  autoUpdate = true;
-  upgrade = true;
-};
-```
-
-**6. Follow Fresh Install Steps 5-9**
-
-Continue with hostname setup, Nix install, and bootstrap from the Fresh Install section above.
-
-**7. Post-Install Cleanup (Optional)**
-
-After verifying everything works, use `find_unmanaged_apps.sh` to identify remaining unmanaged apps, then optionally re-enable cleanup in `homebrew.nix`.
+3. **Rebuild:**
+   ```bash
+   darwin-rebuild switch --flake .
+   ```
 
 ### Post-Install Configuration
 
