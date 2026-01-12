@@ -3,7 +3,7 @@
   homebrew = {
     enable = true;
     onActivation = {
-      cleanup = "zap";
+      cleanup = "none";  # ← "zap" (cleanup), "none" (safe)
       autoUpdate = true;
       upgrade = true;
     };
