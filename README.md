@@ -43,6 +43,14 @@ Choose your installation path:
 
 **Step 1: Install Xcode Command Line Tools**
 
+Check if already installed:
+```bash
+xcode-select -p
+# If installed, shows: /Library/Developer/CommandLineTools
+# If not installed, shows: error message
+```
+
+Install if needed:
 ```bash
 xcode-select --install
 ```
@@ -67,8 +75,16 @@ cd nix-config
 
 **Step 1: Install Xcode Command Line Tools**
 
+Check if already installed:
 ```bash
-xcode-select --install  # Skip if already installed
+xcode-select -p
+# If installed, shows: /Library/Developer/CommandLineTools (or /Applications/Xcode.app/...)
+# If not installed, shows: error message
+```
+
+Install if needed:
+```bash
+xcode-select --install
 ```
 
 **Step 2: Clone Repository**
