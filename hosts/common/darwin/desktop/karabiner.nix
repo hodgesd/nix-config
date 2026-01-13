@@ -47,8 +47,12 @@
                 ]
               }
       '';
-      # Don't force overwrite - let Karabiner manage device info
-      force = false;
+      # Force overwrite to prevent .hm-backup files
+      force = true;
+      # Restart Karabiner to apply changes
+      onChange = ''
+        /bin/launchctl kickstart -k gui/$(id -u)/org.pqrs.karabiner.karabiner_console_user_server 2>/dev/null || true
+      '';
     };
   };
 }
