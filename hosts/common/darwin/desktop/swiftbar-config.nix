@@ -30,4 +30,12 @@
       ];
     };
   };
+
+  # Set SwiftBar preferences to point to the correct plugin directory
+  system.defaults.CustomUserPreferences = {
+    "com.ameba.SwiftBar" = {
+      PluginDirectory = "${config.users.users.${config.majordouble.user}.home}/Library/Application Support/SwiftBar/Plugins";
+      MakePluginExecutable = 1;
+    };
+  };
 }
