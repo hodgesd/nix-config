@@ -1,5 +1,14 @@
 # hosts/common/darwin/homebrew.nix
 {...}: {
+  # Set Homebrew environment variables
+  environment.variables = {
+    # Update Homebrew once per day instead of on every command
+    HOMEBREW_AUTO_UPDATE_SECS = "86400"; # 24 hours (86400 seconds)
+    
+    # Optional: Uncomment to hide Homebrew hints/tips
+    # HOMEBREW_NO_ENV_HINTS = "1";
+  };
+
   homebrew = {
     enable = true;
     onActivation = {
