@@ -18,11 +18,5 @@
       kDim = true;
       kDimTime = 300;
     };
-
-    # Disable wallpaper shuffle/rotation
-    "com.apple.dock" = {
-      # Disable picture rotation
-      desktop-picture-show-debug-text = false;
-    };
   };
 }
