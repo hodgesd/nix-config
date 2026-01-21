@@ -35,6 +35,7 @@
       shift + ctrl + alt - p : open -a "PyCharm"
       shift + ctrl + alt - f : open -a "Finder"
       shift + ctrl + alt - m : open -b com.apple.MobileSMS
+      shift + ctrl + alt - i : open -b com.apple.systempreferences
       shift + ctrl + alt - y : echo "Meh key works!" | tee ~/skhd-test.log
 
       # Focus or open Hey web app in Vivaldi
