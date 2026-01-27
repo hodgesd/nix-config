@@ -17,8 +17,9 @@ in {
   options.programs.swiftbar = {
     enable = mkEnableOption "SwiftBar";
     package = mkOption {
-      type = types.package;
-      default = pkgs.swiftbar;
+      type = types.nullOr types.package;
+      default = null;
+      description = "SwiftBar package (null if using Homebrew cask)";
     };
     autostart = mkOption {
       type = types.bool;
@@ -73,7 +74,7 @@ in {
   };
 
   config = mkIf cfg.enable {
-    home.packages = [cfg.package];
+    home.packages = lib.optionals (cfg.package != null) [cfg.package];
 
     home.file =
       # (A) Files from your repo
@@ -118,7 +119,7 @@ in {
       };
 
     # Auto-start at login (nix-darwin)
-    launchd.agents.swiftbar = mkIf cfg.autostart {
+    launchd.agents.swiftbar = mkIf (cfg.autostart && cfg.package != null) {
       enable = true;
       config = {
         ProgramArguments = [

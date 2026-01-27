@@ -56,6 +56,7 @@
       "reminders-menubar"
       "sf-symbols"
       "steam"
+      "swiftbar"
       "syntax-highlight"
       "TheBoredTeam/boring-notch/boring-notch"
       "vivaldi"
