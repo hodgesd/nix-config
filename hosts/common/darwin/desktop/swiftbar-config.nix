@@ -26,6 +26,7 @@
 
       repoFiles = [
         "daily_news_uv.2hr.py"
+        "microcenter_deals_uv.6hr.py"
         "bball.1d.py"
       ];
     };
