@@ -249,6 +249,11 @@ Set up wallpaper rotation manually via System Settings:
 
 **Note:** Enable "Launch at login" in Karabiner Elements preferences.
 
+**Manual App Setup**
+- Reminders Menubar: enable “Launch at login”; bind `meh-r`.
+- iStat Menus: add registration key.
+- Launch at login: Raycast, Rectangle, SwiftBar, Ice.
+
 **Manually Installed Apps**
 
 Some apps are not available via Nix/Homebrew and must be installed manually:
