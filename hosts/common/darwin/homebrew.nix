@@ -42,6 +42,7 @@
       "default-folder-x"
       "desktoppr" # Command-line wallpaper manager
       "discord"
+      "fastmail"
       "ghostty"
       "istat-menus"
       "jordanbaird-ice"
