@@ -27,9 +27,9 @@
 
     home.file.".skhdrc".text = ''
       # Meh key (shift + ctrl + alt) shortcuts
+      shift + ctrl + alt - a : open -a "ChatGPT"
       shift + ctrl + alt - s : open -a "Safari"
       shift + ctrl + alt - d : open -a "Drafts"
-      shift + ctrl + alt - c : open -a "ChatGPT"
       shift + ctrl + alt - t : open -a "Ghostty"
       shift + ctrl + alt - o : open -a "Obsidian"
       shift + ctrl + alt - p : open -a "PyCharm"
@@ -43,6 +43,9 @@
 
       # Open Vivaldi in a private window
       shift + ctrl + alt - x : open -a "Vivaldi" --args --incognito
+
+      # Hyper key (shift + ctrl + alt + cmd) shortcuts
+      shift + ctrl + alt + cmd - a : open -a "Cursor"
     '';
   };
 }

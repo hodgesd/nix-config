@@ -69,7 +69,7 @@
       "Drafts" = 1435957248;
       "Dynamo" = 1445910651;
       "Fantastical" = 975937182;
-      "Goodnotes" = 1444383602;
+      # "Goodnotes" = 1444383602;
       "Keynote" = 409183694;
       "Mona" = 1659154653;
       "Numbers" = 409203825;
