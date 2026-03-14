@@ -11,21 +11,13 @@
   services.skhd.enable = false;
 
   home-manager.users.${config.majordouble.user} = {
-    # The focus-hey.sh script is an external script to avoid AppleScript parsing issues.
-    home.file."bin/focus-hey.sh" = {
-      text = ''
-        #!/bin/bash
-        osascript -e "tell application \"Vivaldi\" to activate"
-      '';
-      executable = true;
-    };
-
     # Reload skhd.zig after configuration changes
     home.activation.reloadSkhd = ''
       run /opt/homebrew/bin/skhd -r || echo "skhd reload failed (this is normal if skhd isn't running yet)"
     '';
 
-    home.file.".skhdrc".text = ''
+    # Use ~/.config/skhd/skhdrc - skhd-zig checks this before ~/.skhdrc
+    home.file.".config/skhd/skhdrc".text = ''
       # Meh key (shift + ctrl + alt) shortcuts
       shift + ctrl + alt - a : open -a "ChatGPT"
       shift + ctrl + alt - s : open -a "Safari"
@@ -38,8 +30,7 @@
       shift + ctrl + alt - i : open -b com.apple.systempreferences
       shift + ctrl + alt - y : echo "Meh key works!" | tee ~/skhd-test.log
 
-      # Focus or open Hey web app in Vivaldi
-      shift + ctrl + alt - e : ~/bin/focus-hey.sh
+      shift + ctrl + alt - e : open -a "Fastmail"
 
       # Open Vivaldi in a private window
       shift + ctrl + alt - x : open -a "Vivaldi" --args --incognito
