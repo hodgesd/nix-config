@@ -23,10 +23,7 @@
 
     brews = [
       "opencode"
-      {
-        name = "jackielii/tap/skhd-zig";
-        start_service = true;
-      }
+      "jackielii/tap/my-skhd"
     ];
     taps = [
       "jackielii/tap"

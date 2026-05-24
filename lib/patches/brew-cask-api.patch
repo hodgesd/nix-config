@@ -1,0 +1,60 @@
+Backport fixes from Homebrew/brew 5.1.x to 5.0.12 for three crashes that
+nixpkgs 25.05 users hit because `nix-homebrew` is still pinned to 5.0.12
+(newer brew requires ruby_4_0 which isn't in nixpkgs 25.05 yet).
+
+1) `Library/Homebrew/api/cask.rb`: handle empty `depends_on.macos: {}` from
+   the JSON API. Some casks (discord, steam, rectangle, etc.) ship with an
+   empty `macos` hash; brew 5.0.12 calls `value.keys.first` on it (=> nil)
+   and then crashes with `undefined method 'first' for nil` on the next
+   line. Short-circuit the empty case so `compact_blank` drops it later.
+
+2) `Library/Homebrew/utils/bottles.rb`: the formula JSON API no longer
+   includes the `built_on` field inside `bottle_tab_attributes`, so
+   `tab.built_on["os"]` crashes with `undefined method '[]' for nil` when
+   pouring any bottle. Mirror upstream's safe-navigation fix.
+
+3) `Library/Homebrew/livecheck.rb`: newer formulae (e.g. opencode) use
+   `throttle <rate>, days: <n>` in their livecheck blocks; 5.0.12's
+   `throttle` method only accepts a single positional arg, so the formula
+   fails to load with `wrong number of arguments (given 2, expected 0..1)`
+   during post_install. Accept and ignore the `days:` kwarg.
+
+--- a/Library/Homebrew/api/cask.rb
++++ b/Library/Homebrew/api/cask.rb
+@@ -170,6 +170,9 @@ module Homebrew
+ 
+           next [key, value] if key != :macos
+ 
++          # Patched (nix-config): skip empty `macos: {}` from API to avoid `nil.first` crash.
++          next [key, nil] if value.nil? || (value.respond_to?(:empty?) && value.empty?)
++
+           dep_type = value.keys.first
+           if dep_type == :==
+             version_symbols = value[dep_type].filter_map do |version|
+--- a/Library/Homebrew/utils/bottles.rb
++++ b/Library/Homebrew/utils/bottles.rb
+@@ -124,7 +124,8 @@ module Utils
+ 
+         if (tab_attributes = formula.bottle_tab_attributes.presence)
+           tab = Tab.from_file_content(tab_attributes.to_json, tabfile)
+-          return tab if tab.built_on["os"] == HOMEBREW_SYSTEM
++          # Patched (nix-config): safe-navigate; API may omit `built_on`.
++          return tab if tab.built_on&.[]("os") == HOMEBREW_SYSTEM
+         elsif !tabfile.exist? && bottle_json_path&.exist?
+           _, tag, = Utils::Bottles.extname_tag_rebuild(formula.local_bottle_path.to_s)
+           bottle_hash = JSON.parse(File.read(bottle_json_path))
+--- a/Library/Homebrew/livecheck.rb
++++ b/Library/Homebrew/livecheck.rb
+@@ -149,10 +149,11 @@ class Livecheck
+   sig {
+     params(
+       # Throttle rate of version patch number to use for bumpable versions.
+       rate: Integer,
++      days: T.nilable(Integer),
+     ).returns(T.nilable(Integer))
+   }
+-  def throttle(rate = T.unsafe(nil))
++  def throttle(rate = T.unsafe(nil), days: nil)
+     case rate
+     when nil
+       @throttle

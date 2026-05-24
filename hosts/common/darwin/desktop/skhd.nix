@@ -4,19 +4,31 @@
   pkgs,
   ...
 }: {
-  # This configuration uses SKHD.ZIG (the Zig rewrite of skhd).
-  # The brew is installed via homebrew.nix with start_service = true
+  # This configuration uses jackielii/tap/my-skhd (jackielii's C skhd fork).
+  # The brew is installed via homebrew.nix; the LaunchAgent is registered via
+  # skhd's own `--start-service` mechanism in `startSkhd` below. (my-skhd
+  # doesn't implement brew's #service DSL, so `start_service = true` is
+  # incompatible with `brew bundle`.)
 
-  # Disable the default skhd service to avoid conflict with the Zig version.
+  # Disable the default skhd service to avoid conflict with the brew-managed one.
   services.skhd.enable = false;
 
   home-manager.users.${config.majordouble.user} = {
-    # Reload skhd.zig after configuration changes
+    # First-time bootstrap: register skhd's LaunchAgent via its own command.
+    # Idempotent across rebuilds: skips if a skhd launchd job is already loaded.
+    home.activation.startSkhd = ''
+      if ! /bin/launchctl list 2>/dev/null | grep -q skhd; then
+        run /opt/homebrew/bin/skhd --start-service \
+          || echo "skhd --start-service failed (run it manually if needed)"
+      fi
+    '';
+
+    # Reload skhd after configuration changes
     home.activation.reloadSkhd = ''
       run /opt/homebrew/bin/skhd -r || echo "skhd reload failed (this is normal if skhd isn't running yet)"
     '';
 
-    # Use ~/.config/skhd/skhdrc - skhd-zig checks this before ~/.skhdrc
+    # skhd reads ~/.config/skhd/skhdrc before ~/.skhdrc
     home.file.".config/skhd/skhdrc".text = ''
       # Meh key (shift + ctrl + alt) shortcuts
       shift + ctrl + alt - a : open -a "ChatGPT"

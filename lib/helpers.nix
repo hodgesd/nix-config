@@ -58,15 +58,27 @@ in {
           };
         }
           inputs.nix-homebrew.darwinModules.nix-homebrew
-          {
+          ({pkgs, ...}: {
             nix-homebrew = {
               enable = true;
               enableRosetta = true;
               autoMigrate = true;
               mutableTaps = true;
               user = username;
+              # Patch brew 5.0.12 to handle empty `depends_on.macos: {}` cask API
+              # entries (discord, steam, rectangle, etc.). Upstream fix is in
+              # 5.1.x but requires ruby_4_0, not yet in nixpkgs 25.05.
+              package =
+                (pkgs.applyPatches {
+                  name = "brew-5.0.12-cask-api-patched-src";
+                  src = inputs.nix-homebrew.inputs.brew-src;
+                  patches = [./patches/brew-cask-api.patch];
+                })
+                // {
+                  version = "5.0.12";
+                };
             };
-          }
+          })
         ]
         ++ hostSpecificModules;
     };
