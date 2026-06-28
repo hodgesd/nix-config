@@ -1,0 +1,31 @@
+# Weekly automated PR that bumps flake.lock. The PR is gated by the Eval and
+# Build workflows so a bad nixpkgs bump shows up red instead of at switch time.
+#
+# NOTE: PRs opened with the default GITHUB_TOKEN do NOT trigger other workflows.
+# To make Eval/Build run on the bump PR, create a Personal Access Token with
+# `repo` + `workflow` scope, save it as the FLAKE_LOCK_PAT secret, and the
+# `token:` line below will use it. Without the PAT the PR is still created; just
+# push an empty commit (or re-run) to kick off CI on it.
+name: Update flake.lock 🔄
+
+on:
+  schedule:
+    # Mondays at 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update:
+    name: Update flake.lock
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/update-flake-lock@v24
+        with:
+          token: ${{ secrets.FLAKE_LOCK_PAT || secrets.GITHUB_TOKEN }}
+          pr-title: 'chore: update flake.lock'
+          pr-labels: |
+            dependencies
+            automated
+          commit-msg: 'chore: update flake.lock'

@@ -1,0 +1,27 @@
+# Fast, free evaluation of every host on each push.
+# Runs on Linux: it does NOT build (that needs macOS), it only evaluates the
+# full module tree for each host, which catches ~95% of breakage — syntax
+# errors, missing options, module conflicts, and per-host metadata branches.
+name: Eval 🔍
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  eval:
+    name: Eval ${{ matrix.host }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [mbp, mini, air]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - name: Evaluate ${{ matrix.host }}
+        # Forcing .drvPath instantiates the whole config without building it.
+        run: nix eval --raw ".#darwinConfigurations.${{ matrix.host }}.system.drvPath"
