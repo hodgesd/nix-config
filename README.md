@@ -1,6 +1,6 @@
 # 🛠️ My Nix Config
 
-A modular, well-documented Nix configuration managing both macOS (via nix-darwin) and NixOS systems.
+A modular, well-documented Nix configuration managing macOS systems via nix-darwin.
 
 ## ✨ Features
 
@@ -25,7 +25,6 @@ A modular, well-documented Nix configuration managing both macOS (via nix-darwin
 | `mini`      | 🍏 | Mac Mini M2 Pro        | `derrickhodges`| —                |                 |
 | `mbp`       | 🍏 | MacBook Pro M3 Pro 14" | `hodgesd`      | 18GB / 1TB       | 12 / 18         |
 | `air`       | 🍏 | MacBook Air M1 13"     | `hodgesd`      | 16GB / 500GB     | 8 / 7           |
-| `nixos-air` | ❄️ | MacBook Air i7-5650U   | `hodgesd`      | 8GB / 500GB      | 2 / 1           |
 
 ## 🍎 Mac Installation
 
@@ -299,13 +298,11 @@ nix-config/
 ├── flake.nix              # Main flake configuration
 ├── lib/                   # Helper functions and machine metadata
 │   ├── machines.nix       # Machine metadata registry
-│   └── helpers.nix        # mkDarwin/mkNixos functions
+│   └── helpers.nix        # mkDarwin function
 ├── hosts/
 │   ├── common/            # Shared configurations
-│   │   ├── darwin/        # Darwin-specific modules (modular!)
-│   │   └── nixos/         # NixOS-specific modules
-│   ├── darwin/            # Per-machine Darwin configs
-│   └── nixos/             # Per-machine NixOS configs
+│   │   └── darwin/        # Darwin-specific modules (modular!)
+│   └── darwin/            # Per-machine Darwin configs
 ├── home/                  # Home Manager configurations
 ├── modules/               # Custom modules
 └── docs/                  # Documentation

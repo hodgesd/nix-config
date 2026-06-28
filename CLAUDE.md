@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a modular Nix configuration managing both macOS (via nix-darwin) and NixOS systems. The configuration uses a machine metadata system for conditional configurations and follows a highly modular structure.
+This is a modular Nix configuration managing macOS systems via nix-darwin. The configuration uses a machine metadata system for conditional configurations and follows a highly modular structure.
 
 ## Build and Development Commands
 
@@ -25,9 +25,6 @@ darwin-rebuild build --flake . --show-trace
 
 # Check configuration validity (no build)
 nix flake check
-
-# NixOS systems
-nixos-rebuild switch --flake .#hostname
 ```
 
 ### Using Just (recommended)
@@ -77,17 +74,14 @@ darwin-rebuild switch --flake . --dry-run
    - Darwin common config from `hosts/common/darwin-common.nix`
    - Host-specific overrides from `hosts/darwin/{hostname}/default.nix`
 3. `darwin-common.nix` imports modular components (base, homebrew, fonts, packages, system-defaults)
-4. Home Manager configs from `home/hodgesd.nix`
-
-**NixOS Systems:**
-Similar flow using `mkNixos` and `hosts/common/nixos-common.nix`
+4. Home Manager configs from `home/default.nix`
 
 ### Machine Metadata System
 
 All machines are defined in `lib/machines.nix` with metadata like:
-- `type`: "darwin" or "nixos"
-- `formFactor`: "laptop", "desktop", "server"
-- `primaryUse`: "development", "server", "ai-inference", etc.
+- `type`: "darwin"
+- `formFactor`: "laptop", "desktop"
+- `primaryUse`: "development", "server", etc.
 - `chip`: "m1", "m2-pro", "m3-pro", etc.
 - `specs`: ram, storage, cpu, gpu cores
 
@@ -108,9 +102,8 @@ This metadata is available as the `machine` argument in all modules for conditio
 Located in `lib/helpers.nix`:
 
 - `mkDarwin { hostname, username?, system? }` - Creates nix-darwin configurations
-- `mkNixos { hostname, username?, system? }` - Creates NixOS configurations
 
-Both functions automatically:
+This function automatically:
 - Load machine metadata
 - Import common and host-specific configs
 - Set up Home Manager
@@ -124,9 +117,8 @@ Darwin-specific modules in `hosts/common/darwin/`:
 - `packages.nix` - Darwin-only Nix packages
 - `fonts.nix` - Font packages
 - `system-defaults.nix` - Imports all defaults/* modules
-- `dock-presets.nix` - Reusable Dock configurations
-- `skhd.nix` - Keyboard shortcuts via skhd
-- `karabiner.nix` - Keyboard remapping
+- `desktop/skhd.nix` - Keyboard shortcuts via skhd
+- `desktop/karabiner.nix` - Keyboard remapping
 - `defaults/` - macOS system preferences by category:
   - `general.nix` - NSGlobalDomain settings
   - `keyboard.nix` - Keyboard and input settings
@@ -168,25 +160,16 @@ masApps = { "App Name" = 123; };  # Mac App Store (ID from mas search)
 
 ### Dock Configuration
 
-**Use preset:** In host config (`hosts/darwin/mbp/default.nix`):
-```nix
-let
-  dockPresets = import ../../common/darwin/dock-presets.nix;
-in
-{
-  system.defaults.dock.persistent-apps = dockPresets.developer;
-}
-```
-
-**Custom apps:** List app paths directly:
+Dock behavior lives in `hosts/common/darwin/defaults/dock.nix`. Pinned apps
+are set via `persistent-apps` (currently `[]` — managed manually). To pin apps,
+list their paths:
 ```nix
 system.defaults.dock.persistent-apps = [
   "/Applications/Safari.app"
   "/Applications/Ghostty.app"
 ];
 ```
-
-**Create new preset:** Edit `hosts/common/darwin/dock-presets.nix`
+For per-host overrides, set the same option in `hosts/darwin/{hostname}/default.nix`.
 
 ### System Preferences
 
@@ -208,9 +191,9 @@ home.file.".skhdrc".text = ''
 ## Adding a New Machine
 
 1. Add metadata to `lib/machines.nix`
-2. Create host directory: `hosts/darwin/{hostname}/` or `hosts/nixos/{hostname}/`
+2. Create host directory: `hosts/darwin/{hostname}/`
 3. Create `default.nix` with host-specific config
-4. Add to `flake.nix` darwinConfigurations or nixosConfigurations
+4. Add to `flake.nix` darwinConfigurations
 5. Build: `darwin-rebuild switch --flake .#{hostname}`
 
 See `docs/ADDING_MACHINE.md` for detailed steps.
@@ -262,7 +245,6 @@ darwin-rebuild switch --flake . --dry-run
 Tracked in `flake.lock`, update with `nix flake update`:
 - `nixpkgs` - NixOS 25.05 (stable)
 - `nixpkgs-unstable` - Rolling release for latest packages
-- `nixpkgs-darwin` - Darwin-specific stable
 - `nix-darwin` - macOS system management
 - `home-manager` - User environment management
 - `nix-homebrew` - Declarative Homebrew
@@ -273,19 +255,17 @@ Tracked in `flake.lock`, update with `nix flake update`:
 ```
 flake.nix                       # Main entry point - defines all systems
 lib/
-  helpers.nix                   # mkDarwin, mkNixos functions
+  helpers.nix                   # mkDarwin function
   machines.nix                  # Machine metadata registry
 hosts/
   common/
-    common-packages.nix         # Cross-platform packages
+    common-packages.nix         # Shared package set
     darwin-common.nix           # Darwin entry point
-    nixos-common.nix            # NixOS entry point
     darwin/                     # Darwin-specific modules (modular)
   darwin/{hostname}/            # Per-host Darwin configs
-  nixos/{hostname}/             # Per-host NixOS configs
 home/
-  hodgesd.nix                   # User config entry point
-  {tool}/                       # Tool-specific configs (nvim, etc.)
+  default.nix                   # User config entry point
+  modules/                      # Tool-specific configs (cli, core, services)
 modules/                        # Custom reusable modules
 docs/                           # Documentation
   STRUCTURE.md                  # Detailed directory layout

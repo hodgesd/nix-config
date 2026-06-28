@@ -45,41 +45,4 @@
     };
     screen = "13\"";
   };
-
-  # NixOS machines
-  desktop = {
-    hostname = "desktop";
-    type = "nixos";
-    formFactor = "desktop";
-    primaryUse = "workstation";
-  };
-
-  ktz-cloud = {
-    hostname = "ktz-cloud";
-    type = "nixos";
-    formFactor = "server";
-    primaryUse = "cloud";
-  };
-
-  morphnix = {
-    hostname = "morphnix";
-    type = "nixos";
-    formFactor = "server";
-    primaryUse = "server";
-  };
-
-  nix-dev = {
-    hostname = "nix-dev";
-    type = "nixos";
-    formFactor = "server";
-    primaryUse = "development";
-  };
-
-  nvllama = {
-    hostname = "nvllama";
-    type = "nixos";
-    formFactor = "server";
-    primaryUse = "ai-inference";
-  };
-
 }

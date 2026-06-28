@@ -10,7 +10,6 @@ in {
   inherit
     (helpers)
     mkDarwin
-    mkNixos
     ;
 
   # Export machine metadata for reference

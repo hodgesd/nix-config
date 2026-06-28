@@ -9,48 +9,38 @@ nix-config/
 ├── flake.nix              # Main flake file - defines all systems
 ├── lib/                   # Library functions and machine metadata
 │   ├── default.nix        # Exports helper functions
-│   ├── helpers.nix        # mkDarwin and mkNixos functions
+│   ├── helpers.nix        # mkDarwin function
 │   └── machines.nix       # Machine metadata registry
 ├── hosts/                 # Host-specific configurations
 │   ├── common/            # Shared configurations
-│   │   ├── common-packages.nix      # Cross-platform packages
+│   │   ├── common-packages.nix      # Shared package set
 │   │   ├── darwin-common.nix        # Darwin entry point
-│   │   ├── nixos-common.nix         # NixOS entry point
 │   │   └── darwin/                  # Darwin-specific modules
 │   │       ├── base.nix             # Core Nix settings
 │   │       ├── homebrew.nix         # Homebrew packages
 │   │       ├── fonts.nix            # Font packages
 │   │       ├── packages.nix         # Darwin packages
 │   │       ├── system-defaults.nix  # System preferences
-│   │       ├── dock-presets.nix     # Dock configurations
-│   │       ├── skhd.nix             # Keyboard shortcuts
-│   │       ├── karabiner.nix        # Keyboard remapping
+│   │       ├── desktop/             # skhd, karabiner, jankyborders, swiftbar
 │   │       └── defaults/            # System defaults by category
 │   │           ├── general.nix      # NSGlobalDomain settings
 │   │           ├── keyboard.nix     # Keyboard/input settings
 │   │           ├── finder.nix       # Finder preferences
 │   │           ├── dock.nix         # Dock settings
 │   │           └── security.nix     # Security/privacy settings
-│   ├── darwin/            # Darwin hosts
-│   │   ├── mbp/
-│   │   │   └── default.nix
-│   │   ├── mini/
-│   │   │   └── default.nix
-│   │   └── air/
-│   │       └── default.nix
-│   └── nixos/             # NixOS hosts
-│       ├── desktop/
-│       ├── ktz-cloud/
-│       └── ...
+│   └── darwin/            # Darwin hosts
+│       ├── mbp/
+│       │   └── default.nix
+│       ├── mini/
+│       │   └── default.nix
+│       └── air/
+│           └── default.nix
 ├── home/                  # Home Manager configurations
-│   ├── hodgesd.nix        # User configuration
-│   ├── nvim/              # Neovim configs
-│   ├── starship/          # Starship prompt
-│   ├── ssh/               # SSH configs
-│   └── ...
-└── modules/               # Custom NixOS/Home Manager modules
+│   ├── default.nix        # User configuration entry point
+│   └── modules/           # Tool configs (core, cli, services)
+└── modules/               # Custom Home Manager / nix-darwin modules
     ├── swiftbar.nix
-    └── beszel-agent.nix
+    └── wallpaper.nix
 ```
 
 ## Configuration Flow
@@ -69,11 +59,7 @@ nix-config/
    - `darwin/system-defaults.nix` - macOS defaults (imports defaults/*)
    - `darwin/fonts.nix` - Fonts
    - `darwin/packages.nix` - Darwin-only packages
-4. Home Manager is configured via `home/hodgesd.nix`
-
-### NixOS Systems
-
-Similar flow but uses `lib.mkNixos` and `hosts/common/nixos-common.nix`.
+4. Home Manager is configured via `home/default.nix`
 
 ## Key Design Principles
 
@@ -81,13 +67,12 @@ Similar flow but uses `lib.mkNixos` and `hosts/common/nixos-common.nix`.
 2. **Reusability** - Common config shared across machines
 3. **Machine Metadata** - All machines defined in `lib/machines.nix`
 4. **DRY** - Don't Repeat Yourself - use presets and shared configs
-5. **Clear Separation** - Darwin vs NixOS vs cross-platform configs
 
 ## Finding Things
 
 - **Add a package?** → `hosts/common/common-packages.nix` (cross-platform) or `hosts/common/darwin/packages.nix` (Darwin-only)
 - **Change Homebrew apps?** → `hosts/common/darwin/homebrew.nix`
-- **Modify dock?** → `hosts/common/darwin/dock-presets.nix` or host-specific `default.nix`
+- **Modify dock?** → `hosts/common/darwin/defaults/dock.nix` or host-specific `default.nix`
 - **Adjust Finder settings?** → `hosts/common/darwin/defaults/finder.nix`
 - **Change keyboard shortcuts?** → `hosts/common/darwin/skhd.nix`
 - **Add a new machine?** → See `docs/ADDING_MACHINE.md`

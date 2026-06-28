@@ -22,22 +22,13 @@
       libx = import ./lib { inherit inputs outputs stateVersion; };
     in
     {
-    darwinConfigurations = {
-      mbp = libx.mkDarwin { hostname = "mbp"; };
-      mini = libx.mkDarwin { 
-        hostname = "mini"; 
-        username = "derrickhodges";
-      };
-      air = libx.mkDarwin { hostname = "air"; };
-    };
-
-      nixosConfigurations = {
-        desktop = libx.mkNixos { hostname = "desktop"; };
-        ktz-cloud = libx.mkNixos { hostname = "ktz-cloud"; };
-        morphnix = libx.mkNixos { hostname = "morphnix"; };
-        nix-dev = libx.mkNixos { hostname = "nix-dev"; };
-        nvllama = libx.mkNixos { hostname = "nvllama"; };
-        nixos-air = libx.mkNixos { hostname = "nixos-air"; };
+      darwinConfigurations = {
+        mbp = libx.mkDarwin { hostname = "mbp"; };
+        mini = libx.mkDarwin {
+          hostname = "mini";
+          username = "derrickhodges";
+        };
+        air = libx.mkDarwin { hostname = "air"; };
       };
     };
 }

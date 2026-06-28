@@ -15,12 +15,12 @@
       };
 
       type = lib.mkOption {
-        type = lib.types.enum ["darwin" "nixos"];
-        description = "System type (darwin or nixos)";
+        type = lib.types.enum ["darwin"];
+        description = "System type (darwin)";
       };
 
       formFactor = lib.mkOption {
-        type = lib.types.enum ["laptop" "desktop" "server"];
+        type = lib.types.enum ["laptop" "desktop"];
         description = "Machine form factor";
       };
 

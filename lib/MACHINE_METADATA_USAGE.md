@@ -47,10 +47,10 @@ The machine metadata is also available in home-manager configurations:
 
 Each machine has:
 - `hostname` - The machine's hostname
-- `type` - Either "darwin" or "nixos"
-- `chip` - CPU/chip type (e.g., "m3-pro", "m1", "i7-5650u")
-- `formFactor` - "laptop", "desktop", or "server"
-- `primaryUse` - "development", "server", "workstation", etc.
+- `type` - "darwin"
+- `chip` - CPU/chip type (e.g., "m3-pro", "m1", "m2-pro")
+- `formFactor` - "laptop" or "desktop"
+- `primaryUse` - "development", "server", etc.
 - `specs` - Object with `ram`, `storage`, `cpu`, `gpu` (may be null)
 - `screen` - Screen size for laptops (optional)
 

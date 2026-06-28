@@ -92,24 +92,11 @@ hyper - r : ~/scripts/my-script.sh
 
 ## Dock Configuration
 
-### Using Presets
+Dock behavior and pinned apps live in `hosts/common/darwin/defaults/dock.nix`.
+The `persistent-apps` option controls pinned icons (default `[]` = managed
+manually).
 
-Edit your host configuration (`hosts/darwin/mbp/default.nix`):
-
-```nix
-let
-  dockPresets = import ../../common/darwin/dock-presets.nix;
-in
-{
-  # Use a preset
-  system.defaults.dock.persistent-apps = dockPresets.developer;
-
-  # Or use minimal
-  # system.defaults.dock.persistent-apps = dockPresets.minimal;
-}
-```
-
-### Custom Dock Apps
+### Pinning Dock Apps
 
 ```nix
 {
@@ -123,23 +110,8 @@ in
 }
 ```
 
-### Creating a New Preset
-
-Edit `hosts/common/darwin/dock-presets.nix`:
-
-```nix
-{
-  developer = [ ... ];
-  minimal = [ ... ];
-
-  # Your new preset
-  writer = [
-    "/Applications/Obsidian.app"
-    "/Applications/Ulysses.app"
-    "/Applications/Drafts.app"
-  ];
-}
-```
+For a single machine, set the same option in
+`hosts/darwin/{hostname}/default.nix` instead.
 
 ## Packages
 

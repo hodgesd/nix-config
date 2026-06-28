@@ -13,10 +13,10 @@ Edit `lib/machines.nix` and add your machine's metadata:
 
   newmachine = {
     hostname = "newmachine";
-    type = "darwin";  # or "nixos"
+    type = "darwin";
     chip = "m4-pro";  # CPU/chip type
-    formFactor = "laptop";  # "laptop", "desktop", or "server"
-    primaryUse = "development";  # "development", "server", "workstation", etc.
+    formFactor = "laptop";  # "laptop" or "desktop"
+    primaryUse = "development";  # "development", "server", etc.
     specs = {
       ram = "32GB";
       storage = "2TB";
@@ -30,8 +30,6 @@ Edit `lib/machines.nix` and add your machine's metadata:
 
 ## Step 2: Create Host Directory
 
-### For Darwin (macOS):
-
 ```bash
 mkdir -p hosts/darwin/newmachine
 ```
@@ -40,41 +38,16 @@ Create `hosts/darwin/newmachine/default.nix`:
 
 ```nix
 { ... }:
-let
-  dockPresets = import ../../common/darwin/dock-presets.nix;
-in
 {
-  # Choose a dock preset or define your own
-  system.defaults.dock.persistent-apps = dockPresets.developer;
-
   # Add any machine-specific configuration here
   # For example:
   # homebrew.casks = [ "specific-app" ];
 }
 ```
 
-### For NixOS:
-
-```bash
-mkdir -p hosts/nixos/newmachine
-```
-
-Create `hosts/nixos/newmachine/default.nix`:
-
-```nix
-{ config, pkgs, ... }:
-{
-  # Machine-specific NixOS configuration
-  # Example:
-  # services.openssh.enable = true;
-}
-```
-
 ## Step 3: Add to flake.nix
 
-Edit `flake.nix` and add your machine to the appropriate section:
-
-### For Darwin:
+Edit `flake.nix` and add your machine to `darwinConfigurations`:
 
 ```nix
 # flake.nix
@@ -83,16 +56,6 @@ darwinConfigurations = {
   mini = libx.mkDarwin {hostname = "mini";};
   air = libx.mkDarwin {hostname = "air";};
   newmachine = libx.mkDarwin {hostname = "newmachine";};  # Add this
-};
-```
-
-### For NixOS:
-
-```nix
-# flake.nix
-nixosConfigurations = {
-  desktop = libx.mkNixos {hostname = "desktop";};
-  newmachine = libx.mkNixos {hostname = "newmachine";};  # Add this
 };
 ```
 
@@ -119,21 +82,14 @@ chmod +x set_mac_name.sh
 ./set_mac_name.sh
 ```
 
-### NixOS:
-
-The hostname will be set automatically from your configuration.
-
 ## Step 5: Build Configuration
 
 ```bash
 # Check configuration is valid
 nix flake check --no-build
 
-# Build and activate (Darwin)
+# Build and activate
 darwin-rebuild switch --flake .#newmachine
-
-# Build and activate (NixOS)
-sudo nixos-rebuild switch --flake .#newmachine
 ```
 
 ## Step 6: Customize
