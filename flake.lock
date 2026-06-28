@@ -122,11 +122,11 @@
     "swiftbar_plugins": {
       "flake": false,
       "locked": {
-        "lastModified": 1768265035,
-        "narHash": "sha256-OVETISiLL1qfGij93enER1iFWwGPpOf8xhduuCtH7dY=",
+        "lastModified": 1775274334,
+        "narHash": "sha256-BnW8h1H22T8Ex37yMYr7mMUcCH2PKCUeEHEIKP5/Klk=",
         "owner": "hodgesd",
         "repo": "swiftbar_plugins",
-        "rev": "7936073fa5ed1de75a5d120f2da7ddea459270cc",
+        "rev": "c504d1b03cc64c38b3b40aca3bebee424171ae16",
         "type": "github"
       },
       "original": {
