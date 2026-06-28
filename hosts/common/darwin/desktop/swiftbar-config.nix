@@ -17,12 +17,10 @@
       # Nix passes matching args to imported modules (same-behavior shown in the Flakes book).
       repoPath = inputs.swiftbar_plugins;
 
-      # Point to local git repo to bypass Nix store caching (hodgesd only)
-      # On other users/machines, falls back to inputs.swiftbar_plugins from GitHub
-      repoLocalPath =
-        if config.majordouble.user == "hodgesd"
-        then "/Users/hodgesd/PycharmProjects/swiftbar_plugins"
-        else null;
+      # Source plugins from the pinned flake input on all machines (reproducible,
+      # CI-verified). To iterate on plugins locally, edit them in the
+      # swiftbar_plugins repo, push, then `nix flake update swiftbar_plugins`.
+      repoLocalPath = null;
 
       repoFiles = [
         "daily_news_uv.2hr.py"
