@@ -7,6 +7,9 @@
 name: Build 🍎
 
 on:
+  # Build every PR too — free on public repos, and the only way to catch
+  # build-time breakage (vs eval) before merge. Cachix keeps it fast.
+  pull_request:
   push:
     branches:
       - main
