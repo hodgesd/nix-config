@@ -16,10 +16,12 @@
       substituters = [
         "https://cache.nixos.org"
         "https://nix-community.cachix.org"
+        "https://hodgesd-nix-config.cachix.org"
       ];
       trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+        "hodgesd-nix-config.cachix.org-1:VRtYFrJXm6UAQOXZ1xLbMfGohWyLeXKFrNb8mCc2VmM="
       ];
     };
 

@@ -1,0 +1,36 @@
+# Full macOS build of every host. Thorough but expensive, so it only runs when
+# flake.lock changes (the risky dependency bump), nightly, or on demand.
+# Built store paths are pushed to Cachix so local `darwin-rebuild switch`
+# downloads them instead of recompiling.
+#
+# Requires repository secret CACHIX_AUTH_TOKEN (see .github/workflows/README.md).
+name: Build 🍎
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - flake.lock
+  schedule:
+    # nightly at 07:00 UTC
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.host }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [mbp, mini, air]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: cachix/cachix-action@v15
+        with:
+          name: hodgesd-nix-config
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Build ${{ matrix.host }}
+        run: nix build -L ".#darwinConfigurations.${{ matrix.host }}.system"
