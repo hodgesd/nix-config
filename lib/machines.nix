@@ -3,7 +3,6 @@
 {
   # Darwin machines
   mbp = {
-    hostname = "mbp";
     type = "darwin";
     chip = "m3-pro";
     formFactor = "laptop";
@@ -18,8 +17,8 @@
   };
 
   mini = {
-    hostname = "mini";
     type = "darwin";
+    username = "derrickhodges";
     chip = "m2-pro";
     formFactor = "desktop";
     primaryUse = "server";
@@ -32,7 +31,6 @@
   };
 
   air = {
-    hostname = "air";
     type = "darwin";
     chip = "m1";
     formFactor = "laptop";

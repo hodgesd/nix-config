@@ -7,6 +7,8 @@
   unstablePkgs,
   ...
 }: {
+  # Pinned at the install-time Home Manager release; intentionally not bumped
+  # with nixpkgs. (Distinct from system.stateVersion and the nixpkgs version.)
   home.stateVersion = "24.05";
 
   imports = [

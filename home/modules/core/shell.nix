@@ -3,6 +3,7 @@
   config,
   pkgs,
   lib,
+  machine,
   ...
 }: {
   programs.zsh = {
@@ -17,7 +18,7 @@
 
     # Only show banner on login shells (not every subshell)
     loginExtra = ''
-      ${pkgs.figurine}/bin/figurine -f "Doom.flf" mbp
+      ${pkgs.figurine}/bin/figurine -f "Doom.flf" ${machine.hostname}
     '';
   };
 

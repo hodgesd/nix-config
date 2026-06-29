@@ -1,6 +1,10 @@
-# Host-specific configuration for air (M1 Laptop)
-{machine, ...}: {
-  # Laptop-specific power management
+# Power/menu-bar settings common to all laptops; applied via machine.formFactor.
+{
+  machine,
+  lib,
+  ...
+}:
+lib.mkIf (machine.formFactor == "laptop") {
   system.defaults.CustomUserPreferences = {
     "com.apple.menuextra.battery" = {
       # Show battery percentage in menu bar
