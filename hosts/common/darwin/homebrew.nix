@@ -64,6 +64,7 @@
       "brave-browser"
       "chatgpt"
       "citrix-workspace"
+      "claude"
       "cursor"
       "default-folder-x"
       "desktoppr" # Command-line wallpaper manager

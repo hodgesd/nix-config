@@ -16,6 +16,16 @@ fi
 # Command to find all installed applications in common locations
 FIND_APPS_COMMAND='find /Applications ~/Applications "/Applications/Nix Apps" -maxdepth 2 -name "*.app" 2>/dev/null | sort'
 
+# Apps to always ignore: cask sub-bundles and known name-mismatch false
+# positives that aren't really unmanaged. Match is on the app's basename with
+# the .app extension stripped.
+IGNORE_APPS=(
+    "Karabiner-EventViewer"             # bundled with the karabiner-elements cask
+    "Karabiner-VirtualHIDDevice-Manager"
+    "Ice"                               # managed via jordanbaird-ice cask
+    "Mona 6"                            # managed via masApps "Mona"
+)
+
 # --- Functions ---
 
 # Function to normalize an app name for comparison
@@ -33,6 +43,20 @@ normalize_name() {
 
     # echo "DEBUG: Normalized '$name' to '$normalized'" >&2 # Optional: add this for even more detailed tracing
     echo "$normalized"
+}
+
+# Function to detect built-in macOS system apps (Safari, Feedback Assistant, etc.)
+# These are signed with "macOS Software Signing". Apple App Store apps (Keynote,
+# Numbers, ...) use "Apple Mac OS Application Signing" and are NOT matched here,
+# so apps you manage via masApps still get reported if missing from your config.
+is_system_app() {
+    local app="$1"
+    # Capture first, then grep: piping codesign directly into `grep -q` lets grep
+    # close the pipe early, giving codesign SIGPIPE — and under `pipefail` that
+    # makes the whole check spuriously report non-system.
+    local sig
+    sig=$(codesign -dvv "$app" 2>&1)
+    grep -q '^Authority=macOS Software Signing' <<< "$sig"
 }
 
 # --- Main Script ---
@@ -55,7 +79,10 @@ echo "Evaluating Nix darwin configuration..."
 # This reads the actual darwin configuration, not the nix daemon settings
 # Note: Replace 'mini' with your hostname if different
 HOSTNAME=$(hostname -s)
-managed_names_raw=$(nix eval .#darwinConfigurations.${HOSTNAME}.config.homebrew --json 2>/dev/null | jq -r '(.casks[]? // empty), ((.masApps? // {}) | keys[]? // empty)')
+# Note: homebrew.casks entries are submodule objects ({name, args, ...}) in
+# current nix-darwin, but were plain strings in older versions. Handle both:
+# `objects | .name` for the new form, `strings` for the old.
+managed_names_raw=$(nix eval .#darwinConfigurations.${HOSTNAME}.config.homebrew --json 2>/dev/null | jq -r '(.casks[]? | objects | .name), (.casks[]? | strings), ((.masApps? // {}) | keys[]? // empty)')
 
 # Create a temporary file to store normalized managed names
 # Use a trap to ensure the temp file is removed even if the script errors
@@ -88,6 +115,31 @@ for app_path in "${installed_apps[@]}"; do
     normalized_installed_name=$(normalize_name "$app_path")
 
     # echo "DEBUG: Checking installed app '$app_path' normalized to '$normalized_installed_name'" >&2 # Optional: very verbose debug
+
+    app_base=$(basename "$app_path")
+
+    # Skip hidden apps (dot-prefixed): always internal helper bundles
+    if [[ "$app_base" == .* ]]; then
+        continue
+    fi
+
+    # Skip explicitly-ignored apps (cask sub-bundles, known false positives)
+    app_name_no_ext="${app_base%.app}"
+    skip=false
+    for ignore in "${IGNORE_APPS[@]}"; do
+        if [[ "$app_name_no_ext" == "$ignore" ]]; then
+            skip=true
+            break
+        fi
+    done
+    if [[ "$skip" == true ]]; then
+        continue
+    fi
+
+    # Skip built-in macOS system apps (e.g. Safari, Feedback Assistant)
+    if is_system_app "$app_path"; then
+        continue
+    fi
 
     # Check if the normalized installed name exists in the temporary file of managed names
     # Use grep -Fqx for fixed string, quiet, exact line match
