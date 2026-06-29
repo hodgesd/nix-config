@@ -8,6 +8,5 @@
     ./defaults/finder.nix
     ./defaults/dock.nix
     ./defaults/security.nix
-    ./defaults/apps.nix
   ];
 }

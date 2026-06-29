@@ -2,19 +2,21 @@
 {
   inputs,
   outputs,
-  stateVersion,
   ...
 }: let
   machines = import ./machines.nix;
 in {
   mkDarwin = {
     hostname,
-    username ? "hodgesd",
     system ? "aarch64-darwin",
   }: let
     inherit (inputs.nixpkgs) lib;
     unstablePkgs = inputs.nixpkgs-unstable.legacyPackages.${system};
-    machine = machines.${hostname};
+    # Enrich the registry entry with its hostname (derived from the attr key)
+    # so `machine.hostname` is available to every module, including home-manager.
+    machine = machines.${hostname} // {inherit hostname;};
+    # Username comes from the machine registry, defaulting to "hodgesd".
+    username = machine.username or "hodgesd";
     customConfPath = ./../hosts/darwin/${hostname}/default.nix;
     hostSpecificModules =
       if builtins.pathExists customConfPath
@@ -32,31 +34,32 @@ in {
             config.majordouble = {
               user = username;
               machine = {
-                inherit (machine) hostname type formFactor primaryUse chip;
+                inherit hostname;
+                inherit (machine) type formFactor primaryUse chip;
                 specs = machine.specs or {};
               };
             };
           }
           ../hosts/common/common-packages.nix
           ../hosts/common/darwin-common.nix
-        # Configure Nix settings
-        {
-          nix.settings = {
-            trusted-users = ["root" username];
-            experimental-features = ["nix-command" "flakes"];
-          };
-        }
-        inputs.home-manager.darwinModules.home-manager
-        {
-          networking.hostName = hostname;
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.backupFileExtension = "backup";
-          home-manager.extraSpecialArgs = {inherit inputs;};
-          home-manager.users.${username} = {
-            imports = [./../home/default.nix];
-          };
-        }
+          # Configure Nix settings
+          {
+            nix.settings = {
+              trusted-users = ["root" username];
+              experimental-features = ["nix-command" "flakes"];
+            };
+          }
+          inputs.home-manager.darwinModules.home-manager
+          {
+            networking.hostName = hostname;
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.backupFileExtension = "backup";
+            home-manager.extraSpecialArgs = {inherit inputs machine username unstablePkgs;};
+            home-manager.users.${username} = {
+              imports = [./../home/default.nix];
+            };
+          }
           inputs.nix-homebrew.darwinModules.nix-homebrew
           ({pkgs, ...}: {
             nix-homebrew = {

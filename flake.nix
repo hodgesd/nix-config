@@ -14,21 +14,16 @@
     };
   };
 
-  outputs = { self, ... } @ inputs:
+  outputs = {self, ...} @ inputs:
     with inputs; let
       inherit (self) outputs;
 
-      stateVersion = "25.05";
-      libx = import ./lib { inherit inputs outputs stateVersion; };
-    in
-    {
+      libx = import ./lib {inherit inputs outputs;};
+    in {
       darwinConfigurations = {
-        mbp = libx.mkDarwin { hostname = "mbp"; };
-        mini = libx.mkDarwin {
-          hostname = "mini";
-          username = "derrickhodges";
-        };
-        air = libx.mkDarwin { hostname = "air"; };
+        mbp = libx.mkDarwin {hostname = "mbp";};
+        mini = libx.mkDarwin {hostname = "mini";};
+        air = libx.mkDarwin {hostname = "air";};
       };
     };
 }

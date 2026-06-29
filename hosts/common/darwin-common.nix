@@ -5,12 +5,12 @@
   ...
 }: {
   imports = [
-    inputs.home-manager.darwinModules.home-manager
     ./darwin/base.nix
     ./darwin/homebrew.nix
     ./darwin/system-defaults.nix
     ./darwin/fonts.nix
     ./darwin/packages.nix
+    ./darwin/laptop-defaults.nix
     ./darwin/wallpaper.nix
     ./darwin/desktop
   ];
