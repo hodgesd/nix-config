@@ -87,7 +87,9 @@ managed_names_raw=$(nix eval .#darwinConfigurations.${HOSTNAME}.config.homebrew 
 # Create a temporary file to store normalized managed names
 # Use a trap to ensure the temp file is removed even if the script errors
 managed_names_file=$(mktemp)
-trap 'rm -f "$managed_names_file"' EXIT # Ensure cleanup on exit
+cask_map_file=$(mktemp)
+mas_map_file=$(mktemp)
+trap 'rm -f "$managed_names_file" "$cask_map_file" "$mas_map_file"' EXIT # Ensure cleanup on exit
 
 echo "Normalizing and collecting managed app names..."
 # Normalize managed names and store them in the temporary file, one per line
@@ -107,9 +109,46 @@ sort -u "$managed_names_file" -o "$managed_names_file"
 # cat "$managed_names_file" >&2
 # echo "---" >&2
 
+# Build a Homebrew cask lookup mapping each cask's installed .app bundle name to
+# its token (e.g. "Rectangle.app<TAB>rectangle"). Sourced from the Homebrew API.
+# If the fetch fails (offline, etc.) the map stays empty and cask detection is
+# skipped gracefully. `|| true` keeps pipefail from aborting the script.
+cask_lookup_available=false
+echo "Fetching Homebrew cask catalog..."
+if curl -fsS https://formulae.brew.sh/api/cask.json 2>/dev/null \
+    | jq -r '.[] | .token as $t | (.artifacts[]? | .app[]? | strings) | "\(.)\t\($t)"' \
+    > "$cask_map_file" 2>/dev/null \
+    && [[ -s "$cask_map_file" ]]; then
+    cask_lookup_available=true
+else
+    echo "Warning: could not reach the Homebrew API — skipping cask availability lookup." >&2
+fi
+
+# Build a Mac App Store lookup mapping each installed App Store app's name to its
+# numeric id (e.g. "Affinity Photo<TAB>824183456"), from `mas list`.
+mas_lookup_available=false
+if command -v mas &> /dev/null; then
+    # `mas list` prints "<id>  <name>            (<version>)". Strip the id and the
+    # trailing (version), then any padding, so the name matches the .app basename.
+    if mas list 2>/dev/null \
+        | awk '{
+            id=$1; line=$0
+            sub(/^ *[0-9]+[ ]+/, "", line)        # drop leading id
+            sub(/[ ]+\([^)]*\)[ ]*$/, "", line)   # drop trailing (version)
+            sub(/[ ]+$/, "", line)                # drop any residual padding
+            print line "\t" id
+          }' \
+        > "$mas_map_file"; then
+        mas_lookup_available=true
+    fi
+else
+    echo "Note: 'mas' not installed — skipping Mac App Store lookup." >&2
+fi
 
 echo "Comparing installed apps against managed list..."
-unmanaged_apps=()
+cask_tokens=()      # unmanaged apps available as a Homebrew cask (token list)
+mas_entries=()      # unmanaged App Store apps, as "Name|id" (id may be empty)
+unmatched_apps=()   # unmanaged apps that are neither cask nor App Store
 for app_path in "${installed_apps[@]}"; do
     # Normalize the installed app name
     normalized_installed_name=$(normalize_name "$app_path")
@@ -143,26 +182,77 @@ for app_path in "${installed_apps[@]}"; do
 
     # Check if the normalized installed name exists in the temporary file of managed names
     # Use grep -Fqx for fixed string, quiet, exact line match
-    if ! grep -Fqx "$normalized_installed_name" "$managed_names_file"; then
-        # App name not found in the managed list, add the original path
-        # echo "DEBUG: '$normalized_installed_name' NOT found." >&2 # Optional debug
-        unmanaged_apps+=("$app_path")
-    else
+    if grep -Fqx "$normalized_installed_name" "$managed_names_file"; then
         # echo "DEBUG: '$normalized_installed_name' FOUND." >&2 # Optional debug
-        : # Do nothing if found
+        continue # Already managed, nothing to do
+    fi
+
+    # Unmanaged. Classify it (cask-first, then App Store, then neither).
+    # 1) Is there a cask whose .app bundle matches this app's basename?
+    token=""
+    if [[ "$cask_lookup_available" == true ]]; then
+        token=$(awk -F'\t' -v a="$app_base" '$1==a{print $2; exit}' "$cask_map_file")
+    fi
+    if [[ -n "$token" ]]; then
+        cask_tokens+=("$token")
+    # 2) Was it installed from the Mac App Store? (authoritative: receipt file)
+    elif [[ -e "$app_path/Contents/_MASReceipt/receipt" ]]; then
+        id=""
+        if [[ "$mas_lookup_available" == true ]]; then
+            id=$(awk -F'\t' -v n="$app_name_no_ext" '$1==n{print $2; exit}' "$mas_map_file")
+        fi
+        mas_entries+=("$app_name_no_ext|$id")
+    # 3) Neither a cask nor an App Store install.
+    else
+        unmatched_apps+=("$app_path")
     fi
 done
 
 echo -e "\n--- Unmanaged Applications ---"
 
-if [ ${#unmanaged_apps[@]} -eq 0 ]; then
+if [ ${#cask_tokens[@]} -eq 0 ] && [ ${#mas_entries[@]} -eq 0 ] && [ ${#unmatched_apps[@]} -eq 0 ]; then
     echo "All found applications appear to be managed by your Nix configuration (via homebrew.casks or homebrew.masApps)."
-else
-    echo "The following installed applications are not listed in your Nix config's homebrew.casks or homebrew.masApps:"
-    # Print each unmanaged app path
-    for app in "${unmanaged_apps[@]}"; do
-        echo "$app"
+fi
+
+# --- Bucket 1: available as a Homebrew cask ---
+if [ ${#cask_tokens[@]} -gt 0 ]; then
+    # Sort + dedupe tokens.
+    sorted_tokens=()
+    while IFS= read -r t; do
+        sorted_tokens+=("$t")
+    done < <(printf '%s\n' "${cask_tokens[@]}" | sort -u)
+
+    echo -e "\nAvailable as Homebrew cask (${sorted_tokens[*]}):"
+    echo
+    echo "  1) Adopt existing apps:"
+    echo "     brew install --cask --adopt ${sorted_tokens[*]}"
+    echo
+    echo "  2) Add to homebrew.nix casks (sorted + indented to match):"
+    for t in "${sorted_tokens[@]}"; do
+        echo "      \"$t\""
     done
 fi
 
-# The trap will handle removing the temporary file
+# --- Bucket 2: installed from the Mac App Store ---
+if [ ${#mas_entries[@]} -gt 0 ]; then
+    echo -e "\nInstalled from Mac App Store — add to homebrew.nix masApps:"
+    while IFS= read -r entry; do
+        name="${entry%|*}"
+        id="${entry##*|}"
+        if [[ -n "$id" ]]; then
+            echo "      \"$name\" = $id;"
+        else
+            echo "      \"$name\" = ; # run: mas search \"$name\""
+        fi
+    done < <(printf '%s\n' "${mas_entries[@]}" | sort -u)
+fi
+
+# --- Bucket 3: neither cask nor App Store ---
+if [ ${#unmatched_apps[@]} -gt 0 ]; then
+    echo -e "\nNot found as cask or App Store (manual install / candidate to remove):"
+    for app in "${unmatched_apps[@]}"; do
+        echo "  $app"
+    done
+fi
+
+# The trap will handle removing the temporary files
