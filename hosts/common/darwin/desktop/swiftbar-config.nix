@@ -28,6 +28,14 @@
         "microcenter_deals_uv.6hr.py"
         "bball.1d.py"
       ];
+
+      # Plugins maintained in this repo (not in the swiftbar_plugins input)
+      plugins = {
+        lottery_value = {
+          filename = "lottery_value.12h.py";
+          source = ./swiftbar-plugins/lottery_value.12h.py;
+        };
+      };
     };
   };
 

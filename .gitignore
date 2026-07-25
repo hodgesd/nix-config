@@ -9,3 +9,6 @@ docker/**/.env
 # IntelliJ IDEA project files
 *.iml
 .idea/
+
+# Python bytecode (swiftbar plugins)
+__pycache__/
