@@ -86,6 +86,7 @@
       "swiftbar"
       "syntax-highlight"
       "TheBoredTeam/boring-notch/boring-notch"
+      "unifi-identity-endpoint"
       "vivaldi"
       "xnapper"
     ];
