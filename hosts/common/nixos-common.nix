@@ -83,9 +83,11 @@
 
   networking.networkmanager.enable = true;
 
-  # Tailscale from unstable: 25.11's tailscale predates the fix for the
-  # 1.98.x MagicDNS regression (NixOS/nixpkgs#520715). Unlike the old
-  # unpinned fetchTarball this is actually locked via flake.lock.
+  # Tailscale from unstable, locked via flake.lock (unlike the old
+  # unpinned fetchTarball). Locked rev ships 1.98.8 — the exact version
+  # the VM was running at cutover, so no up/downgrade surprises. When
+  # bumping nixpkgs-unstable, check the tailscale release notes; 1.98.0
+  # and 1.98.1 had a Linux MagicDNS regression (NixOS/nixpkgs#520715).
   services.tailscale = {
     enable = true;
     package = unstablePkgs.tailscale;
