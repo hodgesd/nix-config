@@ -24,16 +24,33 @@ switch target_host=hostname: (build target_host)
 ### nixos (run from the Mac)
 
 # Deploy a nixos host: eval locally, build + activate on the host over tailscale.
-# The Mac can't build x86_64-linux, so --build-host points at the VM itself;
-# CI-pushed Cachix closures make the remote build mostly downloads.
-# ssh_dest is root over Tailscale SSH (tailscaled's own SSH server — not
-# affected by openssh's PermitRootLogin=no), so no sudo password is needed.
-# The bare hostname resolves to the LAN IP where root login is refused,
-# hence the tailnet IP default.
+# The Mac can't build x86_64-linux, so the derivation closure is copied to the
+# host and realised there (CI-pushed Cachix closures make that mostly
+# downloads). Activation runs inside a transient systemd unit so it survives
+# tailscaled restarts mid-switch. ssh_dest is root over Tailscale SSH
+# (tailscaled's own SSH server — unaffected by openssh's PermitRootLogin=no),
+# so no sudo password is needed. The bare hostname resolves to the LAN IP
+# where root login is refused, hence the tailnet IP default.
 [macos]
 deploy target_host="nixos-infra" action="switch" ssh_dest="root@100.98.163.36":
-  nix run nixpkgs#nixos-rebuild -- {{action}} --flake ".#{{target_host}}" \
-    --build-host {{ssh_dest}} --target-host {{ssh_dest}}
+  #!/usr/bin/env bash
+  set -euo pipefail
+  echo "==> evaluating {{target_host}}"
+  drv=$(nix eval --raw ".#nixosConfigurations.{{target_host}}.config.system.build.toplevel.drvPath")
+  echo "==> copying derivations to {{ssh_dest}}"
+  nix copy --derivation --to "ssh://{{ssh_dest}}" "$drv"
+  echo "==> realising on {{ssh_dest}} (Cachix/cache.nixos.org downloads + local builds)"
+  out=$(ssh {{ssh_dest}} "nix-store --realise '$drv'")
+  echo "==> {{action}} $out"
+  if [ "{{action}}" = "switch" ] || [ "{{action}}" = "boot" ]; then
+    ssh {{ssh_dest}} "nix-env -p /nix/var/nix/profiles/system --set '$out'"
+    ssh {{ssh_dest}} "systemd-run --wait --collect --quiet --unit=nixos-deploy \
+      '$out/bin/switch-to-configuration' {{action}}" \
+      || { echo 'activation unit failed; check: journalctl -u nixos-deploy'; exit 1; }
+    ssh {{ssh_dest}} "readlink /run/current-system"
+  else
+    ssh {{ssh_dest}} "'$out/bin/switch-to-configuration' {{action}}"
+  fi
 
 # Dry-run a deploy (shows would-be systemd changes on the host)
 [macos]

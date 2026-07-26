@@ -1,0 +1,20 @@
+# sops recipient policy: who can decrypt which secrets files.
+#
+# - admin_hodgesd: the Mac editing key (~/.config/sops/age/keys.txt).
+#   BACK THE PRIVATE KEY UP IN YOUR PASSWORD MANAGER — losing it means you
+#   can no longer edit secrets (the VM could still decrypt its own).
+# - host_nixos_infra: derived from the VM's /etc/ssh/ssh_host_ed25519_key
+#   via ssh-to-age. If the VM is ever reinstalled its host key changes:
+#   re-run `ssh-keyscan -t ed25519 <vm> | ssh-to-age`, update here, then
+#   `sops updatekeys secrets/nixos-infra.yaml`.
+#
+# Edit secrets with: sops secrets/nixos-infra.yaml
+keys:
+  - &admin_hodgesd age1t6n5zv8apvjcknhd9cuph2d84xkvgh0nn8ktsj09c6gffcquk39sny20lu
+  - &host_nixos_infra age1xnhke44jxdfa209c3939993xznhm8fftmp5d6m5g22cm39jrqpjq5k9wch
+creation_rules:
+  - path_regex: secrets/nixos-infra\.yaml$
+    key_groups:
+      - age:
+          - *admin_hodgesd
+          - *host_nixos_infra

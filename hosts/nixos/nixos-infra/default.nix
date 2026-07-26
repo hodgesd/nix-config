@@ -4,7 +4,11 @@
 # UNAS "Data" share mount (storage.nix). Shared server baseline
 # (tailscale, docker, ssh, firewall, user) comes from
 # hosts/common/nixos-common.nix.
-{pkgs, ...}: {
+{
+  config,
+  pkgs,
+  ...
+}: {
   imports = [
     ./hardware-configuration.nix
     ./easy-afd.nix
@@ -12,6 +16,28 @@
     ./backup.nix
     ./storage.nix
   ];
+
+  # Secrets: decrypted at activation by sops-nix into /run/secrets (tmpfs)
+  # using this host's ssh_host_ed25519_key as the age identity. If
+  # decryption fails, activation aborts BEFORE services restart — the
+  # running generation is never harmed. Edit on the Mac with:
+  #   sops secrets/nixos-infra.yaml
+  sops = {
+    defaultSopsFile = ../../../secrets/nixos-infra.yaml;
+    age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+    secrets = {
+      easy-afd-env = {}; # OPENAIP/Autorouter/Kuma push URLs (gunicorn env)
+      cloudflare-acme-env = {}; # DNS-01 token for afd.hdgs.me cert
+      nas-backup-credentials = {}; # SMB creds for both UNAS shares
+      homelab-env = {}; # TS_AUTHKEY for the compose tailscale sidecars
+      # Decrypted pre-user-creation; makes DR rebuilds come up with the
+      # same login password (mutableUsers is on, so this only seeds new
+      # installs — the live shadow entry already matches).
+      hodgesd-password.neededForUsers = true;
+    };
+  };
+
+  users.users.hodgesd.hashedPasswordFile = config.sops.secrets.hodgesd-password.path;
 
   # Matches the release the VM was installed with. NEVER bump this —
   # it gates stateful data migrations, not features.

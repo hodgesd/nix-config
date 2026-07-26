@@ -15,10 +15,11 @@
 # is pandas-version-coupled (dev Mac runs pandas 3.x, nixpkgs ships 2.x).
 # The easy-afd-refresh service rebuilds all of data/ locally instead.
 #
-# Secrets (Autorouter credentials) live in /etc/easy-afd.env, root-only;
-# systemd reads it before dropping privileges. (Moves to sops-nix in a
-# later phase.)
+# Secrets (Autorouter credentials, Kuma push URLs) come from sops —
+# decrypted to /run/secrets/easy-afd-env at activation; systemd reads the
+# EnvironmentFile as root before dropping privileges.
 {
+  config,
   pkgs,
   lib,
   ...
@@ -73,14 +74,14 @@
     cd ${stateDir}
     ${pyEnv}/bin/python ${appDir}/scripts/refresh_faa_data.py --nasr --data-dir ${stateDir}/data
     ${pyEnv}/bin/python ${appDir}/scripts/refresh_ourairports_data.py --data-dir ${stateDir}/data
-    # Non-fatal: needs OPENAIP_API_KEY (in /etc/easy-afd.env) since
+    # Non-fatal: needs OPENAIP_API_KEY (in the easy-afd-env secret) since
     # openAIP's bulk exports went requester-pays (2026-07-22); on any
     # failure the PCN overlay just goes stale and the app degrades
     # gracefully without it.
     ${pyEnv}/bin/python ${appDir}/scripts/refresh_openaip_data.py --data-dir ${stateDir}/data \
       || echo "openaip refresh failed (non-fatal)" >&2
     # Success heartbeat for the Uptime Kuma push monitor. Set
-    # KUMA_REFRESH_PUSH_URL in /etc/easy-afd.env; skipped when unset.
+    # KUMA_REFRESH_PUSH_URL in the easy-afd-env secret; skipped when unset.
     if [ -n "''${KUMA_REFRESH_PUSH_URL:-}" ]; then
       ${pkgs.curl}/bin/curl -fsS -m 10 --retry 3 "''${KUMA_REFRESH_PUSH_URL}" >/dev/null \
         || echo "kuma heartbeat push failed" >&2
@@ -133,7 +134,7 @@ in {
           "--access-logfile -"
           "g7afd:app"
         ];
-        EnvironmentFile = "/etc/easy-afd.env";
+        EnvironmentFile = config.sops.secrets.easy-afd-env.path;
         Restart = "on-failure";
       };
   };
@@ -156,7 +157,7 @@ in {
         # "+" = run as root: pick up the fresh data (the app loads the
         # sqlite stores and alternates pickle at import time).
         ExecStartPost = "+${lib.getExe' pkgs.systemd "systemctl"} try-restart easy-afd.service";
-        EnvironmentFile = "/etc/easy-afd.env";
+        EnvironmentFile = config.sops.secrets.easy-afd-env.path;
       };
   };
 
@@ -179,7 +180,7 @@ in {
     description = "Heartbeat Easy A/FD health to Uptime Kuma";
     serviceConfig = {
       Type = "oneshot";
-      EnvironmentFile = "/etc/easy-afd.env";
+      EnvironmentFile = config.sops.secrets.easy-afd-env.path;
     };
     script = ''
       ${pkgs.curl}/bin/curl -fsS -m 10 https://afd.hdgs.me/healthz >/dev/null
