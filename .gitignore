@@ -5,6 +5,11 @@ com.googlecode.iterm2.plist
 docker/**/.env
 **/.env
 *.DS_Store
+.DS_Store
+
+# sops: never commit decrypted material
+secrets/*.dec.yaml
+*.dec.yaml
 
 # IntelliJ IDEA project files
 *.iml

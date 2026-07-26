@@ -99,7 +99,7 @@ cd nix-config
 Identify apps to preserve:
 
 ```bash
-./pre_install_audit.sh
+./scripts/pre_install_audit.sh
 ```
 
 This will:
@@ -140,8 +140,8 @@ Edit `hosts/common/darwin/homebrew.nix`:
 Set to one of the [machine names](#machines) (e.g., `mini`, `mbp`, `air`):
 
 ```bash
-chmod +x set_mac_name.sh
-./set_mac_name.sh
+chmod +x scripts/set_mac_name.sh
+./scripts/set_mac_name.sh
 
 # Or manually:
 sudo scutil --set HostName <hostname>
@@ -210,7 +210,7 @@ After verifying everything works:
 
 1. **Find remaining unmanaged apps:**
    ```bash
-   ./find_unmanaged_apps.sh
+   ./scripts/find_unmanaged_apps.sh
    ```
 
 2. **Optional: Re-enable cleanup** in `homebrew.nix`:
@@ -288,7 +288,7 @@ darwin-rebuild switch --rollback
 darwin-rebuild --list-generations
 
 # Audit unmanaged apps (after nix-darwin installed)
-./find_unmanaged_apps.sh
+./scripts/find_unmanaged_apps.sh
 ```
 
 ## 📁 Configuration Structure
@@ -318,8 +318,8 @@ See [STRUCTURE.md](docs/STRUCTURE.md) for detailed information.
 - **Modify system settings**: Edit files in `hosts/common/darwin/defaults/`
 - **Add keyboard shortcut**: Edit `hosts/common/darwin/desktop/skhd.nix`
 - **Add a new machine**: See [ADDING_MACHINE.md](docs/ADDING_MACHINE.md)
-- **Audit installed apps**: Run `./find_unmanaged_apps.sh` (after nix-darwin installed)
-- **Pre-install audit**: Run `./pre_install_audit.sh` (before nix-darwin installed)
+- **Audit installed apps**: Run `./scripts/find_unmanaged_apps.sh` (after nix-darwin installed)
+- **Pre-install audit**: Run `./scripts/pre_install_audit.sh` (before nix-darwin installed)
 
 For more, see [CUSTOMIZATION.md](docs/CUSTOMIZATION.md).
 
@@ -332,11 +332,11 @@ For more, see [CUSTOMIZATION.md](docs/CUSTOMIZATION.md).
 
 ## 📝 Helper Scripts
 
-- **`pre_install_audit.sh`** - Audit system BEFORE installing nix-darwin
+- **`scripts/pre_install_audit.sh`** - Audit system BEFORE installing nix-darwin
   - Lists all Homebrew casks/formulas
   - Identifies non-Homebrew apps
   - Generates manual app checklist
-- **`find_unmanaged_apps.sh`** - Find apps not managed by nix AFTER installation
+- **`scripts/find_unmanaged_apps.sh`** - Find apps not managed by nix AFTER installation
   - Compares installed apps with nix config
   - Identifies apps to add to homebrew.nix
-- **`set_mac_name.sh`** - Set hostname to match configuration
+- **`scripts/set_mac_name.sh`** - Set hostname to match configuration

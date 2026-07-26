@@ -25,7 +25,7 @@ switch target_host=hostname: (build target_host)
 update:
   nix flake update
 
-# Garbage collect old OS generations and remove stale packages from the nix store
-gc generations="5":
-  nix-env --delete-generations {{generations}}
-  nix-store --gc
+# Garbage collect system generations older than N days and optimise the store
+gc days="14":
+  sudo nix-collect-garbage --delete-older-than {{days}}d
+  nix-store --optimise
