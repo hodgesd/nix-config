@@ -4,12 +4,14 @@
 # real fs. uid/gid 1000 = the container user MeTube writes as.
 #
 # NAS IP 192.168.1.142 also appears in backup.nix (backups share).
-{...}: {
+{config, ...}: {
   fileSystems."/mnt/data" = {
     device = "//192.168.1.142/Data";
     fsType = "cifs";
     options = [
-      "credentials=/etc/nas-backup.credentials"
+      # sops-decrypted at activation; the automount fires on first access,
+      # well after secrets exist.
+      "credentials=${config.sops.secrets.nas-backup-credentials.path}"
       "vers=3.0"
       "uid=1000"
       "gid=1000"

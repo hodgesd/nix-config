@@ -3,8 +3,10 @@
 # user nixos-backup scoped to that share). History/versioning comes
 # from snapshots on the share, so this is a plain --delete mirror.
 # Covered: the docker estate /srv/homelab (actual-budget ledger,
-# uptime-kuma, ntfy, homepage, compose file), /etc/nixos, and the
-# secrets env files. /var/lib/easy-afd is deliberately excluded —
+# uptime-kuma, ntfy, homepage, compose file) and a break-glass plaintext
+# copy of the sops secrets (from /run/secrets — lets you recover even if
+# every age key is lost). /etc/nixos is no longer mirrored: the config
+# lives in the nix-config repo on GitHub. /var/lib/easy-afd is excluded —
 # refresh scripts rebuild it and its pickles are pandas-coupled.
 # Containers are paused around the homelab copy so SQLite files
 # aren't torn mid-write (window is seconds for ~14 MB).
@@ -20,7 +22,7 @@
   dockerPkg = config.virtualisation.docker.package;
   backup = pkgs.writeShellScript "homelab-backup" ''
     set -eu
-    creds=/etc/nas-backup.credentials
+    creds=${config.sops.secrets.nas-backup-credentials.path}
     if [ ! -f "$creds" ]; then
       echo "no $creds - skipping NAS backup" >&2
       exit 0
@@ -37,9 +39,8 @@
     # so /srv/homelab holds only its small queue state — no excludes.
     ${pkgs.rsync}/bin/rsync -a --delete /srv/homelab/ "$dest/homelab/"
     $compose unpause
-    ${pkgs.rsync}/bin/rsync -a --delete /etc/nixos/ "$dest/etc-nixos/"
-    for f in /etc/easy-afd.env /etc/cloudflare-acme.env /etc/nas-backup.credentials; do
-      ${pkgs.coreutils}/bin/install -m 600 "$f" "$dest/secrets/"
+    for f in easy-afd-env cloudflare-acme-env nas-backup-credentials homelab-env; do
+      ${pkgs.coreutils}/bin/install -m 600 "/run/secrets/$f" "$dest/secrets/"
     done
     ${pkgs.coreutils}/bin/date -u +%FT%TZ > "$dest/last-backup.txt"
   '';
