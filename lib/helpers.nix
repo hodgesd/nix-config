@@ -35,7 +35,8 @@ in {
               user = username;
               machine = {
                 inherit hostname;
-                inherit (machine) type formFactor primaryUse chip;
+                inherit (machine) type formFactor primaryUse;
+                chip = machine.chip or null;
                 specs = machine.specs or {};
               };
             };
@@ -84,5 +85,59 @@ in {
           })
         ]
         ++ hostSpecificModules;
+    };
+
+  mkNixos = {
+    hostname,
+    system ? "x86_64-linux",
+    withHomeManager ? false,
+  }: let
+    unstablePkgs = inputs.nixpkgs-unstable.legacyPackages.${system};
+    machine = machines.${hostname} // {inherit hostname;};
+    username = machine.username or "hodgesd";
+  in
+    inputs.nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = {inherit system inputs username unstablePkgs machine;};
+      modules =
+        [
+          ./options.nix
+          {
+            config.majordouble = {
+              user = username;
+              machine = {
+                inherit hostname;
+                inherit (machine) type formFactor primaryUse;
+                chip = machine.chip or null;
+                specs = machine.specs or {};
+              };
+            };
+          }
+          ../hosts/common/common-packages.nix
+          ../hosts/common/nixos-common.nix
+          # Unlike darwin, a NixOS host dir is required: it carries
+          # hardware-configuration.nix, without which the system can't boot.
+          ../hosts/nixos/${hostname}
+          inputs.sops-nix.nixosModules.sops
+          {
+            networking.hostName = hostname;
+            nix.settings = {
+              trusted-users = ["root" username];
+              experimental-features = ["nix-command" "flakes"];
+            };
+          }
+        ]
+        ++ inputs.nixpkgs.lib.optionals withHomeManager [
+          inputs.home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.backupFileExtension = "backup";
+            home-manager.extraSpecialArgs = {inherit inputs machine username unstablePkgs;};
+            home-manager.users.${username} = {
+              imports = [./../home/default.nix];
+            };
+          }
+        ];
     };
 }

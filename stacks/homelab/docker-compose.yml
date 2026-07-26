@@ -1,0 +1,210 @@
+# SNAPSHOT for reference until the compose-stack phase lands — authoritative
+# file: /srv/homelab/docker-compose.yml on the VM (backed up nightly to the
+# NAS). Once nix deploys this file, THIS copy becomes authoritative and
+# hand-edits on the VM are overwritten at switch.
+services:
+  ts-uptime:
+    image: tailscale/tailscale:latest
+    container_name: ts-uptime
+    hostname: uptime
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./ts-uptime/state:/var/lib/tailscale
+      - ./ts-uptime/config:/config
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    network_mode: service:ts-uptime
+    depends_on:
+      - ts-uptime
+    volumes:
+      - ./uptime-kuma:/app/data
+
+  ts-budget:
+    image: tailscale/tailscale:latest
+    container_name: ts-budget
+    hostname: budget
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./ts-budget/state:/var/lib/tailscale
+      - ./ts-budget/config:/config
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  actual-budget:
+    image: actualbudget/actual-server:latest
+    container_name: actual-budget
+    restart: unless-stopped
+    network_mode: service:ts-budget
+    depends_on:
+      - ts-budget
+    volumes:
+      - ./actual-budget:/data
+
+  ts-homepage:
+    image: tailscale/tailscale:latest
+    container_name: ts-homepage
+    hostname: homepage
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./ts-homepage/state:/var/lib/tailscale
+      - ./ts-homepage/config:/config
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    network_mode: service:ts-homepage
+    depends_on:
+      - ts-homepage
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: homepage.jaguar-duckbill.ts.net
+    volumes:
+      - ./homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  ts-ntfy:
+    image: tailscale/tailscale:latest
+    container_name: ts-ntfy
+    hostname: ntfy
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./ts-ntfy/state:/var/lib/tailscale
+      - ./ts-ntfy/config:/config
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    container_name: ntfy
+    restart: unless-stopped
+    network_mode: service:ts-ntfy
+    depends_on:
+      - ts-ntfy
+    command: serve
+    volumes:
+      - ./ntfy/cache:/var/cache/ntfy
+      - ./ntfy/config:/etc/ntfy
+
+  ts-adguard:
+    image: tailscale/tailscale:latest
+    container_name: ts-adguard
+    hostname: adguard
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./ts-adguard/state:/var/lib/tailscale
+      - ./ts-adguard/config:/config
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    restart: unless-stopped
+    network_mode: service:ts-adguard
+    depends_on:
+      - ts-adguard
+    volumes:
+      - ./adguard/work:/opt/adguardhome/work
+      - ./adguard/conf:/opt/adguardhome/conf
+
+  ts-librespeed:
+    image: tailscale/tailscale:latest
+    container_name: ts-librespeed
+    hostname: librespeed
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./ts-librespeed/state:/var/lib/tailscale
+      - ./ts-librespeed/config:/config
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  librespeed:
+    image: linuxserver/librespeed:latest
+    container_name: librespeed
+    restart: unless-stopped
+    network_mode: service:ts-librespeed
+    depends_on:
+      - ts-librespeed
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: America/Chicago
+    volumes:
+      - ./librespeed/config:/config
+
+  ts-metube:
+    image: tailscale/tailscale:latest
+    container_name: ts-metube
+    hostname: metube
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./ts-metube/state:/var/lib/tailscale
+      - ./ts-metube/config:/config
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  metube:
+    image: ghcr.io/alexta69/metube:latest
+    container_name: metube
+    restart: unless-stopped
+    network_mode: service:ts-metube
+    depends_on:
+      - ts-metube
+    environment:
+      UID: 1000
+      GID: 1000
+      TZ: America/Chicago
+      STATE_DIR: /state
+      YTDL_OPTIONS: '{"format":"bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best","merge_output_format":"mp4"}'
+    volumes:
+      - /mnt/data/Videos/MeTube:/downloads
+      - ./metube/state:/state

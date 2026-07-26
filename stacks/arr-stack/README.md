@@ -1,5 +1,10 @@
 # ARR Stack with Gluetun VPN
 
+> **Status: not deployed anywhere.** Parked here as a candidate for a
+> future media host (e.g. bare-metal NixOS on the HP mini PC — out of
+> scope for now). The Linux paths `/mnt/tank` and `/mnt/storage` assume
+> that future host, not `nixos-infra`.
+
 ## Services
 - qBittorrent (through VPN)
 - Sonarr 
