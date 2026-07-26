@@ -1,5 +1,7 @@
-# SNAPSHOT for reference — authoritative file: /srv/homelab/docker-compose.yml
-# on the VM (backed up nightly to the NAS). Refresh this copy when committing.
+# SNAPSHOT for reference until the compose-stack phase lands — authoritative
+# file: /srv/homelab/docker-compose.yml on the VM (backed up nightly to the
+# NAS). Once nix deploys this file, THIS copy becomes authoritative and
+# hand-edits on the VM are overwritten at switch.
 services:
   ts-uptime:
     image: tailscale/tailscale:latest
