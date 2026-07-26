@@ -1,15 +1,18 @@
 # 🛠️ My Nix Config
 
-A modular, well-documented Nix configuration managing macOS systems via nix-darwin.
+A modular Nix flake managing **all my machines**: three Macs via nix-darwin and the
+NixOS homelab VM via the same repo — one lockfile, shared modules, machine metadata
+for conditional config.
 
 ## ✨ Features
 
 - 🔧 Modular configuration structure
-- 🤖 Machine metadata system for conditional configs
-- 📦 Declarative package management (Nix + Homebrew)
-- 🏠 Home Manager integration
-- 📚 Comprehensive documentation
-- 🔄 Easy rollbacks and reproducibility
+- 🤖 Machine metadata system for conditional configs (`lib/machines.nix`)
+- 📦 Declarative package management (Nix + Homebrew on macOS)
+- 🏠 Home Manager integration (macOS; opt-in per NixOS host)
+- 🐧 NixOS homelab host deployed from the Mac over Tailscale
+- 🔄 Easy rollbacks and reproducibility (generations on every machine)
+- ✅ CI: every host is evaluated and built on each PR, pushed to Cachix
 
 ## 📖 Documentation
 
@@ -20,242 +23,75 @@ A modular, well-documented Nix configuration managing macOS systems via nix-darw
 
 ## 💻 Machines
 
-| Hostname    | OS | Model                  | User           | Storage (Ram/HD) | Cores (CPU/GPU) |
-|-------------|--|------------------------|----------------|------------------|-----------------|
-| `mini`      | 🍏 | Mac Mini M2 Pro        | `derrickhodges`| —                |                 |
-| `mbp`       | 🍏 | MacBook Pro M3 Pro 14" | `hodgesd`      | 18GB / 1TB       | 12 / 18         |
-| `air`       | 🍏 | MacBook Air M1 13"     | `hodgesd`      | 16GB / 500GB     | 8 / 7           |
+| Hostname      | OS | Model                    | User            | Storage (Ram/HD) | Cores (CPU/GPU) |
+|---------------|----|--------------------------|-----------------|------------------|-----------------|
+| `mbp`         | 🍏 | MacBook Pro M3 Pro 14"   | `hodgesd`       | 18GB / 1TB       | 12 / 18         |
+| `mini`        | 🍏 | Mac Mini M2 Pro          | `derrickhodges` | —                |                 |
+| `air`         | 🍏 | MacBook Air M1 13"       | `hodgesd`       | 16GB / 500GB     | 8 / 7           |
+| `nixos-infra` | 🐧 | Proxmox VM (HP mini PC)  | `hodgesd`       | 39GB disk        |                 |
 
 ## 🍎 Mac Installation
 
-Choose your installation path:
-- **[Fresh Install](#fresh-install)** - Brand new Mac, no existing apps
-- **[Existing System](#existing-system)** - Mac with apps/data to preserve
+### Fresh Install (recommended path)
 
----
+On a brand-new Mac, `scripts/bootstrap.sh` does everything: Xcode CLT, Nix
+(Determinate Systems installer), host validation, build, and activation.
+Idempotent — safe to re-run.
 
-### Fresh Install
-
-**Prerequisites**
-- [ ] Create user (see [Machines](#machines) table for username per host)
-- [ ] Update macOS: **System Settings** → **Software Update** → **Upgrade Now**
-
-**Step 1: Install Xcode Command Line Tools**
-
-Check if already installed:
 ```bash
-xcode-select -p
-# If installed, shows: /Library/Developer/CommandLineTools
-# If not installed, shows: error message
+git clone https://github.com/hodgesd/nix-config.git ~/nix-config
+cd ~/nix-config && ./scripts/bootstrap.sh <hostname>
 ```
 
-Install if needed:
-```bash
-xcode-select --install
-```
-
-**Step 2: Clone Repository**
+`<hostname>` must be one of the darwin machines above. Set the Mac's name first
+(or let the script infer it from `hostname -s`):
 
 ```bash
-cd ~
-git clone https://github.com/hodgesd/nix-config.git
-cd nix-config
-```
-
-**→ Go to [Common Installation Steps](#common-installation-steps)**
-
----
-
-### Existing System
-
-**Prerequisites**
-- [ ] Time Machine backup recommended
-- [ ] Block out 1-2 hours for installation
-
-**Step 1: Install Xcode Command Line Tools**
-
-Check if already installed:
-```bash
-xcode-select -p
-# If installed, shows: /Library/Developer/CommandLineTools (or /Applications/Xcode.app/...)
-# If not installed, shows: error message
-```
-
-Install if needed:
-```bash
-xcode-select --install
-```
-
-**Step 2: Clone Repository**
-
-```bash
-cd ~
-git clone https://github.com/hodgesd/nix-config.git
-cd nix-config
-```
-
-**Step 3: Run Pre-Install Audit**
-
-Identify apps to preserve:
-
-```bash
-./scripts/pre_install_audit.sh
-```
-
-This will:
-- List all Homebrew casks/formulas (⚠️ at risk of removal)
-- Show all applications
-- Identify non-Homebrew apps (✓ safe from removal)
-- Optionally generate manual app checklist
-
-**Step 4: Update Configuration**
-
-Edit `hosts/common/darwin/homebrew.nix`:
-
-1. **Add apps to preserve:**
-   ```nix
-   casks = [
-     # ... existing casks ...
-     "your-important-app"  # Add from audit
-   ];
-   ```
-
-2. **Disable cleanup temporarily:**
-   ```nix
-   onActivation = {
-     cleanup = "none";  # ← Change from "zap" to "none"
-     autoUpdate = true;
-     upgrade = true;
-   };
-   ```
-
-**→ Go to [Common Installation Steps](#common-installation-steps)**
-
----
-
-### Common Installation Steps
-
-**Step A: Set Hostname**
-
-Set to one of the [machine names](#machines) (e.g., `mini`, `mbp`, `air`):
-
-```bash
-chmod +x scripts/set_mac_name.sh
 ./scripts/set_mac_name.sh
-
-# Or manually:
-sudo scutil --set HostName <hostname>
-sudo scutil --set LocalHostName <hostname>
-sudo scutil --set ComputerName <hostname>
-
-# Verify:
-hostname -s
 ```
 
-**Step B: Install Nix**
+⏱️ **Expected time:** 15–30 minutes. Then restart your shell: `exec zsh`.
 
-Using the [official Nix installer](https://nixos.org/download.html):
+### Existing System (Mac with apps/data to preserve)
 
-```bash
-sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)
-```
+Same as above, but **before** running bootstrap:
 
-The installer automatically uses multi-user mode on macOS, which provides:
-- ✅ Flakes enabled automatically on macOS
-- ✅ Nix daemon for better performance
-- ✅ Proper permissions setup
-
-After installation completes, restart your terminal or source:
-
-```bash
-. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-```
-
-**Step C: Bootstrap nix-darwin**
-
-First-time installation:
-
-```bash
-cd ~/nix-config
-sudo nix --extra-experimental-features "nix-command flakes" run nix-darwin -- switch --flake .#<hostname>
-
-# Examples:
-# nix --extra-experimental-features "nix-command flakes" run nix-darwin -- switch --flake .#mini
-# nix --extra-experimental-features "nix-command flakes" run nix-darwin -- switch --flake .#mbp
-```
-
-⚠️ **Note:** Experimental features flags are required for first-time bootstrap. After installation, these are enabled automatically.
-
-⏱️ **Expected time:** 15-30 minutes
-
-**Step D: Restart Shell**
-
-```bash
-exec zsh
-```
-
-**Step E: Future Updates**
-
-After initial bootstrap, use:
-
-```bash
-darwin-rebuild switch --flake .
-```
-
----
-
-### Post-Install (Existing Systems Only)
-
-After verifying everything works:
-
-1. **Find remaining unmanaged apps:**
+1. Time Machine backup recommended.
+2. Run the audit to identify apps at risk:
    ```bash
-   ./scripts/find_unmanaged_apps.sh
+   ./scripts/pre_install_audit.sh
    ```
+3. Add apps you want kept to `hosts/common/darwin/homebrew.nix` (`casks = [...]`)
+   and make sure `onActivation.cleanup = "none"` while migrating.
 
-2. **Optional: Re-enable cleanup** in `homebrew.nix`:
-   ```nix
-   onActivation.cleanup = "zap";  # or "uninstall" or keep "none"
-   ```
-
-3. **Rebuild:**
-   ```bash
-   darwin-rebuild switch --flake .
-   ```
+After verifying everything works, find stragglers with
+`./scripts/find_unmanaged_apps.sh` and optionally re-enable cleanup.
 
 ### Post-Install Configuration
 
-**Wallpaper Rotation (mini)**
+**Wallpaper Rotation (mini)** — manual via System Settings:
 
-Set up wallpaper rotation manually via System Settings:
-
-1. Ensure folder exists (iCloud synced):
-   ```bash
-   mkdir -p ~/Documents/Wallpapers
-   ```
-
-2. Configure in System Settings:
-   - Open **System Settings** > **Wallpaper**
-   - Add folder: `~/Documents/Wallpapers/`
-   - Enable **"Change picture"** with desired interval
+1. Ensure folder exists (iCloud synced): `mkdir -p ~/Documents/Wallpapers`
+2. **System Settings** → **Wallpaper** → add folder `~/Documents/Wallpapers/`,
+   enable **"Change picture"** with desired interval.
 
 **Hotkeys (skhd + Karabiner Elements)**
 
 1. Launch Karabiner Elements: `open -a Karabiner-Elements`
-2. Grant Accessibility permissions: **System Settings** → **Privacy & Security** → **Accessibility** → Enable `skhd` and `Karabiner-Elements`
-3. Start skhd service: `brew services start skhd-zig`
+2. Grant Accessibility permissions: **System Settings** → **Privacy & Security** →
+   **Accessibility** → Enable `skhd` and `Karabiner-Elements`
+3. skhd starts automatically at activation (`skhd --start-service` under the hood);
+   if it didn't, run `/opt/homebrew/bin/skhd --start-service` manually.
 4. Test: Press `shift + ctrl + alt + y` (creates `~/skhd-test.log`)
 
 **Note:** Enable "Launch at login" in Karabiner Elements preferences.
 
 **Manual App Setup**
-- Reminders Menubar: enable “Launch at login”; bind `meh-r`.
+- Reminders Menubar: enable "Launch at login"; bind `meh-r`.
 - iStat Menus: add registration key.
 - Launch at login: Raycast, Rectangle, SwiftBar, Ice.
 
 **Manually Installed Apps**
-
-Some apps are not available via Nix/Homebrew and must be installed manually:
 
 - [llm](https://llm.datasette.io/en/stable/) - CLI for LLMs with MLX support
   ```bash
@@ -266,45 +102,101 @@ Some apps are not available via Nix/Homebrew and must be installed manually:
   llm models default m7b
   ```
 
+## 🐧 NixOS Homelab (`nixos-infra`)
+
+A Proxmox guest VM on the HP mini PC, fully managed by this flake
+(`hosts/nixos/nixos-infra/`). It runs:
+
+- **easy-afd** — Flask/gunicorn app behind nginx with a Let's Encrypt DNS-01 cert
+  (`afd.hdgs.me`, tailnet-only reachability)
+- **Docker compose estate** (`/srv/homelab`) — 7 apps, each with a Tailscale
+  sidecar: Uptime Kuma, Actual Budget, Homepage, ntfy, AdGuard Home,
+  LibreSpeed, MeTube (compose snapshot: `stacks/homelab/docker-compose.yml`)
+- **Nightly NAS backups** (03:30 → UNAS Pro 8) and weekly aeronautical-data refresh
+
+### Deploying (from the Mac)
+
+The Mac evaluates the flake; the VM builds and activates (the Mac can't build
+x86_64-linux). Runs as root over Tailscale SSH — no password prompts:
+
+```bash
+just deploy-check   # dry-activate: show what would change
+just deploy         # build + switch
+```
+
+Rollback on the VM: `sudo nixos-rebuild switch --rollback`, or pick the previous
+generation in the systemd-boot menu from the Proxmox console.
+
+### DR fallback (Mac unavailable)
+
+On the VM itself:
+
+```bash
+git clone https://github.com/hodgesd/nix-config && cd nix-config
+sudo nixos-rebuild switch --flake .#nixos-infra
+```
+
+### Notes
+
+- `/etc/nixos` on the VM is just a pointer README — this repo is authoritative.
+  (Pre-flake config preserved at `/etc/nixos.pre-flake.bak` for now.)
+- LAN SSH (`hodgesd@192.168.1.216`) is key-only and independent of Tailscale —
+  the break-glass path if the tailnet is down. Proxmox console is the last resort.
+- Secrets are root-only files on the VM (`/etc/easy-afd.env`,
+  `/etc/cloudflare-acme.env`, `/etc/nas-backup.credentials`, `/srv/homelab/.env`),
+  mirrored nightly to the NAS. Migration to sops-nix is in progress.
+- The easy-afd **app source** (`/srv/easy-afd`) is rsynced from the dev Mac and is
+  *not* managed by Nix — a from-scratch rebuild needs that rsync before the
+  service starts.
+
 ## 🚀 Quick Commands
 
 ```bash
-# Build and activate configuration (current host)
-darwin-rebuild switch --flake .
+# Macs: build and switch current host (uses justfile)
+just
 
-# Build specific host
-darwin-rebuild switch --flake .#mbp
+# Macs: build only (no activation)
+just build
+
+# Homelab: dry-run / deploy from the Mac
+just deploy-check
+just deploy
 
 # Update flake inputs (get latest packages)
-nix flake update
+just update
 
-# Check configuration for errors
-nix flake check
+# Garbage collect generations older than 14 days
+just gc
 
-# Rollback to previous generation
+# Format nix files
+nix fmt
+
+# Rollback (macOS / NixOS)
 darwin-rebuild switch --rollback
-
-# See what changed in last build
-darwin-rebuild --list-generations
-
-# Audit unmanaged apps (after nix-darwin installed)
-./scripts/find_unmanaged_apps.sh
+sudo nixos-rebuild switch --rollback
 ```
 
 ## 📁 Configuration Structure
 
 ```
 nix-config/
-├── flake.nix              # Main flake configuration
-├── lib/                   # Helper functions and machine metadata
-│   ├── machines.nix       # Machine metadata registry
-│   └── helpers.nix        # mkDarwin function
+├── flake.nix              # Inputs + darwin/nixos configurations + formatter
+├── lib/
+│   ├── machines.nix       # Machine metadata registry (all machines)
+│   ├── helpers.nix        # mkDarwin + mkNixos builders
+│   └── options.nix        # majordouble.* option schema
 ├── hosts/
-│   ├── common/            # Shared configurations
-│   │   └── darwin/        # Darwin-specific modules (modular!)
-│   └── darwin/            # Per-machine Darwin configs
-├── home/                  # Home Manager configurations
-├── modules/               # Custom modules
+│   ├── common/
+│   │   ├── common-packages.nix   # Cross-platform CLI set (+ darwin-only extras)
+│   │   ├── darwin-common.nix     # macOS entry point
+│   │   ├── nixos-common.nix      # NixOS server baseline
+│   │   └── darwin/               # macOS modules (homebrew, defaults, desktop…)
+│   ├── darwin/<host>/     # Per-Mac overrides
+│   └── nixos/<host>/      # Per-NixOS-host config (hardware, services…)
+├── home/                  # Home Manager configurations (portable)
+├── modules/               # Custom modules (swiftbar, wallpaper…)
+├── stacks/                # Docker compose stacks (homelab, arr-stack)
+├── scripts/               # bootstrap + audit helper scripts
 └── docs/                  # Documentation
 ```
 
@@ -312,11 +204,12 @@ See [STRUCTURE.md](docs/STRUCTURE.md) for detailed information.
 
 ## 🔧 Common Tasks
 
-- **Add a package**: Edit `hosts/common/common-packages.nix`
+- **Add a package (all machines)**: Edit `hosts/common/common-packages.nix`
 - **Add Homebrew app**: Edit `hosts/common/darwin/homebrew.nix`
 - **Change dock**: Edit `hosts/common/darwin/defaults/dock.nix` or host config
-- **Modify system settings**: Edit files in `hosts/common/darwin/defaults/`
+- **Modify macOS settings**: Edit files in `hosts/common/darwin/defaults/`
 - **Add keyboard shortcut**: Edit `hosts/common/darwin/desktop/skhd.nix`
+- **Change a homelab service**: Edit `hosts/nixos/nixos-infra/*.nix`, then `just deploy-check`
 - **Add a new machine**: See [ADDING_MACHINE.md](docs/ADDING_MACHINE.md)
 - **Audit installed apps**: Run `./scripts/find_unmanaged_apps.sh` (after nix-darwin installed)
 - **Pre-install audit**: Run `./scripts/pre_install_audit.sh` (before nix-darwin installed)
@@ -325,18 +218,14 @@ For more, see [CUSTOMIZATION.md](docs/CUSTOMIZATION.md).
 
 ## 🛡️ Safety Features
 
-- **Rollback capability**: Every change creates a new generation you can rollback to
+- **Rollback capability**: Every change creates a new generation you can roll back to
 - **Declarative**: Configuration is version-controlled and reproducible
-- **Non-destructive**: System settings can be changed back anytime
+- **CI before switch**: every host evaluates + builds on each PR (Cachix-cached)
 - **App protection**: Set `cleanup = "none"` in homebrew.nix to prevent app removal
 
 ## 📝 Helper Scripts
 
+- **`scripts/bootstrap.sh`** - Fresh Mac → fully-activated nix-darwin, idempotent
 - **`scripts/pre_install_audit.sh`** - Audit system BEFORE installing nix-darwin
-  - Lists all Homebrew casks/formulas
-  - Identifies non-Homebrew apps
-  - Generates manual app checklist
 - **`scripts/find_unmanaged_apps.sh`** - Find apps not managed by nix AFTER installation
-  - Compares installed apps with nix config
-  - Identifies apps to add to homebrew.nix
 - **`scripts/set_mac_name.sh`** - Set hostname to match configuration
