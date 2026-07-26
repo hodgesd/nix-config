@@ -30,6 +30,21 @@
     };
   };
 
+  # NixOS machines
+  nixos-infra = {
+    type = "nixos";
+    formFactor = "vm";
+    primaryUse = "homelab";
+    # No chip: QEMU guest on the HP mini PC's Proxmox host.
+    virtualization = {host = "proxmox";};
+    specs = {
+      ram = null;
+      storage = null;
+      cpu = null;
+      gpu = null;
+    };
+  };
+
   air = {
     type = "darwin";
     chip = "m1";
