@@ -15,12 +15,12 @@
       };
 
       type = lib.mkOption {
-        type = lib.types.enum ["darwin"];
-        description = "System type (darwin)";
+        type = lib.types.enum ["darwin" "nixos"];
+        description = "System type (darwin or nixos)";
       };
 
       formFactor = lib.mkOption {
-        type = lib.types.enum ["laptop" "desktop"];
+        type = lib.types.enum ["laptop" "desktop" "server" "vm"];
         description = "Machine form factor";
       };
 
@@ -30,8 +30,9 @@
       };
 
       chip = lib.mkOption {
-        type = lib.types.str;
-        description = "CPU/chip type";
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "CPU/chip type (null for VMs)";
       };
 
       specs = {

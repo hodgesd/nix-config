@@ -18,10 +18,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        host: [mbp, mini, air]
+        include:
+          - host: mbp
+            attr: darwinConfigurations.mbp.system
+          - host: mini
+            attr: darwinConfigurations.mini.system
+          - host: air
+            attr: darwinConfigurations.air.system
+          - host: nixos-infra
+            attr: nixosConfigurations.nixos-infra.config.system.build.toplevel
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v16
       - name: Evaluate ${{ matrix.host }}
         # Forcing .drvPath instantiates the whole config without building it.
-        run: nix eval --raw ".#darwinConfigurations.${{ matrix.host }}.system.drvPath"
+        run: nix eval --raw ".#${{ matrix.attr }}.drvPath"

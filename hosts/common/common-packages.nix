@@ -23,7 +23,7 @@
 
     # System monitoring & management
     btop # Modern resource monitor
-    du-dust # Modern disk usage (du) tool with TUI
+    dust # Modern disk usage (du) tool with TUI (formerly du-dust)
     dua # Disk usage analyzer with interactive TUI
     duf # Disk usage/free space utility (modern df)
     fastfetch # Fast system info fetcher
