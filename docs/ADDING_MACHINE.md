@@ -78,8 +78,8 @@ sudo scutil --set ComputerName newmachine
 Or use the provided script:
 
 ```bash
-chmod +x set_mac_name.sh
-./set_mac_name.sh
+chmod +x scripts/set_mac_name.sh
+./scripts/set_mac_name.sh
 ```
 
 ## Step 5: Build Configuration

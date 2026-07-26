@@ -2,14 +2,14 @@
 # bootstrap.sh — take a fresh macOS machine to a fully-activated nix-darwin config.
 #
 # Usage:
-#   ./bootstrap.sh [hostname]
+#   ./scripts/bootstrap.sh [hostname]
 #
 # hostname defaults to `hostname -s` and must be one of the flake's
 # darwinConfigurations (currently: mbp, mini, air). On a brand-new Mac:
 #
 #   1. Install git via the Xcode CLT prompt (or let this script do it),
 #   2. git clone https://github.com/hodgesd/nix-config && cd nix-config
-#   3. ./bootstrap.sh <host>
+#   3. ./scripts/bootstrap.sh <host>
 #
 # Idempotent: safe to re-run. Skips anything already in place.
 set -euo pipefail
@@ -46,7 +46,7 @@ if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 fi
 command -v nix >/dev/null 2>&1 \
-  || die "nix is not on PATH after install. Open a new terminal and re-run ./bootstrap.sh $host"
+  || die "nix is not on PATH after install. Open a new terminal and re-run ./scripts/bootstrap.sh $host"
 
 # 3. Validate the requested host exists in the flake
 log "Validating host '$host'…"
@@ -54,7 +54,7 @@ if ! "${NIX[@]}" eval --raw ".#darwinConfigurations.${host}.system.drvPath" >/de
   avail="$("${NIX[@]}" eval --json '.#darwinConfigurations' --apply builtins.attrNames 2>/dev/null \
             | tr -d '[]"' | tr ',' ' ')"
   die "'$host' is not a known host. Available:${avail:- mbp mini air}
-     Pass one explicitly:  ./bootstrap.sh <host>"
+     Pass one explicitly:  ./scripts/bootstrap.sh <host>"
 fi
 
 # 4. Build, then activate.
