@@ -9,6 +9,9 @@
   username,
   ...
 }: {
+  # Inert until a host declares majordouble.composeStacks.*
+  imports = [../../modules/nixos/compose-stack.nix];
+
   time.timeZone = "America/Chicago";
   i18n.defaultLocale = "en_US.UTF-8";
 

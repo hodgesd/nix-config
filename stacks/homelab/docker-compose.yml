@@ -1,10 +1,11 @@
-# SNAPSHOT for reference until the compose-stack phase lands — authoritative
-# file: /srv/homelab/docker-compose.yml on the VM (backed up nightly to the
-# NAS). Once nix deploys this file, THIS copy becomes authoritative and
-# hand-edits on the VM are overwritten at switch.
+# AUTHORITATIVE — deployed to /srv/homelab by the compose-stack module on
+# every switch; hand-edits on the VM are overwritten. Images are pinned by
+# digest (exact bytes; the comment is the human-readable version). To
+# upgrade a service: put its :latest (or a specific tag) here, deploy, then
+# re-pin to the new digest from `docker image inspect`.
 services:
   ts-uptime:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
     container_name: ts-uptime
     hostname: uptime
     restart: unless-stopped
@@ -21,7 +22,7 @@ services:
       - SYS_MODULE
 
   uptime-kuma:
-    image: louislam/uptime-kuma:2
+    image: louislam/uptime-kuma@sha256:9aeb4e51d038047f414309c77a1af553281ca535723cb88907d907269d0a908e # 2.3.2
     container_name: uptime-kuma
     restart: unless-stopped
     network_mode: service:ts-uptime
@@ -31,7 +32,7 @@ services:
       - ./uptime-kuma:/app/data
 
   ts-budget:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
     container_name: ts-budget
     hostname: budget
     restart: unless-stopped
@@ -48,7 +49,7 @@ services:
       - SYS_MODULE
 
   actual-budget:
-    image: actualbudget/actual-server:latest
+    image: actualbudget/actual-server@sha256:1aeeb3985db55556e716dec25e08f6ce09308c2571b65cddbc6746ee6d5e0d45 # 26.5.2
     container_name: actual-budget
     restart: unless-stopped
     network_mode: service:ts-budget
@@ -58,7 +59,7 @@ services:
       - ./actual-budget:/data
 
   ts-homepage:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
     container_name: ts-homepage
     hostname: homepage
     restart: unless-stopped
@@ -75,7 +76,7 @@ services:
       - SYS_MODULE
 
   homepage:
-    image: ghcr.io/gethomepage/homepage:latest
+    image: ghcr.io/gethomepage/homepage@sha256:d8d784e5090111b6e4c56dfd90e272d2953a2094e87349f647165df0fa6c4401 # v1.13.1
     container_name: homepage
     restart: unless-stopped
     network_mode: service:ts-homepage
@@ -88,7 +89,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   ts-ntfy:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
     container_name: ts-ntfy
     hostname: ntfy
     restart: unless-stopped
@@ -105,7 +106,7 @@ services:
       - SYS_MODULE
 
   ntfy:
-    image: binwiederhier/ntfy:latest
+    image: binwiederhier/ntfy@sha256:b32b4221a64ec2e7c000f0782b2feef24022e1a09a24e531640f4cbba6cfa1e6 # as of 2026-07-26
     container_name: ntfy
     restart: unless-stopped
     network_mode: service:ts-ntfy
@@ -117,7 +118,7 @@ services:
       - ./ntfy/config:/etc/ntfy
 
   ts-adguard:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
     container_name: ts-adguard
     hostname: adguard
     restart: unless-stopped
@@ -134,7 +135,7 @@ services:
       - SYS_MODULE
 
   adguardhome:
-    image: adguard/adguardhome:latest
+    image: adguard/adguardhome@sha256:7157eb1dc3b26c7af1d6898759a7b3f7d0fa09891fbd2d3caa6abc1057a9179b # v0.107.76
     container_name: adguardhome
     restart: unless-stopped
     network_mode: service:ts-adguard
@@ -145,7 +146,7 @@ services:
       - ./adguard/conf:/opt/adguardhome/conf
 
   ts-librespeed:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
     container_name: ts-librespeed
     hostname: librespeed
     restart: unless-stopped
@@ -162,7 +163,7 @@ services:
       - SYS_MODULE
 
   librespeed:
-    image: linuxserver/librespeed:latest
+    image: linuxserver/librespeed@sha256:4f76560a263044e6bc5ca25287ab6f72259a1f22a53cbea585d87dfe34ff6e6a # 6.1.0-ls275
     container_name: librespeed
     restart: unless-stopped
     network_mode: service:ts-librespeed
@@ -176,7 +177,7 @@ services:
       - ./librespeed/config:/config
 
   ts-metube:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
     container_name: ts-metube
     hostname: metube
     restart: unless-stopped
@@ -193,7 +194,7 @@ services:
       - SYS_MODULE
 
   metube:
-    image: ghcr.io/alexta69/metube:latest
+    image: ghcr.io/alexta69/metube@sha256:3b3b847a125e78037983d3a27c76212e2fc7a0c3a813591ec0de53613e0be874 # as of 2026-07-26
     container_name: metube
     restart: unless-stopped
     network_mode: service:ts-metube
