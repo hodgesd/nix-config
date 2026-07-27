@@ -4,150 +4,139 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a modular Nix configuration managing macOS systems via nix-darwin. The configuration uses a machine metadata system for conditional configurations and follows a highly modular structure.
+This is a modular Nix flake managing macOS systems via nix-darwin **and** NixOS
+homelab hosts from one lockfile. A machine metadata system
+(`lib/machines.nix`) drives conditional configuration. The NixOS side currently
+has one host: `nixos-infra`, a Proxmox VM (see `docs/NIXOS-INFRA.md` for its
+architecture and disaster-recovery runbook).
 
 ## Build and Development Commands
 
-### Building Configurations
+### Using Just (preferred)
 
 ```bash
-# Build and activate current host's configuration
-darwin-rebuild switch --flake .
-
-# Build specific host
-darwin-rebuild switch --flake .#mbp
-
-# Build without activating
-darwin-rebuild build --flake .
-
-# Build with detailed error traces
-darwin-rebuild build --flake . --show-trace
-
-# Check configuration validity (no build)
-nix flake check
-```
-
-### Using Just (recommended)
-
-```bash
-# Build and switch (default command)
+# Macs: build and switch current host (default recipe)
 just
 
-# Build specific host
-just switch mbp
+# Macs: build only, no activation
+just build            # or: just build mbp
 
-# Build with trace output
+# Macs: build with --show-trace
 just trace
+
+# NixOS: dry-run / deploy nixos-infra from the Mac
+just deploy-check
+just deploy
 
 # Update flake inputs
 just update
 
-# Garbage collect old generations
-just gc 5  # Keep last 5 generations
+# Garbage collect system generations older than N days (default 14)
+just gc
 ```
 
-### Managing Changes
+### Raw commands
 
 ```bash
-# Update all flake inputs
-nix flake update
+# Build and activate current host's darwin configuration
+darwin-rebuild switch --flake .
 
-# Rollback to previous generation
+# Build without activating
+darwin-rebuild build --flake .
+
+# Evaluate any host without building (what CI does)
+nix eval --raw ".#darwinConfigurations.mbp.system.drvPath"
+nix eval --raw ".#nixosConfigurations.nixos-infra.config.system.build.toplevel.drvPath"
+
+# Rollback (macOS / NixOS)
 darwin-rebuild switch --rollback
-
-# List generations
-darwin-rebuild --list-generations
-
-# Preview what would change (dry run)
-darwin-rebuild switch --flake . --dry-run
+sudo nixos-rebuild switch --rollback   # on the NixOS host
 ```
+
+Do NOT deploy NixOS hosts with `nix run nixpkgs#nixos-rebuild` — the registry
+nixpkgs is unpinned and its `nixos-rebuild-ng` has a broken macOS wrapper. The
+`just deploy` recipe does the pipeline explicitly (eval → copy drvs → remote
+realise → activate in a systemd-run unit).
 
 ## Architecture
 
 ### Configuration Flow
 
-**Darwin Systems:**
-1. `flake.nix` → calls `lib/helpers.nix:mkDarwin` with hostname
-2. `mkDarwin` loads:
-   - Machine metadata from `lib/machines.nix`
-   - Cross-platform packages from `hosts/common/common-packages.nix`
-   - Darwin common config from `hosts/common/darwin-common.nix`
-   - Host-specific overrides from `hosts/darwin/{hostname}/default.nix`
-3. `darwin-common.nix` imports modular components (base, homebrew, fonts, packages, system-defaults)
-4. Home Manager configs from `home/default.nix`
+**Darwin:** `flake.nix` → `libx.mkDarwin {hostname}` (`lib/helpers.nix`) →
+machine metadata from `lib/machines.nix` + `hosts/common/common-packages.nix` +
+`hosts/common/darwin-common.nix` (which imports the modular
+`hosts/common/darwin/*` set) + optional `hosts/darwin/<hostname>/default.nix` +
+Home Manager (`home/default.nix`).
+
+**NixOS:** `flake.nix` → `libx.mkNixos {hostname}` → same metadata/specialArgs +
+`common-packages.nix` + `hosts/common/nixos-common.nix` (server baseline:
+tailscale from locked unstable, docker_29, openssh, tailnet-only firewall,
+Cachix substituter, compose-stack module) + **required**
+`hosts/nixos/<hostname>/` (carries hardware-configuration.nix) + sops-nix.
+Home Manager only with `withHomeManager = true` (off for servers).
+
+Both builders pass `specialArgs = {system inputs username unstablePkgs machine}`
+and identical `home-manager.extraSpecialArgs` — keep them in sync if you add an
+argument.
 
 ### Machine Metadata System
 
-All machines are defined in `lib/machines.nix` with metadata like:
-- `type`: "darwin"
-- `formFactor`: "laptop", "desktop"
-- `primaryUse`: "development", "server", etc.
-- `chip`: "m1", "m2-pro", "m3-pro", etc.
-- `specs`: ram, storage, cpu, gpu cores
+Machines are defined in `lib/machines.nix`. The hostname comes from the
+attribute name (injected by the helpers — do not add a `hostname` field).
+Schema (enforced by `lib/options.nix`):
 
-This metadata is available as the `machine` argument in all modules for conditional configuration:
+- `type`: "darwin" | "nixos"
+- `formFactor`: "laptop" | "desktop" | "server" | "vm"
+- `primaryUse`: free-form string ("development", "server", "homelab", …)
+- `chip`: string or omitted (null for VMs)
+- `username`: optional, defaults to "hodgesd"
+- `specs`: ram/storage (str|null), cpu/gpu (int|null)
+
+Available as the `machine` arg in all modules (including home-manager):
 
 ```nix
-{ machine, pkgs, ... }:
+{ machine, pkgs, lib, ... }:
 {
   environment.systemPackages = with pkgs;
     []
     ++ lib.optionals (machine.formFactor == "laptop") [ powertop ]
-    ++ lib.optionals (machine.primaryUse == "development") [ docker ];
+    ++ lib.optionals (machine.type == "darwin") [ heavy-dev-tool ];
 }
 ```
 
-### Key Helper Functions
+### Secrets (sops-nix)
 
-Located in `lib/helpers.nix`:
+Encrypted in `secrets/nixos-infra.yaml`; recipients in `.sops.yaml` (Mac age
+key at `~/.config/sops/age/keys.txt` + the VM's SSH host key). Edit with
+`sops secrets/nixos-infra.yaml`, deploy with `just deploy`. Secrets decrypt to
+`/run/secrets/` at activation; a decryption failure aborts activation before
+services restart. IMPORTANT: new files (including secrets) must be `git add`ed
+before `nix eval`/`build` can see them — flakes only see tracked files.
 
-- `mkDarwin { hostname, username?, system? }` - Creates nix-darwin configurations
+### Docker compose stacks
 
-This function automatically:
-- Load machine metadata
-- Import common and host-specific configs
-- Set up Home Manager
-- Provide `unstablePkgs` for bleeding-edge packages
-
-### Modular Darwin Configuration
-
-Darwin-specific modules in `hosts/common/darwin/`:
-- `base.nix` - Core Nix daemon settings, auto-upgrade, garbage collection
-- `homebrew.nix` - Homebrew formulae, casks, Mac App Store apps
-- `packages.nix` - Darwin-only Nix packages
-- `fonts.nix` - Font packages
-- `system-defaults.nix` - Imports all defaults/* modules
-- `desktop/skhd.nix` - Keyboard shortcuts via skhd
-- `desktop/karabiner.nix` - Keyboard remapping
-- `defaults/` - macOS system preferences by category:
-  - `general.nix` - NSGlobalDomain settings
-  - `keyboard.nix` - Keyboard and input settings
-  - `finder.nix` - Finder preferences
-  - `dock.nix` - Dock behavior
-  - `security.nix` - Security and privacy
-  - `apps.nix` - Application-specific settings
+`modules/nixos/compose-stack.nix` provides `majordouble.composeStacks.<name>`:
+nix installs the repo's compose file into the stack dir and runs
+`docker compose up -d --remove-orphans` on change. The homelab estate is
+`stacks/homelab/docker-compose.yml` (deployed to `/srv/homelab`) — the repo
+copy is authoritative and images are pinned by digest. Changing an image
+string recreates that container (config-hash change) even if it resolves to
+the same image.
 
 ## Common Modifications
 
 ### Adding Packages
 
-**Cross-platform:** Edit `hosts/common/common-packages.nix`
-```nix
-environment.systemPackages = with pkgs; [
-  package-name
-];
-```
+**Cross-platform core:** `hosts/common/common-packages.nix` (top list).
+Heavyweight dev/media tools belong in the darwin-only block at the bottom
+(`lib.optionals (machine.type == "darwin")`) — NixOS servers keep a lean closure.
 
-**Darwin-only:** Edit `hosts/common/darwin/packages.nix`
+**Darwin-only:** `hosts/common/darwin/packages.nix`
 
-**Unstable package:** Use `unstablePkgs` (already configured):
-```nix
-environment.systemPackages = [
-  unstablePkgs.package-name
-];
-```
+**Unstable:** use `unstablePkgs.package-name` (available in all modules)
 
-**Machine-specific:** Edit `hosts/darwin/{hostname}/default.nix`
+**Machine-specific:** `hosts/darwin/<hostname>/default.nix` or
+`hosts/nixos/<hostname>/default.nix`
 
 ### Homebrew Apps
 
@@ -158,118 +147,90 @@ brews = [ "formula-name" ];       # CLI tools
 masApps = { "App Name" = 123; };  # Mac App Store (ID from mas search)
 ```
 
-### Dock Configuration
-
-Dock behavior lives in `hosts/common/darwin/defaults/dock.nix`. Pinned apps
-are set via `persistent-apps` (currently `[]` — managed manually). To pin apps,
-list their paths:
-```nix
-system.defaults.dock.persistent-apps = [
-  "/Applications/Safari.app"
-  "/Applications/Ghostty.app"
-];
-```
-For per-host overrides, set the same option in `hosts/darwin/{hostname}/default.nix`.
-
 ### System Preferences
 
-All in `hosts/common/darwin/defaults/`:
-- Finder behavior: `finder.nix`
-- Dock settings: `dock.nix`
-- Keyboard settings: `keyboard.nix`
-- General macOS: `general.nix`
+All in `hosts/common/darwin/defaults/`: `general.nix`, `keyboard.nix`,
+`finder.nix`, `dock.nix`, `security.nix`.
 
 ### Keyboard Shortcuts
 
-Edit `hosts/common/darwin/skhd.nix`:
+Edit `hosts/common/darwin/desktop/skhd.nix`:
 ```nix
-home.file.".skhdrc".text = ''
-  hyper - o : open -a "Obsidian"
-'';
+hyper - o : open -a "Obsidian"
 ```
+
+### Homelab services
+
+Edit `hosts/nixos/nixos-infra/*.nix` (easy-afd, proxy, backup, storage,
+homelab-stack), then `just deploy-check` before `just deploy`.
 
 ## Adding a New Machine
 
-1. Add metadata to `lib/machines.nix`
-2. Create host directory: `hosts/darwin/{hostname}/`
-3. Create `default.nix` with host-specific config
-4. Add to `flake.nix` darwinConfigurations
-5. Build: `darwin-rebuild switch --flake .#{hostname}`
-
-See `docs/ADDING_MACHINE.md` for detailed steps.
+See `docs/ADDING_MACHINE.md` — covers both Macs and NixOS hosts (registry
+entry → host dir → flake output → CI matrix → secrets recipient → deploy).
 
 ## Formatting
 
-Code is formatted with Alejandra:
+Alejandra, via the flake's formatter output:
 ```bash
-# Format is defined in flake.nix outputs.formatter
 nix fmt
 ```
+EXCEPTION: `hosts/nixos/nixos-infra/hardware-configuration.nix` is kept
+byte-for-byte as generated on the VM — don't format it.
 
 ## Important Patterns
 
-### When modifying system defaults:
-- Changes in `defaults/` require rebuild + activation
-- Some settings may require logout/restart to take effect
-- Use `defaults read com.apple.domain` to discover setting keys
-
-### When changing Homebrew apps:
-- Nix manages the Homebrew installation
-- Changes to `homebrew.nix` are applied on rebuild
-- `autoMigrate = true` migrates existing Homebrew installations
-- `mutableTaps = true` allows manual `brew tap` additions
-
-### When working with Home Manager:
-- Configs in `home/hodgesd.nix` and imported modules
-- Changes require darwin-rebuild (not home-manager switch)
-- backupFileExtension set to avoid conflicts
-
-## Testing and Validation
-
-```bash
-# Validate without building
-nix flake check
-
-# Build without activating
-darwin-rebuild build --flake .
-
-# Check for Nix syntax errors
-nix-instantiate --parse flake.nix
-
-# Show what would change
-darwin-rebuild switch --flake . --dry-run
-```
+- `system.stateVersion` (NixOS) and HM `home.stateVersion` are pinned
+  deliberately — never bump them on existing machines.
+- Changes in `darwin/defaults/` require rebuild + activation; some settings
+  need logout/restart. Use `defaults read com.apple.domain` to discover keys.
+- Homebrew: nix manages the installation; `autoMigrate = true`,
+  `mutableTaps = true`, cleanup is `"none"`.
+- Home Manager configs live in `home/` and are Linux-portable — anything
+  darwin-only must be guarded (`pkgs.stdenv.isDarwin`) or live under
+  `hosts/common/darwin/desktop/`. Changes require darwin-rebuild (not
+  home-manager switch).
+- CI (`.github/workflows/`): eval matrix covers every host; build jobs push
+  darwin + nixos closures to Cachix (`hodgesd-nix-config`). Add new hosts to
+  the matrices.
 
 ## Flake Inputs
 
-Tracked in `flake.lock`, update with `nix flake update`:
-- `nixpkgs` - NixOS 25.05 (stable)
-- `nixpkgs-unstable` - Rolling release for latest packages
-- `nix-darwin` - macOS system management
-- `home-manager` - User environment management
-- `nix-homebrew` - Declarative Homebrew
-- `swiftbar_plugins` - Custom SwiftBar plugins (non-flake)
+Tracked in `flake.lock`, update with `just update`:
+- `nixpkgs` — nixos-25.11 (shared by darwin and NixOS)
+- `nixpkgs-unstable` — rolling; provides `unstablePkgs` (incl. tailscale on
+  the VM — check for MagicDNS regressions before bumping, see NIXOS-INFRA.md)
+- `nix-darwin` — nix-darwin-25.11
+- `home-manager` — release-25.11
+- `nix-homebrew` — declarative Homebrew (carries a patched brew 5.0.12; try
+  dropping `lib/patches/brew-cask-api.patch` when brew 5.1.x lands)
+- `sops-nix` — secrets
+- `swiftbar_plugins` — custom SwiftBar plugins (non-flake)
 
 ## Directory Reference
 
 ```
-flake.nix                       # Main entry point - defines all systems
+flake.nix                       # darwin + nixos configurations, formatter
+.sops.yaml                      # sops recipient policy
+secrets/                        # encrypted secrets (ciphertext)
 lib/
-  helpers.nix                   # mkDarwin function
+  helpers.nix                   # mkDarwin + mkNixos
+  options.nix                   # majordouble.* schema
   machines.nix                  # Machine metadata registry
 hosts/
   common/
-    common-packages.nix         # Shared package set
+    common-packages.nix         # Shared package set (+ darwin-only block)
     darwin-common.nix           # Darwin entry point
+    nixos-common.nix            # NixOS server baseline
     darwin/                     # Darwin-specific modules (modular)
-  darwin/{hostname}/            # Per-host Darwin configs
+  darwin/{hostname}/            # Per-host Darwin configs (optional)
+  nixos/{hostname}/             # Per-host NixOS configs (required)
 home/
-  default.nix                   # User config entry point
-  modules/                      # Tool-specific configs (cli, core, services)
-modules/                        # Custom reusable modules
-docs/                           # Documentation
-  STRUCTURE.md                  # Detailed directory layout
-  ADDING_MACHINE.md             # New machine guide
-  CUSTOMIZATION.md              # Common customization tasks
-  HOMEBREW.md                   # Homebrew management
+  default.nix                   # User config entry point (portable)
+  modules/                      # Tool-specific configs (core, cli, services)
+modules/                        # Custom modules (swiftbar, wallpaper, nixos/compose-stack)
+stacks/                         # Docker compose files (homelab deployed, arr-stack parked)
+scripts/                        # bootstrap.sh + audit helpers
+docs/                           # STRUCTURE, ADDING_MACHINE, CUSTOMIZATION,
+                                # HOMEBREW, NIXOS-INFRA (homelab runbook)
 ```
