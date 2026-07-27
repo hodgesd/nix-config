@@ -14,11 +14,13 @@
 
   programs.git = {
     enable = true;
-    userEmail = "hodgesd@gmail.com";
-    userName = "Derrick Hodges";
     lfs.enable = true;
-    extraConfig =
+    settings =
       {
+        user = {
+          email = "hodgesd@gmail.com";
+          name = "Derrick Hodges";
+        };
         init.defaultBranch = "main";
         merge = {
           conflictStyle = "diff3";
