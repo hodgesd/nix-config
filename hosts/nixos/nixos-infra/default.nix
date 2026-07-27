@@ -15,6 +15,7 @@
     ./proxy.nix
     ./backup.nix
     ./storage.nix
+    ./homelab-stack.nix
   ];
 
   # Secrets: decrypted at activation by sops-nix into /run/secrets (tmpfs)
