@@ -21,6 +21,11 @@ in {
       default = null;
       description = "SwiftBar package (null if using Homebrew cask)";
     };
+    appPath = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = "Path to an externally installed SwiftBar.app (e.g. the Homebrew cask); used for autostart when package is null";
+    };
     autostart = mkOption {
       type = types.bool;
       default = true;
@@ -81,18 +86,27 @@ in {
       (lib.optionalAttrs ((cfg.repoLocalPath != null || cfg.repoPath != null) && cfg.repoFiles != []) (
         let
           # Use local path if provided (bypasses Nix caching), otherwise use flake input
-          sourcePath = if cfg.repoLocalPath != null then cfg.repoLocalPath else cfg.repoPath;
+          sourcePath =
+            if cfg.repoLocalPath != null
+            then cfg.repoLocalPath
+            else cfg.repoPath;
           useOutOfStore = cfg.repoLocalPath != null;
         in
-        builtins.listToAttrs (map
-          (fname:
-            lib.nameValuePair
-            "${pluginsDirAbs}/${fname}"
-            (if useOutOfStore
-             then { source = config.lib.file.mkOutOfStoreSymlink "${sourcePath}/${fname}"; }
-             else { source = "${sourcePath}/${fname}"; executable = true; })
-          )
-          cfg.repoFiles)
+          builtins.listToAttrs (map
+            (
+              fname:
+                lib.nameValuePair
+                "${pluginsDirAbs}/${fname}"
+                (
+                  if useOutOfStore
+                  then {source = config.lib.file.mkOutOfStoreSymlink "${sourcePath}/${fname}";}
+                  else {
+                    source = "${sourcePath}/${fname}";
+                    executable = true;
+                  }
+                )
+            )
+            cfg.repoFiles)
       ))
       # (B) Plus any explicit single-file plugins
       // (mapAttrs'
@@ -119,11 +133,15 @@ in {
       };
 
     # Auto-start at login (nix-darwin)
-    launchd.agents.swiftbar = mkIf (cfg.autostart && cfg.package != null) {
+    launchd.agents.swiftbar = mkIf (cfg.autostart && (cfg.package != null || cfg.appPath != null)) {
       enable = true;
       config = {
         ProgramArguments = [
-          "${cfg.package}/Applications/SwiftBar.app/Contents/MacOS/SwiftBar"
+          (
+            if cfg.package != null
+            then "${cfg.package}/Applications/SwiftBar.app/Contents/MacOS/SwiftBar"
+            else "${cfg.appPath}/Contents/MacOS/SwiftBar"
+          )
         ];
         KeepAlive = true;
         RunAtLoad = true;

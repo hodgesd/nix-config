@@ -10,6 +10,9 @@
     programs.swiftbar = {
       enable = true;
 
+      # SwiftBar comes from the Homebrew cask; autostart it via launchd
+      appPath = "/Applications/SwiftBar.app";
+
       # relative to $HOME; this matches your existing usage
       pluginsDir = "Library/Application Support/SwiftBar/Plugins";
 
