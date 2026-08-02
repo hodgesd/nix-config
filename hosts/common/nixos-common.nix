@@ -29,6 +29,13 @@
 
   programs.zsh.enable = true;
 
+  # No Home Manager on servers, so nothing ships a ~/.zshrc; without one,
+  # zsh runs its first-login zsh-newuser-install wizard. An empty file
+  # suppresses it ("f" never clobbers an existing file).
+  systemd.tmpfiles.rules = [
+    "f /home/${username}/.zshrc 0644 ${username} users -"
+  ];
+
   nix = {
     settings = {
       experimental-features = ["nix-command" "flakes"];
