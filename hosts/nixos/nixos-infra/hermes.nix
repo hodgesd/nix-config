@@ -24,7 +24,9 @@
     container.enable = true;
     container.hostUsers = ["hodgesd"];
     addToSystemPackages = true;
-    extraDependencyGroups = ["messaging"];
+    # "anthropic" is not in the base env — without it the agent fails at
+    # runtime with "The 'anthropic' package is required".
+    extraDependencyGroups = ["anthropic" "messaging"];
     settings = {
       model.default = "claude-sonnet-4-5";
       model.base_url = "https://api.anthropic.com/v1";
