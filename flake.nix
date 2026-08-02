@@ -10,6 +10,9 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     sops-nix.url = "github:Mic92/sops-nix";
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+    # Tier-2 (best-effort) upstream; deliberately NOT following our nixpkgs —
+    # hermes pins its own tested deps. Update with: nix flake update hermes-agent
+    hermes-agent.url = "github:NousResearch/hermes-agent";
     swiftbar_plugins = {
       url = "github:hodgesd/swiftbar_plugins";
       flake = false; # repo has no flake.nix; treat as raw files
