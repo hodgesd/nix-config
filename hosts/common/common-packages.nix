@@ -67,5 +67,10 @@
       ffmpeg # Video/audio conversion
       qemu # Hardware virtualization
       skopeo # Work with remote container images
+      # Secrets editing (Macs are the sops editors; the VM only decrypts
+      # via sops-nix). ssh-to-age converts a host key to a recipient when
+      # rotating .sops.yaml after a VM reinstall.
+      sops
+      ssh-to-age
     ];
 }
