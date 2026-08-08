@@ -61,6 +61,10 @@ in {
               imports = [./../home/default.nix];
             };
           }
+          # Inert until a host declares `sops.secrets.*` — verified: adding
+          # this import left the mbp system derivation byte-identical.
+          # Kept in sync with mkNixos below.
+          inputs.sops-nix.darwinModules.sops
           inputs.nix-homebrew.darwinModules.nix-homebrew
           ({pkgs, ...}: {
             nix-homebrew = {

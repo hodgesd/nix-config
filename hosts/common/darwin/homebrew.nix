@@ -2,6 +2,7 @@
 {
   config,
   lib,
+  machine,
   pkgs,
   ...
 }: {
@@ -40,7 +41,7 @@
   homebrew = {
     enable = true;
     onActivation = {
-      cleanup = "none";  # ← "zap" (cleanup), "none" (safe)
+      cleanup = "none"; # ← "zap" (cleanup), "none" (safe)
       # Don't auto-update on rebuild: avoids the giant "New Formulae"/"New
       # Casks" dump (and keeps rebuilds reproducible).
       autoUpdate = false;
@@ -91,7 +92,13 @@
       "xnapper"
     ];
 
-    masApps = {
+    # Skipped on the server (mini): mas-cli installs trip over Spotlight
+    # indexing on that host, and a headless monitoring box has no use for
+    # Keynote or Fantastical anyway. This was a hand-edit living
+    # uncommitted in the mini's checkout since 2026-01; gating it on the
+    # machine registry is the same fix the repo already uses for
+    # laptop-only settings (see darwin/laptop-defaults.nix).
+    masApps = lib.mkIf (machine.primaryUse != "server") {
       "Amphetamine" = 937984704;
       "Drafts" = 1435957248;
       "Dynamo" = 1445910651;

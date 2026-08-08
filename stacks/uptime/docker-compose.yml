@@ -1,0 +1,48 @@
+# AUTHORITATIVE — deployed to the mini's stack dir by the darwin
+# compose-stack module on every activation; hand-edits are overwritten.
+# Images are pinned by digest (exact bytes; the comment is the
+# human-readable version). To upgrade: put a tag here, activate, then
+# re-pin from `docker image inspect`.
+#
+# Lifted from stacks/homelab/docker-compose.yml when Kuma moved off
+# nixos-infra, so that the monitor no longer shares a fate with its
+# primary target. `hostname: uptime` is load-bearing: it keeps the URL
+# https://uptime.jaguar-duckbill.ts.net and therefore every push-monitor
+# token URL in the easy-afd-env secret.
+#
+# Two lines from the VM copy are deliberately absent: the
+# /dev/net/tun bind mount and the SYS_MODULE cap. Both only matter when
+# TS_USERSPACE=false, which was never set — the sidecars have always run
+# userspace networking. macOS has no /dev/net/tun to bind, so carrying
+# them over would be broken and pointless in equal measure.
+services:
+  ts-uptime:
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
+    container_name: ts-uptime
+    hostname: uptime
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+      # Userspace mode gives no kernel route to the tailnet, so outbound
+      # tailnet traffic needs a proxy. Unused today (monitors are push-based
+      # or public), but this is what Kuma's proxy settings would point at to
+      # poll nixos-infra directly.
+      TS_SOCKS5_SERVER: :1055
+      TS_OUTBOUND_HTTP_PROXY_LISTEN: :1056
+    volumes:
+      - ./ts-uptime/state:/var/lib/tailscale
+      - ./ts-uptime/config:/config
+    cap_add:
+      - NET_ADMIN
+
+  uptime-kuma:
+    image: louislam/uptime-kuma@sha256:9aeb4e51d038047f414309c77a1af553281ca535723cb88907d907269d0a908e # 2.3.2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    network_mode: service:ts-uptime
+    depends_on:
+      - ts-uptime
+    volumes:
+      - ./uptime-kuma:/app/data

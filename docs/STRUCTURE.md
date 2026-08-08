@@ -44,8 +44,9 @@ nix-config/
 ├── modules/               # Custom modules
 │   ├── swiftbar.nix       # HM module (macOS)
 │   ├── wallpaper.nix      # HM module (macOS)
-│   └── nixos/compose-stack.nix  # nix-owned docker compose stacks
-├── stacks/                # Docker compose files (homelab = deployed; arr-stack = parked)
+│   ├── nixos/compose-stack.nix   # nix-owned docker compose stacks (systemd)
+│   └── darwin/compose-stack.nix  # same, via launchd user agent (OrbStack)
+├── stacks/                # Docker compose files (homelab + uptime = deployed; arr-stack = parked)
 ├── scripts/               # bootstrap.sh + audit helpers
 └── docs/                  # Documentation (see NIXOS-INFRA.md for the homelab runbook)
 ```
