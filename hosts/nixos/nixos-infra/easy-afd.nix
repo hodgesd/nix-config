@@ -113,6 +113,15 @@ in {
     wants = ["network-online.target"];
     environment.PYTHONPATH = appDir;
 
+    # Unit-level, NOT serviceConfig: systemd moved the start-rate limit
+    # to [Unit] in v229, so setting these under [Service] is silently
+    # ignored. Defaults are 5 starts / 10 s, which RestartSec below
+    # would blow through in under a second — the app would then stay
+    # down permanently, which is the opposite of what Restart=always is
+    # for.
+    startLimitBurst = 5;
+    startLimitIntervalSec = 60;
+
     serviceConfig =
       hardening
       // {
@@ -135,7 +144,19 @@ in {
           "g7afd:app"
         ];
         EnvironmentFile = config.sops.secrets.easy-afd-env.path;
-        Restart = "on-failure";
+
+        # Graceful reload: gunicorn's master re-execs its workers on
+        # SIGHUP, which re-imports the app and so picks up both new
+        # Python and new Jinja templates (Jinja caches compiled
+        # templates per process, so an rsync alone changes nothing).
+        # Lets deploy.sh use `systemctl reload` and not drop requests.
+        ExecReload = "${lib.getExe' pkgs.coreutils "kill"} -HUP $MAINPID";
+
+        # "always", not "on-failure": a clean exit(0) is still an
+        # outage. on-failure would leave the app down if gunicorn were
+        # terminated by anything other than systemd itself.
+        Restart = "always";
+        RestartSec = "5s";
       };
   };
 
