@@ -3,34 +3,13 @@
 # digest (exact bytes; the comment is the human-readable version). To
 # upgrade a service: put its :latest (or a specific tag) here, deploy, then
 # re-pin to the new digest from `docker image inspect`.
+# Uptime Kuma used to live here (ts-uptime + uptime-kuma). It moved to the
+# mini on 2026-08-08 so the monitor no longer shares a fate with the host it
+# watches — see stacks/uptime/docker-compose.yml. Its data and the sidecar's
+# tailnet identity were migrated, so the URL and every push-monitor token
+# are unchanged. /srv/homelab/uptime-kuma and /srv/homelab/ts-uptime are now
+# stale on this host and can be deleted once the move has soaked.
 services:
-  ts-uptime:
-    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
-    container_name: ts-uptime
-    hostname: uptime
-    restart: unless-stopped
-    environment:
-      TS_AUTHKEY: ${TS_AUTHKEY}
-      TS_STATE_DIR: /var/lib/tailscale
-      TS_SERVE_CONFIG: /config/serve.json
-    volumes:
-      - ./ts-uptime/state:/var/lib/tailscale
-      - ./ts-uptime/config:/config
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-
-  uptime-kuma:
-    image: louislam/uptime-kuma@sha256:9aeb4e51d038047f414309c77a1af553281ca535723cb88907d907269d0a908e # 2.3.2
-    container_name: uptime-kuma
-    restart: unless-stopped
-    network_mode: service:ts-uptime
-    depends_on:
-      - ts-uptime
-    volumes:
-      - ./uptime-kuma:/app/data
-
   ts-budget:
     image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
     container_name: ts-budget

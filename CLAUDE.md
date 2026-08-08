@@ -115,13 +115,25 @@ before `nix eval`/`build` can see them — flakes only see tracked files.
 
 ### Docker compose stacks
 
-`modules/nixos/compose-stack.nix` provides `majordouble.composeStacks.<name>`:
-nix installs the repo's compose file into the stack dir and runs
-`docker compose up -d --remove-orphans` on change. The homelab estate is
-`stacks/homelab/docker-compose.yml` (deployed to `/srv/homelab`) — the repo
-copy is authoritative and images are pinned by digest. Changing an image
-string recreates that container (config-hash change) even if it resolves to
-the same image.
+`majordouble.composeStacks.<name>` exists on both platforms with the same
+option surface: `modules/nixos/compose-stack.nix` (systemd oneshot) and
+`modules/darwin/compose-stack.nix` (launchd user agent, because macOS
+container runtimes expose a user-owned socket). Nix installs the repo's
+compose file into the stack dir and runs
+`docker compose up -d --remove-orphans` on change. The repo copy is
+authoritative and images are pinned by digest. Changing an image string
+recreates that container (config-hash change) even if it resolves to the
+same image.
+
+Stacks: `stacks/homelab/docker-compose.yml` → `/srv/homelab` on
+nixos-infra; `stacks/uptime/docker-compose.yml` → `~/srv/uptime` on the
+mini (Uptime Kuma, deliberately not on the host it monitors).
+
+On darwin the runtime is OrbStack, addressed only through the module's
+`dockerHost` option. Two macOS-specific traps are handled there and
+documented inline: the agent must wait for the runtime's VM at login, and
+`~/.docker/config.json` names an out-of-store credential helper that must
+be on PATH or image pulls fail.
 
 ## Common Modifications
 
@@ -228,8 +240,8 @@ hosts/
 home/
   default.nix                   # User config entry point (portable)
   modules/                      # Tool-specific configs (core, cli, services)
-modules/                        # Custom modules (swiftbar, wallpaper, nixos/compose-stack)
-stacks/                         # Docker compose files (homelab deployed, arr-stack parked)
+modules/                        # Custom modules (swiftbar, wallpaper, {nixos,darwin}/compose-stack)
+stacks/                         # Docker compose files (homelab + uptime deployed, arr-stack parked)
 scripts/                        # bootstrap.sh + audit helpers
 docs/                           # STRUCTURE, ADDING_MACHINE, CUSTOMIZATION,
                                 # HOMEBREW, NIXOS-INFRA (homelab runbook)

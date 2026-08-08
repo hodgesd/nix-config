@@ -32,19 +32,30 @@ substituter) lives in `hosts/common/nixos-common.nix`.
 **Docker estate (`stacks/homelab/docker-compose.yml` — authoritative;
 deployed to /srv/homelab on every switch):** each app pairs with a
 `ts-<name>` Tailscale sidecar (hostname = tailnet name, HTTPS via
-`TS_SERVE_CONFIG` proxying 443 → app port). Apps: uptime-kuma
-(`uptime`), actual-budget (`budget`), ntfy, adguardhome (`adguard`),
+`TS_SERVE_CONFIG` proxying 443 → app port). Apps: actual-budget
+(`budget`), ntfy, adguardhome (`adguard`),
 homepage, librespeed, metube. All reachable at
 `https://<name>.jaguar-duckbill.ts.net`. Images are **pinned by digest**
 (human version in a trailing comment). To upgrade one: set its image to
 a tag, `just deploy`, then re-pin to the new digest
 (`docker image inspect --format '{{index .RepoDigests 0}}' <image>`).
 
-**Monitoring (Uptime Kuma at http://uptime:3001):** the Kuma container
-cannot reach tailnet IPs (firewall trusts only tailscale0), so Easy A/FD
-monitors are **push-based dead-man switches**: `afd-healthz` (3-min
-window) and `easy-afd-refresh` (8-day window). Push URLs live in the
-`easy-afd-env` secret.
+**Monitoring (Uptime Kuma — now on the mini, not here):** Kuma moved off
+this host on 2026-08-08 so it would survive the VM dying; see
+`stacks/uptime/docker-compose.yml` and `hosts/darwin/mini/`. Its data and
+the sidecar's tailnet identity were migrated wholesale, so it is still
+`https://uptime.jaguar-duckbill.ts.net` and every push-monitor token URL
+is unchanged. Easy A/FD monitors remain **push-based dead-man switches**:
+`afd-healthz` (3-min window) and `easy-afd-refresh` (8-day window), push
+URLs in the `easy-afd-env` secret. They could now become real HTTP polls
+— Kuma is a tailnet peer rather than a container behind this host's
+firewall — but were deliberately left alone during the move.
+
+`kuma-watchdog.nix` closes the other half of the loop: this host checks
+Kuma every 5 min and alerts via ntfy when it is unreachable, because a
+dead Kuma is otherwise indistinguishable from everything being fine. Note
+the two boxes now watch each other, so an outage taking out both is a
+blind spot only an off-site check would cover.
 
 **DNS:** `hdgs.me` on Cloudflare (moved from Hover 2026-07-25). `afd` A
 → 100.98.163.36 (DNS-only; public name, tailnet-only reachability).
@@ -139,8 +150,10 @@ between machines) and `/mnt/data/Videos/MeTube` (regenerable media).
   into the module's `let` section become unused local variables —
   silently, no error, identical rebuild closure. Config goes in the
   module body. Check the store path changed after rebuild.
-- **Kuma can't poll tailnet/host services** (docker bridge ≠ trusted
-  interface) → use push monitors, not HTTP monitors, for things here.
+- **Kuma no longer runs here**, so the old "can't poll tailnet/host
+  services" constraint is gone — it is a tailnet peer on the mini now and
+  its traffic arrives on tailscale0. The existing push monitors still
+  work and were kept as-is; new checks can be plain HTTP monitors.
 - **UNAS SMB auth:** username is auto-generated (`nixos-backup`), and
   the password is set via "Reset Password" under File Services creds —
   not the account's display name/password. Auth failures = STATUS_LOGON_FAILURE.
@@ -183,5 +196,5 @@ New since the flake migration (2026-07-26):
 - App repo: `github.com/hodgesd/gvii_afd-backup` (deploy via its
   `deploy.sh`; /healthz shows deployed SHA + data ages)
 - Dashboards: homepage `https://homepage.jaguar-duckbill.ts.net`,
-  Kuma `http://uptime:3001`
+  Kuma `https://uptime.jaguar-duckbill.ts.net` (hosted on the mini)
 - Machine registry entry: `lib/machines.nix` (`nixos-infra`)

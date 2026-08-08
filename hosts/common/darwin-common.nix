@@ -11,8 +11,11 @@
     ./darwin/fonts.nix
     ./darwin/packages.nix
     ./darwin/laptop-defaults.nix
+    ./darwin/tailscale.nix
     ./darwin/wallpaper.nix
     ./darwin/desktop
+    # Inert until a host declares `majordouble.composeStacks.*`
+    ../../modules/darwin/compose-stack.nix
   ];
 
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-darwin";

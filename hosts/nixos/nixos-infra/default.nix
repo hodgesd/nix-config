@@ -17,6 +17,7 @@
     ./storage.nix
     ./homelab-stack.nix
     ./hermes.nix
+    ./kuma-watchdog.nix
   ];
 
   # Secrets: decrypted at activation by sops-nix into /run/secrets (tmpfs)

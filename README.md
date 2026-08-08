@@ -109,9 +109,11 @@ A Proxmox guest VM on the HP mini PC, fully managed by this flake
 
 - **easy-afd** — Flask/gunicorn app behind nginx with a Let's Encrypt DNS-01 cert
   (`afd.hdgs.me`, tailnet-only reachability)
-- **Docker compose estate** (`/srv/homelab`) — 7 apps, each with a Tailscale
-  sidecar: Uptime Kuma, Actual Budget, Homepage, ntfy, AdGuard Home,
-  LibreSpeed, MeTube (compose snapshot: `stacks/homelab/docker-compose.yml`)
+- **Docker compose estate** (`/srv/homelab`) — 6 apps, each with a Tailscale
+  sidecar: Actual Budget, Homepage, ntfy, AdGuard Home, LibreSpeed, MeTube
+  (compose snapshot: `stacks/homelab/docker-compose.yml`). Uptime Kuma moved
+  to the mini so the monitor outlives the host it watches
+  (`stacks/uptime/docker-compose.yml`)
 - **Nightly NAS backups** (03:30 → UNAS Pro 8) and weekly aeronautical-data refresh
 
 ### Deploying (from the Mac)
