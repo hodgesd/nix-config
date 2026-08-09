@@ -21,6 +21,18 @@
   # into the command since the activation `sudo` strips the environment). No-op
   # on Tahoe and earlier. Drop once the pinned Homebrew knows the newer macOS.
   system.activationScripts.homebrew.text = lib.mkForce ''
+    # nix-homebrew prepends this to `homebrew.text` with lib.mkBefore, and
+    # our mkForce discards it — so it has to be re-added by hand or brew
+    # itself never gets set up.
+    #
+    # This is not theoretical: without it, /opt/homebrew/Library/Homebrew
+    # stayed symlinked to whatever brew was current the day the machine was
+    # first activated (2026-02 on the mini), and every later change to the
+    # pinned brew was silently ignored. It surfaced on 2026-08-09 when
+    # Homebrew's cask API outgrew that stale brew and `brew bundle` began
+    # crashing in api/cask.rb, failing every activation.
+    ${config.system.activationScripts.setup-homebrew.text}
+
     # Homebrew Bundle
     echo >&2 "Homebrew bundle..."
     if [ -f "${config.homebrew.brewPrefix}/brew" ]; then
@@ -28,6 +40,21 @@
       if [ "$(/usr/bin/sw_vers -productVersion | cut -d. -f1)" -gt 26 ]; then
         fakeMacOS="HOMEBREW_FAKE_MACOS=26.0"
       fi
+
+      # brew 6 refuses to load formulae from third-party taps until the tap
+      # is explicitly trusted (installing one can execute arbitrary code).
+      # Trust exactly the taps this repo declares, and nothing else: the
+      # check stays live for anything not in `homebrew.taps`, and the
+      # acknowledgement lives in git history rather than in per-machine
+      # state a rebuilt Mac would silently lose. `|| true` because older
+      # brews have no `trust` subcommand.
+      ${lib.concatMapStringsSep "\n" (tap: ''
+        PATH="${config.homebrew.brewPrefix}:$PATH" \
+        sudo --user=${lib.escapeShellArg config.homebrew.user} --set-home \
+          brew trust ${lib.escapeShellArg tap.name} >/dev/null 2>&1 || true
+      '')
+      config.homebrew.taps}
+
       PATH="${config.homebrew.brewPrefix}:${lib.makeBinPath [pkgs.mas]}:$PATH" \
       sudo \
         --user=${lib.escapeShellArg config.homebrew.user} \
@@ -52,45 +79,75 @@
       brewfile = true;
     };
 
-    brews = [
-      "opencode"
-      "jackielii/tap/my-skhd"
-    ];
+    brews =
+      [
+        # Everywhere: darwin/desktop/skhd.nix writes ~/.config/skhd/skhdrc
+        # and bootstraps the service on every darwin host.
+        "jackielii/tap/my-skhd"
+      ]
+      ++ lib.optionals (machine.primaryUse != "server") [
+        "opencode"
+      ];
     taps = [
       "jackielii/tap"
     ];
 
-    casks = [
-      "balenaetcher"
-      "brave-browser"
-      "chatgpt"
-      "citrix-workspace"
-      "claude"
-      "cursor"
-      "default-folder-x"
-      "desktoppr" # Command-line wallpaper manager
-      "discord"
-      "fastmail"
-      "ghostty"
-      "istat-menus"
-      "jordanbaird-ice"
-      "karabiner-elements"
-      "launchbar"
-      "netnewswire"
-      "obsidian"
-      "orbstack"
-      "popclip"
-      "rectangle"
-      "reminders-menubar"
-      "sf-symbols"
-      "steam"
-      "swiftbar"
-      "syntax-highlight"
-      "TheBoredTeam/boring-notch/boring-notch"
-      "unifi-identity-endpoint"
-      "vivaldi"
-      "xnapper"
-    ];
+    # Casks are an allowlist per role, not a denylist. A server gets the
+    # first two groups; workstations get everything.
+    #
+    # This is a reliability boundary as much as a tidiness one. `brew
+    # bundle` is all-or-nothing: one rotted vendor download URL fails the
+    # bundle, which fails the whole activation — that is exactly how the
+    # fastmail cask (pinned 1.0.7, 404ing) blocked a switch on the mini on
+    # 2026-08-09. Every cask listed for the monitoring host is a third
+    # party that can break its `darwin-rebuild`, so the list is short and
+    # deliberate. Allowlist rather than denylist so casks added for the
+    # laptops never silently land on the server.
+    #
+    # Nothing already installed is ever removed by narrowing this:
+    # onActivation.cleanup is "none".
+    casks =
+      [
+        # Required everywhere, server included: the uptime compose stack
+        # addresses OrbStack's socket (modules/darwin/compose-stack.nix).
+        "orbstack"
+      ]
+      ++ [
+        # Also on the server. Criterion: apps this repo already writes
+        # config for on every darwin host — leaving them uninstalled there
+        # would mean shipping config for something that isn't present —
+        # plus the basics for actually sitting at the machine.
+        "karabiner-elements" # configured by darwin/desktop/karabiner.nix
+        "swiftbar" # configured by darwin/desktop/swiftbar-config.nix
+        "ghostty"
+        "obsidian"
+        "rectangle"
+        "vivaldi"
+      ]
+      ++ lib.optionals (machine.primaryUse != "server") [
+        "balenaetcher"
+        "brave-browser"
+        "chatgpt"
+        "citrix-workspace"
+        "claude"
+        "cursor"
+        "default-folder-x"
+        "desktoppr" # Command-line wallpaper manager
+        "discord"
+        "fastmail"
+        "istat-menus"
+        "jordanbaird-ice"
+        "launchbar"
+        "netnewswire"
+        "popclip"
+        "reminders-menubar"
+        "sf-symbols"
+        "steam"
+        "syntax-highlight"
+        "TheBoredTeam/boring-notch/boring-notch"
+        "unifi-identity-endpoint"
+        "xnapper"
+      ];
 
     # Skipped on the server (mini): mas-cli installs trip over Spotlight
     # indexing on that host, and a headless monitoring box has no use for

@@ -66,27 +66,26 @@ in {
           # Kept in sync with mkNixos below.
           inputs.sops-nix.darwinModules.sops
           inputs.nix-homebrew.darwinModules.nix-homebrew
-          ({pkgs, ...}: {
+          {
             nix-homebrew = {
               enable = true;
               enableRosetta = true;
               autoMigrate = true;
               mutableTaps = true;
               user = username;
-              # Patch brew 5.0.12 to handle empty `depends_on.macos: {}` cask API
-              # entries (discord, steam, rectangle, etc.). Upstream fix is in
-              # 5.1.x but requires ruby_4_0, not yet in nixpkgs 25.05.
-              package =
-                (pkgs.applyPatches {
-                  name = "brew-5.0.12-cask-api-patched-src";
-                  src = inputs.nix-homebrew.inputs.brew-src;
-                  patches = [./patches/brew-cask-api.patch];
-                })
-                // {
-                  version = "5.0.12";
-                };
+              # No `package` override: use whatever brew nix-homebrew pins.
+              #
+              # This used to pin a patched brew 5.0.12 (the patch handled
+              # empty `depends_on.macos: {}` cask API entries). That pin
+              # aged badly: by 2026-08 Homebrew's cask API had moved on far
+              # enough that 5.0.12 could no longer parse it at all, crashing
+              # with `undefined method 'first' for nil` in
+              # api/cask.rb and failing every `brew bundle` — and therefore
+              # every activation — on any Mac whose metadata had refreshed.
+              # brew 6.x reads the current API natively, so the patch (and
+              # the pin it existed to work around) is gone.
             };
-          })
+          }
         ]
         ++ hostSpecificModules;
     };

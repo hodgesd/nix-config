@@ -159,6 +159,13 @@ brews = [ "formula-name" ];       # CLI tools
 masApps = { "App Name" = 123; };  # Mac App Store (ID from mas search)
 ```
 
+These are **allowlists per machine role**. Servers (`machine.primaryUse ==
+"server"`, i.e. the mini) get a short deliberate subset; workstations get
+everything. `brew bundle` is all-or-nothing, so every cask listed for a
+host is a third-party download URL that can fail its `darwin-rebuild` —
+keep the server's list minimal. Adding to the shared list does not affect
+servers unless you add it to their group too.
+
 ### System Preferences
 
 All in `hosts/common/darwin/defaults/`: `general.nix`, `keyboard.nix`,
@@ -198,6 +205,16 @@ byte-for-byte as generated on the VM — don't format it.
   need logout/restart. Use `defaults read com.apple.domain` to discover keys.
 - Homebrew: nix manages the installation; `autoMigrate = true`,
   `mutableTaps = true`, cleanup is `"none"`.
+- **Never `mkForce` `system.activationScripts.homebrew.text` without
+  re-including `${config.system.activationScripts.setup-homebrew.text}`.**
+  nix-homebrew installs brew itself by prepending to that attribute with
+  `mkBefore`; a bare `mkForce` silently drops it, and `/opt/homebrew` then
+  keeps whatever brew was linked on first activation forever. That went
+  unnoticed from 2026-02 to 2026-08, when Homebrew's cask API outgrew the
+  stale brew and every activation began failing in `api/cask.rb`.
+- `brew bundle` runs with `upgrade = true`, so it will happily upgrade
+  OrbStack — taking the container runtime, and anything running on it,
+  down mid-activation. Worth knowing before switching the mini.
 - Home Manager configs live in `home/` and are Linux-portable — anything
   darwin-only must be guarded (`pkgs.stdenv.isDarwin`) or live under
   `hosts/common/darwin/desktop/`. Changes require darwin-rebuild (not
@@ -214,8 +231,9 @@ Tracked in `flake.lock`, update with `just update`:
   the VM — check for MagicDNS regressions before bumping, see NIXOS-INFRA.md)
 - `nix-darwin` — nix-darwin-25.11
 - `home-manager` — release-25.11
-- `nix-homebrew` — declarative Homebrew (carries a patched brew 5.0.12; try
-  dropping `lib/patches/brew-cask-api.patch` when brew 5.1.x lands)
+- `nix-homebrew` — declarative Homebrew. No `package` override: it pins its
+  own brew (6.x). Third-party taps need `brew trust`, which the activation
+  script emits for each entry in `homebrew.taps`.
 - `sops-nix` — secrets
 - `swiftbar_plugins` — custom SwiftBar plugins (non-flake)
 
