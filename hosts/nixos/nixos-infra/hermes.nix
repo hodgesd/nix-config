@@ -59,6 +59,18 @@ in {
         backend = "local";
         timeout = 180;
       };
+      # One-shot-per-session fallback when the primary provider fails
+      # (Anthropic outage/rate limit). Needs DEEPSEEK_API_KEY in the
+      # hermes-env secret — until it's added, hermes just can't use the
+      # fallback; the primary path is unaffected. deepseek-v4-flash is
+      # the current API model id (the deepseek-chat alias retired
+      # 2026-07-24); ~$0.14/$0.28 per MTok, 1M context.
+      fallback_providers = [
+        {
+          provider = "deepseek";
+          model = "deepseek-v4-flash";
+        }
+      ];
     };
     environmentFiles = [config.sops.secrets.hermes-env.path];
   };
