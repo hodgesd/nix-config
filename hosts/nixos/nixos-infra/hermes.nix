@@ -63,6 +63,14 @@ in {
     environmentFiles = [config.sops.secrets.hermes-env.path];
   };
 
+  # The upstream module copies the rendered config.yaml into $HERMES_HOME at
+  # activation but does not restart the agent — a settings change (e.g. the
+  # model switch) otherwise deploys cleanly while the running process keeps
+  # the old config. Same failure class as the hermes-env restartUnits above.
+  systemd.services.hermes-agent.restartTriggers = [
+    (builtins.toJSON config.services.hermes-agent.settings)
+  ];
+
   # Watchdog: a dead Telegram bot is indistinguishable from a quiet day
   # (the same failure class kuma-watchdog.nix exists for), so check the
   # unit AND the container every 5 minutes and alert via ntfy. Same
