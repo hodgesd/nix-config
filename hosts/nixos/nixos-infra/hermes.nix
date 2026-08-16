@@ -49,7 +49,11 @@ in {
     # has no docker.sock and a read-only /nix/store, but host networking).
     extraDependencyGroups = ["anthropic" "messaging"];
     settings = {
-      model.default = "claude-sonnet-4-5";
+      # sonnet-5: better than sonnet-4-5 on agentic work at the same list
+      # price ($3/$15/MTok, intro $2/$10 through 2026-08-31). Note it 400s on
+      # non-default temperature/top_p — if hermes ever grows sampling knobs,
+      # leave them unset for this model.
+      model.default = "claude-sonnet-5";
       model.base_url = "https://api.anthropic.com/v1";
       terminal = {
         backend = "local";
