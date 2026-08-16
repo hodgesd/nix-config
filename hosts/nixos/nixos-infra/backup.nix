@@ -49,8 +49,11 @@
     # regenerable uv Python toolchain whose thousands of symlinks SMB
     # cannot store (rsync dies on I/O errors, and set -eu then skips the
     # secrets mirror below). Not part of the compose estate, so the pause
-    # window doesn't apply.
-    ${pkgs.rsync}/bin/rsync -a --delete /var/lib/hermes/.hermes/ "$dest/hermes/"
+    # window doesn't apply. -rlt instead of -a: .hermes/skills contains
+    # read-only dirs, and preserving that mode sets the DOS read-only
+    # attribute on the share, which blocks every later --delete update
+    # (the mount's dir_mode/file_mode already yield sane modes).
+    ${pkgs.rsync}/bin/rsync -rlt --delete /var/lib/hermes/.hermes/ "$dest/hermes/"
     for f in easy-afd-env cloudflare-acme-env nas-backup-credentials homelab-env hermes-env; do
       ${pkgs.coreutils}/bin/install -m 600 "/run/secrets/$f" "$dest/secrets/"
     done
