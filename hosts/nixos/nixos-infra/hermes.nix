@@ -60,15 +60,17 @@ in {
         timeout = 180;
       };
       # One-shot-per-session fallback when the primary provider fails
-      # (Anthropic outage/rate limit). Needs DEEPSEEK_API_KEY in the
+      # (Anthropic outage/rate limit). Routed via OpenRouter rather than
+      # DeepSeek's first-party API so requests stay on US-hosted inference
+      # (the model is open-weight; first-party would send conversation +
+      # tool output to PRC servers). Needs OPENROUTER_API_KEY in the
       # hermes-env secret — until it's added, hermes just can't use the
-      # fallback; the primary path is unaffected. deepseek-v4-flash is
-      # the current API model id (the deepseek-chat alias retired
-      # 2026-07-24); ~$0.14/$0.28 per MTok, 1M context.
+      # fallback; the primary path is unaffected. In the OpenRouter
+      # account settings, disable providers that train on prompts.
       fallback_providers = [
         {
-          provider = "deepseek";
-          model = "deepseek-v4-flash";
+          provider = "openrouter";
+          model = "deepseek/deepseek-v4-flash";
         }
       ];
     };
