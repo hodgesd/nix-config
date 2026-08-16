@@ -24,6 +24,8 @@ with `just deploy` (see [Deploying](#deploying)).
 | `mnt-data.automount` | `storage.nix` | `//192.168.1.142/Data` at /mnt/data (MeTube downloads) | on access |
 | `compose-homelab` | `homelab-stack.nix` | Deploys `stacks/homelab/docker-compose.yml` → `docker compose up -d` | on change |
 | `acme-afd.hdgs.me` timers | `proxy.nix` | Cert renewal | automatic |
+| `hermes-agent` | `hermes.nix` | NousResearch Hermes agent (Claude via Anthropic API): Telegram bot + host `hermes` CLI, container mode on the host docker daemon | always |
+| `hermes-watchdog` | `hermes.nix` | Checks hermes unit + container, alerts via ntfy (`hermes-watchdog` topic) | every 5 min |
 
 Shared server baseline (tailscale from locked unstable, docker_29,
 openssh with LAN key, firewall trusting only `tailscale0`, Cachix
@@ -56,6 +58,11 @@ Kuma every 5 min and alerts via ntfy when it is unreachable, because a
 dead Kuma is otherwise indistinguishable from everything being fine. Note
 the two boxes now watch each other, so an outage taking out both is a
 blind spot only an off-site check would cover.
+
+`hermes-watchdog` (in `hermes.nix`) applies the same pattern to the
+Hermes agent: unit + container checked every 5 min, edge-triggered ntfy
+alert. It won't catch a Telegram poller wedged inside a healthy
+container — that would need a Kuma push dead-man monitor (future work).
 
 **DNS:** `hdgs.me` on Cloudflare (moved from Hover 2026-07-25). `afd` A
 → 100.98.163.36 (DNS-only; public name, tailnet-only reachability).
@@ -98,6 +105,7 @@ aborts activation *before* any service restarts.
 | `cloudflare-acme-env` | ACME (CLOUDFLARE_DNS_API_TOKEN + propagation tuning) |
 | `nas-backup-credentials` | /mnt/data mount + backup script (SMB user `nixos-backup`) |
 | `homelab-env` | compose interpolation (TS_AUTHKEY for sidecars) |
+| `hermes-env` | hermes-agent (ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, Telegram user-ID allowlist — kept in ciphertext because the repo is public) |
 | `hodgesd-password` | `hashedPasswordFile` (seeds login on fresh installs) |
 
 Edit: `sops secrets/nixos-infra.yaml` (opens your editor decrypted,
@@ -110,11 +118,11 @@ re-encrypts on save), then `just deploy`.
 ## Backups (3 layers)
 
 1. **Nightly file mirror** (`homelab-backup`, 03:30): /srv/homelab
-   (minus `metube/downloads` — lives on NAS directly) plus a break-glass
-   plaintext copy of `/run/secrets/*` →
-   `//192.168.1.142/backups/nixos-infra/`. Containers paused seconds for
-   SQLite consistency. (`/etc/nixos` is no longer mirrored — config
-   lives in this repo on GitHub.)
+   (minus `metube/downloads` — lives on NAS directly), hermes state
+   `/var/lib/hermes`, plus a break-glass plaintext copy of the sops
+   secrets → `//192.168.1.142/backups/nixos-infra/`. Containers paused
+   seconds for SQLite consistency. (`/etc/nixos` is no longer mirrored —
+   config lives in this repo on GitHub.)
 2. **NAS snapshots**: `backups` share daily 05:00, keep 64 (~2 months).
    Restore a file = browse the snapshot in UniFi Drive.
 3. **Proxmox vzdump** (weekly, mode=snapshot → NAS): whole-VM archive.

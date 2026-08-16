@@ -3,11 +3,13 @@
 # user nixos-backup scoped to that share). History/versioning comes
 # from snapshots on the share, so this is a plain --delete mirror.
 # Covered: the docker estate /srv/homelab (actual-budget ledger,
-# uptime-kuma, ntfy, homepage, compose file) and a break-glass plaintext
-# copy of the sops secrets (from /run/secrets — lets you recover even if
-# every age key is lost). /etc/nixos is no longer mirrored: the config
-# lives in the nix-config repo on GitHub. /var/lib/easy-afd is excluded —
-# refresh scripts rebuild it and its pickles are pandas-coupled.
+# uptime-kuma, ntfy, homepage, compose file), hermes-agent state
+# /var/lib/hermes (sessions + merged env; small, no quiesce needed), and a
+# break-glass plaintext copy of the sops secrets (from /run/secrets — lets
+# you recover even if every age key is lost). /etc/nixos is no longer
+# mirrored: the config lives in the nix-config repo on GitHub.
+# /var/lib/easy-afd is excluded — refresh scripts rebuild it and its
+# pickles are pandas-coupled.
 # Containers are paused around the homelab copy so SQLite files
 # aren't torn mid-write (window is seconds for ~14 MB).
 #
@@ -18,7 +20,10 @@
   ...
 }: let
   # Follow the daemon's docker package (docker_29) instead of pkgs.docker,
-  # which is an older release marked insecure in 25.11.
+  # which is an older release marked insecure in 25.11. (hermes.nix solves
+  # the same mismatch the other way, with a host-global overlay rebinding
+  # pkgs.docker → docker_29 for the upstream module's sake — so on this
+  # host the two expressions currently agree.)
   dockerPkg = config.virtualisation.docker.package;
   backup = pkgs.writeShellScript "homelab-backup" ''
     set -eu
@@ -39,9 +44,14 @@
     # so /srv/homelab holds only its small queue state — no excludes.
     ${pkgs.rsync}/bin/rsync -a --delete /srv/homelab/ "$dest/homelab/"
     $compose unpause
-    for f in easy-afd-env cloudflare-acme-env nas-backup-credentials homelab-env; do
+    # Hermes state is small (session/config files, merged .env); it isn't
+    # part of the compose estate, so the pause window doesn't apply to it.
+    ${pkgs.rsync}/bin/rsync -a --delete /var/lib/hermes/ "$dest/hermes/"
+    for f in easy-afd-env cloudflare-acme-env nas-backup-credentials homelab-env hermes-env; do
       ${pkgs.coreutils}/bin/install -m 600 "/run/secrets/$f" "$dest/secrets/"
     done
+    # hodgesd-password is neededForUsers, so it lives outside /run/secrets.
+    ${pkgs.coreutils}/bin/install -m 600 ${config.sops.secrets.hodgesd-password.path} "$dest/secrets/"
     ${pkgs.coreutils}/bin/date -u +%FT%TZ > "$dest/last-backup.txt"
   '';
 in {

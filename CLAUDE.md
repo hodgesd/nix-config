@@ -181,7 +181,8 @@ hyper - o : open -a "Obsidian"
 ### Homelab services
 
 Edit `hosts/nixos/nixos-infra/*.nix` (easy-afd, proxy, backup, storage,
-homelab-stack), then `just deploy-check` before `just deploy`.
+homelab-stack, hermes, kuma-watchdog), then `just deploy-check` before
+`just deploy`.
 
 ## Adding a New Machine
 

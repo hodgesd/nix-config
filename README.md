@@ -114,6 +114,8 @@ A Proxmox guest VM on the HP mini PC, fully managed by this flake
   (compose snapshot: `stacks/homelab/docker-compose.yml`). Uptime Kuma moved
   to the mini so the monitor outlives the host it watches
   (`stacks/uptime/docker-compose.yml`)
+- **Hermes agent** (NousResearch) — Claude-backed agent in a container on the
+  host docker daemon; Telegram bot front end + `hermes` CLI on the VM
 - **Nightly NAS backups** (03:30 → UNAS Pro 8) and weekly aeronautical-data refresh
 
 ### Deploying (from the Mac)

@@ -5,8 +5,17 @@
 {
   inputs,
   config,
+  lib,
+  pkgs,
   ...
-}: {
+}: let
+  # Same reasoning as kuma-watchdog.nix: ntfy is tailnet-only, so the topic
+  # name isn't a secret. Subscribe with:
+  #   ntfy subscribe https://ntfy.jaguar-duckbill.ts.net/hermes-watchdog
+  ntfyUrl = "https://ntfy.jaguar-duckbill.ts.net/hermes-watchdog";
+  curl = lib.getExe pkgs.curl;
+  dockerPkg = config.virtualisation.docker.package;
+in {
   imports = [inputs.hermes-agent.nixosModules.default];
 
   # The hermes module hardcodes ${pkgs.docker}/bin/docker (no package
@@ -15,9 +24,16 @@
   # the same thing so the module's CLI matches the running daemon.
   nixpkgs.overlays = [(final: prev: {docker = prev.docker_29;})];
 
-  # ANTHROPIC_API_KEY, dotenv format. Root-read is fine: systemd resolves
-  # EnvironmentFiles as root (same pattern as easy-afd-env).
-  sops.secrets.hermes-env = {};
+  # Dotenv format: ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, and the Telegram
+  # user-ID allowlist. The allowlist stays in ciphertext deliberately — this
+  # repo is public. Root-read is fine: systemd resolves EnvironmentFiles as
+  # root (same pattern as easy-afd-env).
+  #
+  # restartUnits for the same reason as easy-afd-env (see default.nix):
+  # systemd restarts a service when its unit changes, not when the contents
+  # of its EnvironmentFile change — without this, editing the secret (e.g.
+  # the allowlist) deploys cleanly but never reaches the running agent.
+  sops.secrets.hermes-env.restartUnits = ["hermes-agent.service"];
 
   services.hermes-agent = {
     enable = true;
@@ -26,6 +42,11 @@
     addToSystemPackages = true;
     # "anthropic" is not in the base env — without it the agent fails at
     # runtime with "The 'anthropic' package is required".
+    # "messaging" is the Telegram front end: the bot long-polls Telegram
+    # (outbound only, no listener), and the user-ID allowlist in hermes-env
+    # is the ONLY authorization boundary in front of an agent that has a
+    # shell (terminal.backend = "local" below — inside the container, which
+    # has no docker.sock and a read-only /nix/store, but host networking).
     extraDependencyGroups = ["anthropic" "messaging"];
     settings = {
       model.default = "claude-sonnet-4-5";
@@ -36,5 +57,62 @@
       };
     };
     environmentFiles = [config.sops.secrets.hermes-env.path];
+  };
+
+  # Watchdog: a dead Telegram bot is indistinguishable from a quiet day
+  # (the same failure class kuma-watchdog.nix exists for), so check the
+  # unit AND the container every 5 minutes and alert via ntfy. Same
+  # edge-triggered one-alert-per-outage pattern as kuma-watchdog.nix.
+  # Known blind spot: a poller wedged inside a healthy container isn't
+  # caught — that would need a Kuma push dead-man monitor.
+  systemd.services.hermes-watchdog = {
+    description = "Watch hermes-agent, alert via ntfy";
+    serviceConfig = {
+      Type = "oneshot";
+      # Holds the flag file that makes alerting edge-triggered.
+      StateDirectory = "hermes-watchdog";
+    };
+    script = ''
+      set -u
+      flag="$STATE_DIRECTORY/down"
+
+      notify() {
+        ${curl} -fsS -m 10 \
+          -H "Title: $1" \
+          -H "Priority: $2" \
+          -H "Tags: $3" \
+          -d "$4" \
+          ${lib.escapeShellArg ntfyUrl} >/dev/null || true
+      }
+
+      ok=1
+      ${pkgs.systemd}/bin/systemctl is-active --quiet hermes-agent.service || ok=0
+      [ "$(${dockerPkg}/bin/docker inspect -f '{{.State.Running}}' hermes-agent 2>/dev/null)" = "true" ] || ok=0
+
+      if [ "$ok" = 1 ]; then
+        if [ -e "$flag" ]; then
+          notify "Hermes agent recovered" default white_check_mark \
+            "hermes-agent on nixos-infra is running again."
+          rm -f "$flag"
+        fi
+      else
+        # Edge-triggered: alert once per outage, not every 5 minutes.
+        if [ ! -e "$flag" ]; then
+          notify "Hermes agent is DOWN" urgent rotating_light \
+            "hermes-agent.service or its container is not running on nixos-infra. The Telegram bot is offline."
+          touch "$flag"
+        fi
+      fi
+    '';
+  };
+
+  systemd.timers.hermes-watchdog = {
+    wantedBy = ["timers.target"];
+    timerConfig = {
+      # Give docker and the agent container time to come up after boot.
+      OnBootSec = "5m";
+      OnUnitActiveSec = "5m";
+      Persistent = true;
+    };
   };
 }
