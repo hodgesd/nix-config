@@ -122,6 +122,7 @@
         "ghostty"
         "obsidian"
         "rectangle"
+        "thaw" # menu bar manager, maintained fork of the abandoned jordanbaird-ice
         "vivaldi"
       ]
       ++ lib.optionals (machine.primaryUse != "server") [
@@ -143,7 +144,6 @@
         "sf-symbols"
         "steam"
         "syntax-highlight"
-        "thaw" # menu bar manager, maintained fork of the abandoned jordanbaird-ice
         "TheBoredTeam/boring-notch/boring-notch"
         "unifi-identity-endpoint"
         "xnapper"
