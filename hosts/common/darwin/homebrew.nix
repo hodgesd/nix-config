@@ -136,7 +136,6 @@
         "discord"
         "fastmail"
         "istat-menus"
-        "jordanbaird-ice"
         "launchbar"
         "netnewswire"
         "popclip"
@@ -144,6 +143,7 @@
         "sf-symbols"
         "steam"
         "syntax-highlight"
+        "thaw" # menu bar manager, maintained fork of the abandoned jordanbaird-ice
         "TheBoredTeam/boring-notch/boring-notch"
         "unifi-identity-endpoint"
         "xnapper"
