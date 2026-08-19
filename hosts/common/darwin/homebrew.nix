@@ -131,6 +131,7 @@
         "chatgpt"
         "citrix-workspace"
         "claude"
+        "codexbar"
         "cursor"
         "default-folder-x"
         "desktoppr" # Command-line wallpaper manager
