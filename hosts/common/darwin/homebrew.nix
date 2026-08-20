@@ -68,87 +68,88 @@
   homebrew = {
     enable = true;
     onActivation = {
-      cleanup = "none"; # ← "zap" (cleanup), "none" (safe)
+      # "uninstall" removes anything installed that this allowlist doesn't
+      # declare (apps' prefs/support files are kept — that would be "zap").
+      # Anything worth keeping must be listed below or it disappears on the
+      # next activation of that host.
+      cleanup = "uninstall"; # ← "zap" | "uninstall" (cleanup), "none" (safe)
       # Don't auto-update on rebuild: avoids the giant "New Formulae"/"New
       # Casks" dump (and keeps rebuilds reproducible).
       autoUpdate = false;
-      upgrade = true;
+      # Rebuilds only converge to this config (install missing, cleanup
+      # undeclared) — they never upgrade what's installed. That keeps
+      # `just` fast and deterministic, avoids one bad cask download failing
+      # the whole activation, and can't upgrade OrbStack out from under the
+      # mini's containers mid-switch. Upgrade deliberately instead:
+      # `brew upgrade && mas upgrade`.
+      upgrade = false;
     };
     global = {
       autoUpdate = false;
       brewfile = true;
     };
 
-    brews =
-      [
-        # Everywhere: darwin/desktop/skhd.nix writes ~/.config/skhd/skhdrc
-        # and bootstraps the service on every darwin host.
-        "jackielii/tap/my-skhd"
-      ]
-      ++ lib.optionals (machine.primaryUse != "server") [
-        "opencode"
-      ];
+    brews = [
+      # darwin/desktop/skhd.nix writes ~/.config/skhd/skhdrc and bootstraps
+      # the service on every darwin host.
+      "jackielii/tap/my-skhd"
+      "mas" # keep brew's mas current; nix's pkgs.mas is only the PATH fallback
+      "opencode"
+    ];
     taps = [
       "jackielii/tap"
     ];
 
-    # Casks are an allowlist per role, not a denylist. A server gets the
-    # first two groups; workstations get everything.
-    #
-    # This is a reliability boundary as much as a tidiness one. `brew
-    # bundle` is all-or-nothing: one rotted vendor download URL fails the
-    # bundle, which fails the whole activation — that is exactly how the
-    # fastmail cask (pinned 1.0.7, 404ing) blocked a switch on the mini on
-    # 2026-08-09. Every cask listed for the monitoring host is a third
-    # party that can break its `darwin-rebuild`, so the list is short and
-    # deliberate. Allowlist rather than denylist so casks added for the
-    # laptops never silently land on the server.
-    #
-    # Nothing already installed is ever removed by narrowing this:
-    # onActivation.cleanup is "none".
-    casks =
-      [
-        # Required everywhere, server included: the uptime compose stack
-        # addresses OrbStack's socket (modules/darwin/compose-stack.nix).
-        "orbstack"
-      ]
-      ++ [
-        # Also on the server. Criterion: apps this repo already writes
-        # config for on every darwin host — leaving them uninstalled there
-        # would mean shipping config for something that isn't present —
-        # plus the basics for actually sitting at the machine.
-        "karabiner-elements" # configured by darwin/desktop/karabiner.nix
-        "swiftbar" # configured by darwin/desktop/swiftbar-config.nix
-        "ghostty"
-        "obsidian"
-        "rectangle"
-        "thaw" # menu bar manager, maintained fork of the abandoned jordanbaird-ice
-        "vivaldi"
-      ]
-      ++ lib.optionals (machine.primaryUse != "server") [
-        "balenaetcher"
-        "brave-browser"
-        "chatgpt"
-        "citrix-workspace"
-        "claude"
-        "codexbar"
-        "cursor"
-        "default-folder-x"
-        "desktoppr" # Command-line wallpaper manager
-        "discord"
-        "fastmail"
-        "istat-menus"
-        "launchbar"
-        "netnewswire"
-        "popclip"
-        "reminders-menubar"
-        "sf-symbols"
-        "steam"
-        "syntax-highlight"
-        "TheBoredTeam/boring-notch/boring-notch"
-        "unifi-identity-endpoint"
-        "xnapper"
-      ];
+    # One cask list for every darwin host. The per-role allowlist was
+    # collapsed on 2026-08-19: the mini deliberately installs the full
+    # workstation set for now, pending a decision on which apps are
+    # mbp-only. Two standing cautions from the allowlist era still apply:
+    # `brew bundle` is all-or-nothing, so one rotted vendor download URL
+    # fails the whole activation (the pinned fastmail 1.0.7 404ing blocked
+    # a mini switch on 2026-08-09), and onActivation.cleanup is
+    # "uninstall", so removing an entry (or leaving an installed app
+    # undeclared) removes the app on that host's next activation.
+    casks = [
+      # The uptime compose stack addresses OrbStack's socket
+      # (modules/darwin/compose-stack.nix).
+      "orbstack"
+      "karabiner-elements" # configured by darwin/desktop/karabiner.nix
+      "swiftbar" # configured by darwin/desktop/swiftbar-config.nix
+      "balenaetcher"
+      "brave-browser"
+      "chatgpt"
+      "citrix-workspace"
+      "claude"
+      "codexbar"
+      "crossover"
+      "cursor"
+      "default-folder-x"
+      "desktoppr" # Command-line wallpaper manager
+      "discord"
+      "fastmail"
+      "ghostty"
+      "google-chrome"
+      "google-gemini"
+      "istat-menus"
+      "launchbar"
+      "libreoffice"
+      "lm-studio"
+      "macwhisper"
+      "netnewswire"
+      "obsidian"
+      "opencode-desktop"
+      "popclip"
+      "rectangle"
+      "reminders-menubar"
+      "sf-symbols"
+      "steam"
+      "syntax-highlight"
+      "thaw" # menu bar manager, maintained fork of the abandoned jordanbaird-ice
+      "unifi-identity-endpoint"
+      "vivaldi"
+      "whatcable"
+      "xnapper"
+    ];
 
     # Skipped on the server (mini): mas-cli installs trip over Spotlight
     # indexing on that host, and a headless monitoring box has no use for
@@ -157,17 +158,38 @@
     # machine registry is the same fix the repo already uses for
     # laptop-only settings (see darwin/laptop-defaults.nix).
     masApps = lib.mkIf (machine.primaryUse != "server") {
+      "1Blocker" = 1365531024;
+      "Actions" = 1586435171;
+      "Affinity Photo" = 824183456;
+      "Affinity Publisher" = 881418622;
+      "Airport Madness 3D Volume 2" = 1321684059;
       "Amphetamine" = 937984704;
+      "BloonsTD6+" = 1584423325;
+      "Calca" = 635758264;
       "Drafts" = 1435957248;
       "Dynamo" = 1445910651;
       "Fantastical" = 975937182;
-      # "Goodnotes" = 1444383602;
-      "Keynote" = 409183694;
+      "Goodnotes" = 1444383602;
+      "iMovie" = 408981434;
+      "iThoughtsX" = 720669838;
+      # Keynote/Numbers/Pages use Apple's newer unified store IDs (the
+      # current 15.x versions); the old 409183694/409203825/409201541
+      # receipts are stale 14.5 copies that cleanup is expected to remove.
+      "Keynote" = 361285480;
+      "Marked 2" = 890031187;
+      "MindNode" = 6446116532;
+      "Mini Metro+" = 1550663539;
       "Mona" = 1659154653;
-      "Numbers" = 409203825;
-      "Pages" = 409201541;
+      "Numbers" = 361304891;
+      "Obsidian Web Clipper" = 6720708363;
+      "Okta Verify" = 490179405;
+      "OmniFocus" = 1346203938;
+      "Pages" = 361309726;
       "PDF Expert" = 1055273043;
       "RegEx Lab" = 1252988123;
+      "TestFlight" = 899247664;
+      "The Lost City" = 1538650027;
+      "Xcode" = 497799835;
     };
   };
 }

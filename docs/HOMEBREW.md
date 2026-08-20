@@ -67,7 +67,7 @@ taps = [
 
 ## Removing Applications
 
-Simply remove the entry from the appropriate list and rebuild. With `cleanup = "zap"` enabled (default), Homebrew will automatically uninstall removed apps.
+Simply remove the entry from the appropriate list and rebuild. With `cleanup = "uninstall"` enabled (the current setting), Homebrew uninstalls removed apps on the next activation but keeps their preferences and support files (`"zap"` would purge those too).
 
 ## Organization
 
@@ -149,11 +149,12 @@ Current settings in `homebrew.nix`:
 homebrew = {
   enable = true;
   onActivation = {
-    cleanup = "zap";      # Uninstall removed apps
-    autoUpdate = true;    # Update Homebrew on activation
-    upgrade = true;       # Upgrade installed apps
+    cleanup = "uninstall"; # Uninstall undeclared apps (prefs kept)
+    autoUpdate = false;    # Don't update Homebrew on activation
+    upgrade = false;       # Never upgrade during a rebuild — run
+                           # `brew upgrade && mas upgrade` deliberately
   };
-  global.autoUpdate = true;
+  global.autoUpdate = false;
 };
 ```
 

@@ -205,7 +205,9 @@ byte-for-byte as generated on the VM — don't format it.
 - Changes in `darwin/defaults/` require rebuild + activation; some settings
   need logout/restart. Use `defaults read com.apple.domain` to discover keys.
 - Homebrew: nix manages the installation; `autoMigrate = true`,
-  `mutableTaps = true`, cleanup is `"none"`.
+  `mutableTaps = true`, cleanup is `"uninstall"` — anything installed but
+  not declared in `homebrew.nix` is removed on that host's next activation
+  (prefs are kept; that would be `"zap"`).
 - **Never `mkForce` `system.activationScripts.homebrew.text` without
   re-including `${config.system.activationScripts.setup-homebrew.text}`.**
   nix-homebrew installs brew itself by prepending to that attribute with
@@ -213,9 +215,11 @@ byte-for-byte as generated on the VM — don't format it.
   keeps whatever brew was linked on first activation forever. That went
   unnoticed from 2026-02 to 2026-08, when Homebrew's cask API outgrew the
   stale brew and every activation began failing in `api/cask.rb`.
-- `brew bundle` runs with `upgrade = true`, so it will happily upgrade
-  OrbStack — taking the container runtime, and anything running on it,
-  down mid-activation. Worth knowing before switching the mini.
+- `brew bundle` runs with `upgrade = false` (since 2026-08-19): rebuilds
+  only converge to the config and never upgrade installed packages, so an
+  activation can't take OrbStack (and the mini's containers) down
+  mid-switch. Upgrades are a deliberate separate step:
+  `brew upgrade && mas upgrade`.
 - Home Manager configs live in `home/` and are Linux-portable — anything
   darwin-only must be guarded (`pkgs.stdenv.isDarwin`) or live under
   `hosts/common/darwin/desktop/`. Changes require darwin-rebuild (not
