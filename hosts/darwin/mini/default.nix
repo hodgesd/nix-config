@@ -19,6 +19,10 @@
   # there is no vault named "Derrick", and "Pro Pilot" is a stale husk).
   vaultPath = "/Users/${username}/Library/Mobile Documents/iCloud~md~obsidian/Documents/Pro Pilot 2";
 in {
+  # Nightly Kuma-data mirror to the NAS (the VM's backup job stopped
+  # covering it when Kuma moved here).
+  imports = [./backup.nix];
+
   # Uptime Kuma + its Tailscale sidecar. stacks/uptime/docker-compose.yml is
   # authoritative; see modules/darwin/compose-stack.nix for the contract.
   # stateDir is under the user's home because OrbStack's docker socket is
