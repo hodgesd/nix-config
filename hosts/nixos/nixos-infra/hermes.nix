@@ -75,6 +75,19 @@ in {
       ];
     };
     environmentFiles = [config.sops.secrets.hermes-env.path];
+
+    # Agent policy (hermes-policy.md): tiers, injection rules, escalation.
+    # Installed as workspace AGENTS.md because that's the file the gateway
+    # injects into every session's system prompt (prompt_builder loads
+    # context files from the module-set terminal.cwd = /data/workspace;
+    # SOUL.md would need to live in HERMES_HOME, which `documents` can't
+    # reach). Two caveats, verified against the pinned rev: a .hermes.md in
+    # the workspace would silently take priority over AGENTS.md — don't
+    # create one; and the installed copy is hermes-owned 0640, so the agent
+    # could edit it mid-generation — the repo copy is authoritative and
+    # every activation reinstalls it (tamper-evident via git + audit log,
+    # not tamper-proof).
+    documents."AGENTS.md" = ./hermes-policy.md;
   };
 
   # The upstream module copies the rendered config.yaml into $HERMES_HOME at
