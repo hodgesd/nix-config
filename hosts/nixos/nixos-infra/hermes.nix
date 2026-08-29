@@ -15,6 +15,15 @@
   ntfyUrl = "https://ntfy.jaguar-duckbill.ts.net/hermes-watchdog";
   curl = lib.getExe pkgs.curl;
   dockerPkg = config.virtualisation.docker.package;
+
+  # Audit hook lives in /nix/store (mounted read-only in the container) so
+  # the agent — which owns everything under /data — cannot rewrite the code
+  # that audits it. The nix python3 works in-container for the same reason.
+  auditHook = pkgs.writeScript "hermes-audit-hook" ''
+    #!${pkgs.python3.interpreter}
+    ${builtins.readFile ./hermes-audit-hook.py}
+  '';
+  auditLog = "/var/lib/hermes/.hermes/logs/audit.jsonl";
 in {
   imports = [inputs.hermes-agent.nixosModules.default];
 
@@ -73,6 +82,24 @@ in {
           model = "deepseek/deepseek-v4-flash";
         }
       ];
+
+      # Audit trail: log every tool call (terminal, file, and future MCP —
+      # no matcher means all tools) as one JSON line with an args DIGEST,
+      # no content. This is the observability the whole integration plan's
+      # trust model leans on; tail it on the host with `hermes-audit`.
+      hooks.post_tool_call = [
+        {
+          command = "${auditHook}";
+          timeout = 10;
+        }
+      ];
+      # Hook first-use consent is a TTY prompt the gateway can never answer
+      # (it would silently skip the hook, i.e. no audit trail). Auto-accept
+      # does not widen the blast radius: a shell hook runs as the hermes
+      # user inside the container, which is exactly what the agent's own
+      # terminal tool already does — there is no capability here the agent
+      # doesn't have. The declared hook itself is in the read-only store.
+      hooks_auto_accept = true;
     };
     environmentFiles = [config.sops.secrets.hermes-env.path];
 
@@ -96,6 +123,42 @@ in {
   # the old config. Same failure class as the hermes-env restartUnits above.
   systemd.services.hermes-agent.restartTriggers = [
     (builtins.toJSON config.services.hermes-agent.settings)
+  ];
+
+  # The hook writes audit.jsonl inside the container's bind mount; hooks
+  # can't reach the host journal from in there, so a host-side tail bridges
+  # the file into journald under a stable identifier. -n0 skips history on
+  # (re)start — the file itself keeps the full record; journald gets the
+  # live stream. tail -F tolerates the file not existing yet (first boot,
+  # or before the first tool call ever fires).
+  systemd.services.hermes-audit-forwarder = {
+    description = "Forward hermes tool-call audit log to journald";
+    wantedBy = ["multi-user.target"];
+    serviceConfig = {
+      ExecStart = "${pkgs.coreutils}/bin/tail -n0 -F ${auditLog}";
+      SyslogIdentifier = "hermes-audit";
+      # Matches the file's hermes:hermes 0660 (dirs 2770) from the upstream
+      # module's activation script.
+      User = "hermes";
+      Group = "hermes";
+      Restart = "always";
+      RestartSec = 5;
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ReadOnlyPaths = ["/var/lib/hermes/.hermes/logs"];
+      PrivateTmp = true;
+    };
+  };
+
+  # `hermes-audit` = live tail of the audit stream; any extra args are
+  # passed straight to journalctl (e.g. `hermes-audit --since -1h`).
+  environment.systemPackages = [
+    (pkgs.writeShellScriptBin "hermes-audit" ''
+      if [ $# -eq 0 ]; then
+        exec journalctl -t hermes-audit -n 50 -f
+      fi
+      exec journalctl -t hermes-audit "$@"
+    '')
   ];
 
   # Watchdog: a dead Telegram bot is indistinguishable from a quiet day
