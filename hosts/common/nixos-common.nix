@@ -9,8 +9,11 @@
   username,
   ...
 }: {
-  # Inert until a host declares majordouble.composeStacks.*
-  imports = [../../modules/nixos/compose-stack.nix];
+  # Inert until a host declares majordouble.composeStacks.* / .mcpServers.*
+  imports = [
+    ../../modules/nixos/compose-stack.nix
+    ../../modules/nixos/mcp-server.nix
+  ];
 
   time.timeZone = "America/Chicago";
   i18n.defaultLocale = "en_US.UTF-8";
