@@ -269,3 +269,50 @@ scripts/                        # bootstrap.sh + audit helpers
 docs/                           # STRUCTURE, ADDING_MACHINE, CUSTOMIZATION,
                                 # HOMEBREW, NIXOS-INFRA (homelab runbook)
 ```
+
+## Hermes Agent Infrastructure (Telegraph-Hermes)
+
+This repo carries a phased build-out of personal AI-agent infrastructure
+around the hermes-agent deployment. The full plan and per-phase execution
+prompts live in `docs/hermes/` (`hermes-integration-plan.md`,
+`claude-code-prompt.md`). Work on it one phase at a time; the context below
+applies to every Hermes session.
+
+**Repo reality** (answers to the context block's open questions — don't
+re-ask these):
+
+- Hermes is already deployed: `hosts/nixos/nixos-infra/hermes.nix`,
+  container mode, via the `hermes-agent` flake input. Its secrets
+  (ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USERS,
+  OPENROUTER_API_KEY) live in the sops `hermes-env` entry in
+  `secrets/nixos-infra.yaml` — the module merges `environmentFiles` into
+  the container's dotenv, not systemd env (see hermes.nix comments).
+- The nix-darwin Mac configs are **in this repo** (`hosts/darwin/`,
+  `hosts/common/darwin/`). The always-on Mac mini is the `mini` host
+  (`machine.primaryUse == "server"`).
+- The secrets mechanism is sops-nix (already wired; see `.sops.yaml`).
+
+### ENVIRONMENT
+
+- Agent host: "hermes" — a NixOS VM on Proxmox, managed declaratively in my nixos-infra flake repo (you are in this repo).
+- My Macs run nix-darwin (config may be in this repo or a sibling — ask me for the path if needed). The Apple bridge (Phase 4) will live on an ALWAYS-ON MAC MINI managed by nix-darwin.
+- All hosts are on a Tailscale tailnet. I already use a Tailscale-serve sidecar pattern for HTTPS on internal services (Uptime Kuma, Actual Budget) — find and reuse that pattern, do not invent a new one.
+- My Obsidian vault uses PARA structure with a GTD inbox. NAS is a UNAS Pro 8.
+- My agent runtime is NousResearch's hermes-agent (open-source, Python core; github.com/NousResearch/hermes-agent), with its Telegram gateway ("Telegraph" is my name for that surface). Relevant native capabilities you should USE rather than reinvent: built-in MCP integration (declare our servers through its MCP config), built-in cron scheduler with delivery to Telegram (use it for briefs/digests instead of custom timers where sensible), and native Telegram user-ID allowlisting (TELEGRAM_ALLOWED_USERS / dmPolicy). Locate my Hermes install + config (likely a NixOS service; config dir ~/.hermes or service-equivalent), read its current version's docs for exact MCP config syntax, and conform. If you cannot determine how it's deployed, STOP and ask me.
+- CRITICAL: hermes-agent has terminal-execution backends — the agent can run shell commands. Its shell containment (Phase 0, task 6) is as important as MCP tool allowlists.
+
+### NON-NEGOTIABLE SECURITY RULES
+
+1. Least privilege: every integration gets its own credential with the minimum scope. Never request or configure broader scopes than the phase specifies.
+2. No secrets in the repo or in generated files. Use the repo's existing secrets mechanism (agenix or sops-nix — detect which; if neither exists, Phase 0 creates one). Reference secrets by path, never by value. When a credential must be created by a human (API tokens, keys), output a numbered checklist for me instead of attempting it.
+3. No new ports on LAN/WAN. Anything listening binds to localhost or the Tailscale interface only. Tailnet ACL work is proposed as a diff for me to apply in the admin console — you do not have access.
+4. Tool surface = risk surface. Configure MCP servers with the exact tool allowlist the phase specifies. If a server can't restrict tools via config, wrap or fork minimally, or flag it and propose an alternative server. Never ship a broader surface "because it was easier."
+5. Read-only first. No phase in this prompt grants send, delete, or config-mutation capability anywhere. If you believe a write tool is needed to meet the spec, stop and ask.
+6. Everything you add must be: declarative (Nix), commented (explain WHY at security-relevant lines), and reversible (document the one-line disable for each service you add).
+
+### WORKING STYLE
+
+- Plan first: open each phase by writing a short PLAN.md of intended changes; wait for my "go" before touching config.
+- Small commits, imperative messages, one logical change each.
+- Finish each phase by writing docs/hermes/phase-N.md: what was built, how to verify, how to disable, credential inventory (names/scopes only), and a 5-item manual test script for me.
+- If anything is ambiguous, ask. Do not guess about my infra.
