@@ -56,43 +56,67 @@ ACCEPTANCE
 
 ---
 
-## PHASE 0.5 — Containment gate (v1.1; run before the first data integration)
+## PHASE 0.5 — Containment gate (v1.1.1; three hard gates, run before ANY data integration)
 
 ```
-GOAL: Shrink the Telegram-facing agent's ambient capability and its network
-blast radius BEFORE any personal data flows through it. No integrations.
+GOAL: Close the three holes that make today's deployment injectable-with-
+persistence: an over-broad Telegram surface (web/browser + shell + file
+tools + open egress in one session), host networking, and agent-writable
+config. No integrations. Context: the sender allowlist authenticates WHO
+messaged, not what fetched content does — web+shell+dotenv-readable file
+tools is the full exfiltration triad already.
 
 TASKS
-1. Toolset narrowing: set platform_toolsets.telegram explicitly, dropping
-   `cronjob` (agent-editable schedules are a persistence vector for injected
-   instructions — scheduled briefs will be deployment-declared instead) and
-   `browser`. Keep `terminal` FOR NOW and record why in the phase doc: no
-   untrusted-content integration exists yet, and the shell is what makes the
-   agent useful day-to-day. Removing/gating the terminal is a precondition
-   of Phase 3a or Phase 1 (whichever runs first) — decide it there.
-2. Egress containment: move the hermes container off --network=host onto a
-   bridge network with default-deny egress; allow Telegram API, Anthropic
-   API, OpenRouter API, DNS, NTP. Do NOT attempt VM-wide egress rules — the
-   VM's other services (NAS backups, proxy, ntfy) need their egress. Test
-   plan required: Telegram long-polling, DNS inside the container, and the
-   watchdog's `docker inspect` health check must all survive the move.
-   Later phases append their one destination each (mini bridge, UniFi).
-3. Config-mutation check: config.yaml is group-writable by the agent user.
-   Determine whether the gateway hot-reloads MCP/hook config the agent
-   edits itself, or whether changes are inert until a restart it cannot
-   perform (and activation re-merges nix settings anyway). Document; if
-   hot-reload is live, propose a mitigation.
-4. Validation battery (document results in the phase doc): non-allowlisted
-   Telegram user ignored; a deliberately broken secret aborts activation
-   before services restart; global kill switch (systemctl stop hermes-agent)
-   and recovery; full VM reboot recovery; audit-log spot-check confirms
-   digests only, no content.
+1. GATE — split the surfaces. Set platform_toolsets.telegram explicitly
+   and minimally: messaging, todo, and propose-with-rationale whether
+   vision/tts stay. NO terminal, web, browser, file, skills, or cronjob
+   on Telegram. Operator/terminal utility stays on the existing `cli`
+   platform (hermes CLI on the VM over SSH keeps the full preset) — do
+   not create a second bot for this. Scheduled briefs become
+   deployment-declared when they arrive; nothing schedule-editing stays
+   chat-reachable.
+2. GATE — real egress policy. Remove --network=host (bridge network with
+   a fixed container IP). Then ENFORCE egress — a Docker bridge still
+   masquerades all outbound by default, so the bridge alone is not the
+   control: per-container rules in the DOCKER-USER chain / nftables
+   keyed to the container's IP, or an egress proxy the container is
+   forced through. Allow only: DNS, NTP, Telegram API, Anthropic API
+   (+OpenRouter only if the fallback survives task 4). Domain-based
+   allowlisting favors the proxy route since API IPs rotate — evaluate
+   both, pick one, document why. Do NOT attempt VM-wide egress rules
+   (NAS backups, proxy, ntfy need theirs). Note in the phase doc: while
+   hermes shares the VM's Tailscale identity, tailnet grants cannot
+   single it out — a Tailscale sidecar or dedicated node is the future
+   fix if that matters. Test plan required: long-polling, in-container
+   DNS, watchdog `docker inspect`.
+3. GATE — config immutable to the agent. Known bypass to close:
+   config.yaml is owned by the agent's user, the activation merge
+   preserves agent-added keys, mcp_servers is not Nix-declared, and the
+   agent can force a restart by crashing. Mount the rendered config.yaml
+   and workspace AGENTS.md read-only into the container
+   (container.extraVolumes "...:ro"); verify an agent-side edit attempt
+   fails and that activation's in-place rewrite still propagates through
+   the bind mount. Leave writable exactly: sessions, logs, memories,
+   SOUL.md/MEMORY.md (agent-managed by design — note the identity slot
+   therefore remains agent-writable; policy authority lives in the ro
+   AGENTS.md). Document what remains writable and why.
+4. Fallback provider decision: OpenRouter does not guarantee US-only or
+   fixed-provider inference without an explicit provider allowlist and
+   fallbacks disabled. Either drop fallback_providers (fail closed to
+   Anthropic — default choice) or configure and VERIFY provider pinning
+   end-to-end; update the hermes.nix comment to match reality.
+5. Validation battery (results in the phase doc): non-allowlisted user
+   ignored; egress to a non-allowlisted host fails from in-container
+   while Telegram works; agent config edit does not survive or load;
+   deliberately broken secret aborts activation before services restart;
+   global kill switch + recovery; full VM reboot recovery; audit-log
+   spot-check confirms digests only.
 
 ACCEPTANCE
-- Agent still answers on Telegram with the narrowed toolset; egress to a
-  non-allowlisted host fails from inside the container while Telegram
-  long-polling works; all validation tests documented; phase-0.5 doc
-  written with the terminal-decision rationale.
+- Agent still answers on Telegram with the minimal toolset; `hermes` CLI
+  on the VM retains terminal; all five validation results documented;
+  phase-0.5 doc written including the what-remains-writable inventory
+  and the egress-mechanism rationale.
 ```
 
 ---
@@ -183,7 +207,9 @@ TASKS
    keeps its read-only token.
 2. Build a minimal draft broker: its own service (Phase-0 module, own
    DynamicUser), exposing exactly ONE tool: create_draft(to, subject,
-   body, in_reply_to?). No other JMAP method is reachable through it —
+   body, in_reply_to?). At the server boundary it permits only
+   Email/set create into the Drafts mailbox and rejects update, destroy,
+   move, EmailSubmission/send, and arbitrary JMAP method pass-through —
    small enough to review line-by-line; that review IS the security model.
    Wrap an existing library, don't adopt a general server with tools
    "disabled".
@@ -209,7 +235,7 @@ TASKS
 1. In my nix-darwin config: install an EventKit MCP server supporting streamable HTTP + bearer auth (evaluate apple-events-mcp and mcp-server-apple-events; prefer Swift/EventKit-native). launchd agent, bound to LOOPBACK only (v1.1 — Tailscale recommends a localhost backend when Serve provides the authorization boundary; task 3 exposes it). Bearer token from a root-readable env file outside any repo; same token into hermes secrets. Note EventKit's grant model when picking the server: reads require full access, event creation alone can use the narrower write-only grant.
 2. TCC: give me the exact one-time interactive steps to trigger and grant Calendar + Reminders permission for the server binary, including verification (System Settings → Privacy & Security) and the known headless-hang failure mode to check for.
 3. HTTPS via my existing tailscale-serve pattern.
-4. Tool allowlist: reminders create/read/update/complete; calendar read + create. NO delete tools in v1 for either. (v1.1) All creates target a dedicated "Hermes Review" calendar and Reminders list only — no attendees, recurrence, or attachments; promotion to real lists is a later, deliberate change after observed trust.
+4. Tool allowlist: reminders create/read/update/complete; calendar read + create. NO delete tools in v1 for either. (v1.1) All creates target a dedicated "Hermes Review" calendar and Reminders list only — no attendees, recurrence, or attachments; promotion to real lists is a later, deliberate change after observed trust. (v1.1.1) Enforce the allowed calendar/list IDs IN THE BRIDGE itself, not only in Hermes config — the bridge is the boundary. Treat the EventKit grant model as a proof-of-concept to verify, not an assumption: reads need Full Access (Reminders too), write-only covers event creation but cannot read; prove the chosen server's grants across reboot, logout/login, and a rebuild before calling this phase done.
 5. Hermes wiring + behaviors: (a) Telegram "remind me to X [when] [list]" → correct list with due date; (b) morning brief section merging due-today/overdue reminders + today's events — (v1.1) if the bridge is unreachable the brief MUST say "calendar unavailable", never silently omit the section or reuse stale data; (c) email→task ("turn that UNUM email into a task") linking Phase 3a.
 6. Work calendar — technically solved, governance-gated (v1.1): do NOT wire this task until I confirm the employer-policy question (the new step is LLM processing + Telegram delivery of work calendar data, not the subscription itself — that already exists on my devices). If approved with reservations, implement busy/free-only. Original task: I already subscribe to my work Outlook calendar in Apple Calendar (published-ICS subscription). Tasks: (a) verify WHERE the subscription lives — if it was added with location "iCloud" it syncs to every device including the mini automatically; if "On My Mac" on another machine, re-add it on the mini (or re-add to iCloud) — give me the check/fix steps (Calendar → settings of the subscribed calendar → Location field, plus refresh frequency; recommend 15 min or hourly); (b) confirm it's visible through the bridge's EventKit READ tools and excluded from any create/update tool paths (subscriptions are read-only at the protocol level anyway — enforce at tool layer too); (c) label it [WORK] in all Hermes output. No Internet Accounts attempt, no OWA work, no IT contact needed. Work calendar data is READ-ONLY forever.
 

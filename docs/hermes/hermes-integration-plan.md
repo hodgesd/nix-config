@@ -127,32 +127,63 @@ waits for its own mini threat model.
 **Effort:** one evening.
 **Status: DONE 2026-08-29** — see `docs/hermes/phase-0.md`.
 
-### Phase 0.5 — Containment gate (before the first data integration)
-*Added in v1.1 from external review. Runs like any phase: PLAN.md → "go".*
-**Build:**
-- Narrow `platform_toolsets.telegram`: drop `cronjob` (agent-editable
-  schedules are a persistence vector for injected instructions — scheduled
-  briefs become deployment-declared instead) and `browser`. The **terminal
-  stays for now**: with no untrusted-content integration yet, the shell is
-  exposed only to allowlisted users inside the container. Removing or
-  further gating it is a **precondition of the first untrusted-content
-  phase (3a or 1)**, decided then — the security property stays attached
-  to the risk that motivates it.
-- Move the hermes container off `--network=host` onto a bridge network
-  with default-deny egress; allowlist Telegram + Anthropic + OpenRouter
-  APIs, DNS/NTP, and (later) the mini bridge and UniFi console. This —
-  not VM-wide firewall rules, which would break the VM's other duties
-  (NAS backups, proxy, ntfy) — is the correct object for egress control.
-  Needs a test window: Telegram long-polling, DNS resolution, and the
-  watchdog's `docker inspect` assumptions.
-**Validation tests:** unauthorized Telegram user is ignored; revoked
-secret fails activation cleanly; global kill switch works; reboot
-recovery; audit-log redaction spot-check (digests only); verify whether
-the agent can hot-reload MCP config it edits itself (config.yaml is
-group-writable — if yes, that's a finding to close).
-**Payoff:** the blast radius of a prompt-injected agent drops from
-"anything the VM can reach" to "its own APIs".
-**Effort:** one evening + a test window.
+### Phase 0.5 — Containment gate (before ANY data integration; three hard gates)
+*Added in v1.1; hardened in v1.1.1 after the second review round. The
+v1.1 draft deferred the terminal decision to Phase 3a/1 on the premise
+that no untrusted content flows yet — that premise was false: the
+deployed Telegram preset already includes `web` and `browser`, so the
+agent can already pull arbitrary web content into a session that also has
+a shell, `file` tools that can read its own dotenv (including the bot
+token), and unrestricted egress. The sender allowlist authenticates who
+messaged, not what the content does. All three gates are therefore
+immediate.*
+
+**Gate 1 — split the surfaces.** The Telegram profile becomes minimal:
+messaging, todo, and (judgment call at implementation) vision/tts —
+**no terminal, no web, no browser, no file, no skills, no cronjob**.
+Operator/terminal utility moves to the surface that already exists for
+it: the `cli` platform (the `hermes` CLI on the VM over SSH keeps the
+full preset) — no second bot needed. Scheduled briefs become
+deployment-declared, not chat-editable. The utility loss on the phone is
+real (no ad-hoc shell or web lookups from Telegram) and temporary in
+spirit: the integrations ARE the intended utility, delivered through
+allowlisted MCP tools as phases land.
+
+**Gate 2 — real egress policy, not just a bridge.** Remove
+`--network=host`. But a Docker bridge network still masquerades all
+outbound by default — the bridge is step one, enforcement is separate:
+per-container firewall rules (DOCKER-USER chain / nftables matching the
+container's fixed bridge IP) or an egress proxy, allowing only DNS,
+Telegram, Anthropic, and explicitly approved integration endpoints
+(domain-based allowlisting favors the proxy approach since API IPs
+rotate). VM-wide default-deny remains wrong for this shared-duty VM.
+Accepted limitation: while hermes shares the VM's Tailscale identity,
+tailnet grants cannot distinguish it from the VM's other services — if
+that distinction ever matters, hermes gets its own Tailscale sidecar or
+its own small VM/node; until then, dst-side auth carries that weight.
+
+**Gate 3 — config genuinely immutable to the agent.** Confirmed bypass,
+not a hypothesis: `config.yaml` is owned by the agent's own user, the
+activation merge preserves agent-added keys (Nix keys win, new keys
+survive), no `mcp_servers` key is Nix-declared, and the agent can force
+its own restart (crash + `Restart=always`). So a compromised agent could
+persist its own MCP server or toolset override across deploys. Fix
+mechanism: read-only bind-mounts over the in-container paths for
+`config.yaml` and workspace `AGENTS.md` (`container.extraVolumes`
+`...:ro`), leaving the agent a narrow writable state (sessions, logs,
+memory — SOUL.md/MEMORY.md stay agent-managed by design; note that the
+identity slot is therefore agent-writable, which is why policy lives in
+the ro AGENTS.md). Verify the merge/inode behavior across activation.
+
+**Validation battery:** unauthorized Telegram user ignored; egress to a
+non-allowlisted host fails from inside the container while long-polling
+works; agent-written config.yaml edit does NOT survive/load (gate 3
+proof); revoked secret aborts activation cleanly; global kill switch +
+reboot recovery; audit-log redaction spot-check.
+**Payoff:** prompt-injection blast radius drops from "anything the VM
+can reach, persistently" to "one session's conversation".
+**Effort:** a weekend, honestly — the egress enforcement and its test
+window are the bulk.
 
 ### Phase 1 — Obsidian, files-first
 **Build:** *(v1.1: the v1.0 Syncthing-replica idea is dead — see the §1
@@ -264,7 +295,7 @@ Captured for later triage; each would follow the same read-only-first, allowlist
 
 - **Rollout cadence:** one phase per weekend max. Live with each before adding the next; the audit log tells you what the agent actually does vs. what you assumed.
 - **Mac bridge hardware: resolved** — the existing daily-use mini hosts both small servers (EventKit bridge + vault filesystem). It's a shared work/play machine, not an appliance: prevent system sleep, keep FileVault on, accept that a reboot pauses the bridges until next login. If that downtime ever becomes annoying, a dedicated appliance is the upgrade path — not a prerequisite.
-- **Backups already cover you:** vault via Syncthing versioning + NAS snapshots; Reminders/Calendar via iCloud + Time Machine to the UNAS; NixOS config in git.
+- **Backups (v1.1.1 — iCloud is sync, NOT backup):** vault via a one-way, versioned Mac-mini→UNAS backup job (agent-inaccessible; built in Phase 1) + NAS snapshots; Reminders/Calendar via iCloud + Time Machine to the UNAS; NixOS config in git. Encrypted off-site copy + quarterly restore test per §5 standing notes.
 - **Kill switches:** per-integration = comment out the server + redeploy (minutes). Global = stop the hermes service. Credentials revocable service-side independently of your infra.
 - **Credential separation (v1.1, standing rule):** the agent's own secret
   (`hermes-env`) never grows integration credentials. Every integration's
@@ -275,13 +306,19 @@ Captured for later triage; each would follow the same read-only-first, allowlist
   ever mounted into Hermes or its container. Vault/data backups are
   one-way, versioned, written by jobs the agent cannot touch; add an
   encrypted off-site copy and test restores quarterly.
-- **Provider data flow (v1.1):** primary inference is Anthropic; the
-  configured fallback (OpenRouter → DeepSeek open-weights, US-hosted) sees
-  full session context when the primary fails. Acceptable today; revisit
-  before mail/vault content enters sessions (3a/1) — drop or restrict the
-  fallback if that's not acceptable for those data classes. **Voice
-  transcription has no pinned provider yet** — choose and document one
-  before Phase 1's voice-capture use case goes live.
+- **Provider data flow (v1.1, corrected v1.1.1):** primary inference is
+  Anthropic; the configured fallback (OpenRouter → DeepSeek open-weights)
+  sees full session context when the primary fails. **Correction: routing
+  through OpenRouter does not by itself guarantee US-only or
+  fixed-provider inference** — OpenRouter routes across providers and has
+  its own fallback behavior unless you set an explicit provider allowlist
+  and disable provider fallbacks (account/request-level controls). Before
+  any data phase (3a/1): either **fail closed to Anthropic** (drop the
+  fallback — recommended for mail/vault sessions) or pin an explicit
+  provider allowlist with data-collection/retention controls, and verify
+  what hermes's `fallback_providers` actually passes through to
+  OpenRouter. **Voice transcription has no pinned provider yet** — choose
+  and document one before Phase 1's voice-capture use case goes live.
 - **Tailscale policy (v1.1):** when applying the Phase-0 ACL draft, express
   it as **grants** (Tailscale's recommended syntax for new policy work)
   rather than legacy ACL entries — same substance.
@@ -303,3 +340,18 @@ Fastmail token-scope reality check; Phase 4 loopback+Serve binding,
 "Hermes Review" write targets, unavailable-not-stale rule; Phase 5/work
 calendar reframed as an employer-policy question; Robin moved to a
 separate-profile design; operational notes above.
+
+**v1.1.1 (same day, second review round):** the terminal-timing deferral
+was withdrawn — the Telegram preset already carries `web`/`browser`/`file`
+alongside the shell, so untrusted content already flows and the sender
+allowlist does not make content safe. Phase 0.5 is now three immediate
+hard gates: minimal Telegram surface (operator utility stays on the CLI
+platform), real per-container egress enforcement (a Docker bridge alone
+still masquerades all outbound), and agent-immutable config via ro
+bind-mounts (the activation merge preserving agent-added keys is a
+confirmed tool-ceiling bypass, not a test item). Also corrected: the
+OpenRouter fallback needs an explicit provider allowlist or removal —
+routing via OpenRouter guarantees neither US-only nor fixed-provider
+inference; EventKit grant model treated as proof-of-concept with
+calendar/list IDs enforced in the bridge; last stale Syncthing backup
+reference replaced with the one-way mini→UNAS design.

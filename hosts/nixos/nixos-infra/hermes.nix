@@ -70,12 +70,16 @@ in {
       };
       # One-shot-per-session fallback when the primary provider fails
       # (Anthropic outage/rate limit). Routed via OpenRouter rather than
-      # DeepSeek's first-party API so requests stay on US-hosted inference
-      # (the model is open-weight; first-party would send conversation +
-      # tool output to PRC servers). Needs OPENROUTER_API_KEY in the
-      # hermes-env secret — until it's added, hermes just can't use the
-      # fallback; the primary path is unaffected. In the OpenRouter
-      # account settings, disable providers that train on prompts.
+      # DeepSeek's first-party API to avoid PRC-hosted first-party
+      # inference — but NOTE (2026-08-30): OpenRouter does NOT by itself
+      # guarantee US-only or fixed-provider routing; without an explicit
+      # provider allowlist and provider-fallbacks disabled it may route
+      # anywhere. Acceptable while sessions carry no personal-data
+      # integrations; Phase 0.5 (docs/hermes/) decides drop-vs-pin before
+      # any data phase. Needs OPENROUTER_API_KEY in the hermes-env secret
+      # — until it's added, hermes just can't use the fallback; the
+      # primary path is unaffected. In the OpenRouter account settings,
+      # disable providers that train on prompts.
       fallback_providers = [
         {
           provider = "openrouter";

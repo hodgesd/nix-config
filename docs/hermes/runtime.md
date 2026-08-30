@@ -38,20 +38,28 @@ hermes-audit --since -2h     # any journalctl args pass through
 Honesty note: the agent owns `/data`, so a fully compromised agent could
 truncate `audit.jsonl` or edit `config.yaml` to drop the hook (the hook
 *code* is store-read-only, its *registration* is not). The trail is
-tamper-evident (gaps are visible in journald, config drift reverts on every
-deploy), not tamper-proof. Out-of-container logging would need a different
-transport — revisit if the audit log ever matters adversarially.
+tamper-evident (gaps are visible in journald), not tamper-proof.
+**v1.1.1 — worse than v1.0 stated, confirmed against the merge script:**
+activation preserves agent-*added* config keys (Nix keys win, new keys
+survive), `mcp_servers` is not Nix-declared, config.yaml is owned by the
+agent's user, and the agent can force a restart by crashing. So config
+drift does NOT fully revert on deploy — the tool ceiling is bypassable by
+a compromised agent until **Phase 0.5 gate 3** (read-only bind-mounts of
+config.yaml and AGENTS.md into the container) closes it.
 
-## Provider data flow (v1.1)
+## Provider data flow (v1.1, corrected v1.1.1)
 
 Primary inference: Anthropic (`claude-sonnet-5`). Fallback on primary
-failure (one-shot per session): OpenRouter → DeepSeek open-weights,
-deliberately US-hosted — but it receives **full session context**, which
-in later phases can include vault or mail content. Revisit (restrict or
-drop the fallback) before Phase 3a/1 go live if that's unacceptable for
-those data classes. **Voice transcription: no provider configured** —
-one must be chosen and documented here before Phase 1's voice-capture
-use case is enabled.
+failure (one-shot per session): OpenRouter → DeepSeek open-weights — and
+it receives **full session context**. v1.1.1 correction: **OpenRouter
+does not by itself guarantee US-only or fixed-provider inference** — its
+routing can select among providers and apply its own fallbacks unless an
+explicit provider allowlist is set and provider fallbacks are disabled;
+the comment in hermes.nix previously overstated this. Phase 0.5 task 4
+decides: drop `fallback_providers` (fail closed to Anthropic — the
+default recommendation) or pin providers and verify end-to-end. **Voice
+transcription: no provider configured** — one must be chosen and
+documented here before Phase 1's voice-capture use case is enabled.
 
 ## Agent policy
 
