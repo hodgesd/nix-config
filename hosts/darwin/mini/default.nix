@@ -15,7 +15,9 @@
   # tailnet reaches it via `tailscale serve --bg --https=8321
   # http://127.0.0.1:9102` (one-time, persisted in tailscaled state).
   vaultMcpEnv = pkgs.python3.withPackages (ps: [ps.fastmcp ps.httpx]);
-  vaultPath = "/Users/${username}/Library/Mobile Documents/iCloud~md~obsidian/Documents/Derrick";
+  # "Pro Pilot 2" is the live vault (376 notes; confirmed 2026-08-30 —
+  # there is no vault named "Derrick", and "Pro Pilot" is a stale husk).
+  vaultPath = "/Users/${username}/Library/Mobile Documents/iCloud~md~obsidian/Documents/Pro Pilot 2";
 in {
   # Uptime Kuma + its Tailscale sidecar. stacks/uptime/docker-compose.yml is
   # authoritative; see modules/darwin/compose-stack.nix for the contract.
