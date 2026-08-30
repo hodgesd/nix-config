@@ -19,6 +19,7 @@
     ./hermes.nix
     ./hermes-egress.nix
     ./unifi.nix
+    ./vault.nix
     ./kuma-watchdog.nix
   ];
 

@@ -33,6 +33,11 @@
     "-m state --state ESTABLISHED,RELATED -j ACCEPT"
     "-p udp --dport 53 -j ACCEPT"
     "-p tcp --dport 53 -j ACCEPT"
+    # Phase 1: the ONE deliberate east-west hole — the mini's vault bridge
+    # (tailscale serve, bearer-token'd). One host, one port, before the
+    # CGNAT reject below. Every future integration adds its own line here
+    # rather than widening anything.
+    "-d 100.122.244.86 -p tcp --dport 8321 -j ACCEPT"
     "-d 10.0.0.0/8 -j REJECT"
     "-d 172.16.0.0/12 -j REJECT"
     "-d 192.168.0.0/16 -j REJECT"
