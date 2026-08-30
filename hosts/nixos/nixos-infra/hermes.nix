@@ -24,6 +24,16 @@
     ${builtins.readFile ./hermes-audit-hook.py}
   '';
   auditLog = "/var/lib/hermes/.hermes/logs/audit.jsonl";
+
+  # Phase 0.5 gate 3: policy is served read-only from the store. A store
+  # path in extraVolumes also means every policy edit changes the container
+  # identity → automatic recreation with the new mount.
+  policyFile = pkgs.writeText "hermes-agents-md" (builtins.readFile ./hermes-policy.md);
+  # Guard files: the context loader prefers .hermes.md/HERMES.md over
+  # AGENTS.md, and the workspace is agent-writable — without these ro
+  # shadows the agent could create .hermes.md and outrank its own policy.
+  # Empty content falls through to AGENTS.md in the loader.
+  emptyContextFile = pkgs.writeText "hermes-empty-context" "";
 in {
   imports = [inputs.hermes-agent.nixosModules.default];
 
@@ -48,6 +58,28 @@ in {
     enable = true;
     container.enable = true;
     container.hostUsers = ["hodgesd"];
+
+    # Phase 0.5 gate 3: config and policy are read-only to the agent.
+    # Bypass this closes (confirmed, not theoretical): config.yaml is
+    # owned by the agent's own user and the activation merge preserves
+    # agent-ADDED keys across deploys — so a compromised agent could
+    # persist e.g. its own mcp_servers entry and reload it by crashing
+    # into Restart=always. With these mounts the in-container write path
+    # is gone. config.yaml binds the HOST path because the activation
+    # merge rewrites it in place (same inode → declared changes still
+    # propagate live). Consequence: in-container `hermes config set` /
+    # /personality saves fail — config is declarative-only, on purpose.
+    # Agent-writable by design: sessions, logs (incl. audit.jsonl —
+    # tamper-EVIDENT, not -proof), memories, SOUL.md/MEMORY.md (the
+    # identity slot stays agent-managed; policy authority lives in the
+    # ro AGENTS.md below, which the guard files keep from being
+    # outranked).
+    container.extraVolumes = [
+      "/var/lib/hermes/.hermes/config.yaml:/data/.hermes/config.yaml:ro"
+      "${policyFile}:/data/workspace/AGENTS.md:ro"
+      "${emptyContextFile}:/data/workspace/.hermes.md:ro"
+      "${emptyContextFile}:/data/workspace/HERMES.md:ro"
+    ];
     addToSystemPackages = true;
     # "anthropic" is not in the base env — without it the agent fails at
     # runtime with "The 'anthropic' package is required".
@@ -78,24 +110,19 @@ in {
         backend = "local";
         timeout = 180;
       };
-      # One-shot-per-session fallback when the primary provider fails
-      # (Anthropic outage/rate limit). Routed via OpenRouter rather than
-      # DeepSeek's first-party API to avoid PRC-hosted first-party
-      # inference — but NOTE (2026-08-30): OpenRouter does NOT by itself
-      # guarantee US-only or fixed-provider routing; without an explicit
-      # provider allowlist and provider-fallbacks disabled it may route
-      # anywhere. Acceptable while sessions carry no personal-data
-      # integrations; Phase 0.5 (docs/hermes/) decides drop-vs-pin before
-      # any data phase. Needs OPENROUTER_API_KEY in the hermes-env secret
-      # — until it's added, hermes just can't use the fallback; the
-      # primary path is unaffected. In the OpenRouter account settings,
-      # disable providers that train on prompts.
-      fallback_providers = [
-        {
-          provider = "openrouter";
-          model = "deepseek/deepseek-v4-flash";
-        }
-      ];
+      # Phase 0.5 task 4: fail closed to Anthropic. The OpenRouter →
+      # DeepSeek fallback was dropped because OpenRouter guarantees
+      # neither US-only nor fixed-provider routing without an explicit
+      # provider allowlist + provider-fallbacks disabled — and the
+      # fallback receives full session context. Trade-off accepted: an
+      # Anthropic outage silences the bot until it passes (the watchdog
+      # below only alerts on process death, not API failure). MUST be an
+      # explicit [] rather than deleted: the activation merge preserves
+      # existing config keys, so deleting the nix key would leave the old
+      # fallback live in the host file. OPENROUTER_API_KEY remains in the
+      # hermes-env secret, unused (cleanup optional). If a fallback ever
+      # returns, it comes with verified provider pinning.
+      fallback_providers = [];
 
       # Audit trail: log every tool call (terminal, file, and future MCP —
       # no matcher means all tools) as one JSON line with an args DIGEST,
@@ -118,17 +145,15 @@ in {
     environmentFiles = [config.sops.secrets.hermes-env.path];
 
     # Agent policy (hermes-policy.md): tiers, injection rules, escalation.
-    # Installed as workspace AGENTS.md because that's the file the gateway
+    # Delivered as workspace AGENTS.md because that's the file the gateway
     # injects into every session's system prompt (prompt_builder loads
     # context files from the module-set terminal.cwd = /data/workspace;
     # SOUL.md would need to live in HERMES_HOME, which `documents` can't
-    # reach). Two caveats, verified against the pinned rev: a .hermes.md in
-    # the workspace would silently take priority over AGENTS.md — don't
-    # create one; and the installed copy is hermes-owned 0640, so the agent
-    # could edit it mid-generation — the repo copy is authoritative and
-    # every activation reinstalls it (tamper-evident via git + audit log,
-    # not tamper-proof).
-    documents."AGENTS.md" = ./hermes-policy.md;
+    # reach). Since Phase 0.5 it arrives via the read-only store mount in
+    # container.extraVolumes above — NOT via `documents`, whose installed
+    # copy would be agent-owned and editable. The stale Phase-0 host copy
+    # at /var/lib/hermes/workspace/AGENTS.md is shadowed by the mount;
+    # remove it once during the 0.5 deploy.
   };
 
   # The upstream module copies the rendered config.yaml into $HERMES_HOME at
