@@ -74,12 +74,16 @@ def append_inbox(text: str, title: str = "") -> str:
 
 @mcp.tool
 def create_daily_note(day: str = "") -> str:
-    """Create today's (or YYYY-MM-DD's) daily note from the template.
-    Idempotent: an existing note is reported, never modified."""
+    """Create today's (or YYYY-MM-DD's) daily note. Idempotent: an
+    existing note is reported, never modified."""
+    # Root-level YYYY-MM-DD.md, matching the vault's actual convention
+    # (periodic-notes config: folder "", format "", no template — and
+    # years of existing dailies at the root). A Daily/ folder here would
+    # fight Obsidian's own "open today's note".
     d = date.fromisoformat(day) if day else date.today()
-    target = _jail(f"Daily/{d:%Y-%m-%d}.md")
+    target = _jail(f"{d:%Y-%m-%d}.md")
     if target.exists():
-        return f"already exists: Daily/{target.name}"
+        return f"already exists: {target.name}"
     template = VAULT / "Templates" / "Daily Note.md"
     body = (
         template.read_text(encoding="utf-8")
@@ -89,11 +93,10 @@ def create_daily_note(day: str = "") -> str:
     body = body.replace("{{date}}", f"{d:%Y-%m-%d}").replace(
         "{{title}}", f"{d:%A, %B %-d %Y}"
     )
-    target.parent.mkdir(exist_ok=True)
     fd = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(body)
-    return f"created Daily/{target.name}"
+    return f"created {target.name}"
 
 
 @mcp.tool
