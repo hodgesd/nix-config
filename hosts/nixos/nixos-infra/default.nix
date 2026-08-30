@@ -17,6 +17,7 @@
     ./storage.nix
     ./homelab-stack.nix
     ./hermes.nix
+    ./hermes-egress.nix
     ./kuma-watchdog.nix
   ];
 
