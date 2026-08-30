@@ -126,7 +126,11 @@ managed via the `hermes cron` CLI. Operational notes: hermes parks an MCP
 server after 3 failed connects until a reconnect is requested — VM-local
 servers must be ordered `Before=` the gateway (unifi.nix), and remote
 ones (the mini bridge) simply need to be up; a parked server recovers on
-gateway restart. macOS-hosted servers MUST set launchd
+gateway restart. **Redeploying a bridge with NEW tools requires
+`systemctl restart hermes-agent`** — the gateway only refreshes an MCP
+server's tool catalog on restart/reconnect, so hermes will truthfully
+claim the tool doesn't exist until bounced (learned live with
+move_reminder). macOS-hosted servers MUST set launchd
 `ProcessType = "Interactive"` or App Nap silently starves SSE (phase-1.md).
 
 ## Upgrade path (deliberate; upstream Nix support is best-effort)
