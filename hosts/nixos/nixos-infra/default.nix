@@ -18,6 +18,7 @@
     ./homelab-stack.nix
     ./hermes.nix
     ./hermes-egress.nix
+    ./unifi.nix
     ./kuma-watchdog.nix
   ];
 
