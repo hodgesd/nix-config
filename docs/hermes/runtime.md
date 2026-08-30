@@ -116,9 +116,14 @@ instead; that plumbing is built in whichever of those phases runs first.)
 
 Live consumers: **unifi** (Phase 2, `hosts/nixos/nixos-infra/unifi.nix` —
 five read-only tools, View-Only account, pinned console cert; see
-`phase-2.md`). Operational note: hermes parks an MCP server after 3
-failed connects until a reconnect is requested — new servers must be
-`Before=` the gateway (see the ordering block in unifi.nix).
+`phase-2.md`) and **vault** (Phase 1, mini-hosted bridge at
+`mini:8321`, five jailed tools, bearer via `${VAULT_MCP_TOKEN}` dotenv
+expansion; see `phase-1.md`). Operational notes: hermes parks an MCP
+server after 3 failed connects until a reconnect is requested — VM-local
+servers must be ordered `Before=` the gateway (unifi.nix), and remote
+ones (the mini bridge) simply need to be up; a parked server recovers on
+gateway restart. macOS-hosted servers MUST set launchd
+`ProcessType = "Interactive"` or App Nap silently starves SSE (phase-1.md).
 
 ## Upgrade path (deliberate; upstream Nix support is best-effort)
 
