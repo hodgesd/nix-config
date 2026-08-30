@@ -21,6 +21,7 @@
     tools.include = [
       "append_inbox"
       "create_daily_note"
+      "append_to_daily"
       "read_note"
       "search_notes"
       "list_notes"

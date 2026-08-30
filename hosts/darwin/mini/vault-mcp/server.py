@@ -100,6 +100,22 @@ def create_daily_note(day: str = "") -> str:
 
 
 @mcp.tool
+def append_to_daily(text: str, section: str = "") -> str:
+    """Append text to TODAY's daily note (created from the template if
+    missing). Append-only — existing content is never modified. The
+    logging workhorse: gym sets, fuel stops, quick journal lines."""
+    today = f"{date.today():%Y-%m-%d}.md"
+    target = _jail(today)
+    if not target.exists():
+        create_daily_note.fn()
+    stamp = f"{datetime.now():%H:%M}"
+    block = (f"\n### {section}\n" if section else "\n") + f"- {stamp} — {text.strip()}\n"
+    with open(target, "a", encoding="utf-8") as f:
+        f.write(block)
+    return f"appended to {today}" + (f" under '{section}'" if section else "")
+
+
+@mcp.tool
 def read_note(path: str) -> str:
     """Read one note by vault-relative path (markdown/text only)."""
     p = _jail(path)

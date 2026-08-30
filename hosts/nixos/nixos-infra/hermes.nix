@@ -88,7 +88,8 @@ in {
     # is the ONLY authorization boundary in front of an agent that has a
     # shell (terminal.backend = "local" below — inside the container, which
     # has no docker.sock and a read-only /nix/store, but host networking).
-    extraDependencyGroups = ["anthropic" "messaging"];
+    # "voice" carries faster-whisper for LOCAL speech-to-text.
+    extraDependencyGroups = ["anthropic" "messaging" "voice"];
     settings = {
       # sonnet-5: better than sonnet-4-5 on agentic work at the same list
       # price ($3/$15/MTok, intro $2/$10 through 2026-08-31). Note it 400s on
@@ -106,6 +107,19 @@ in {
       # operator surface is the `hermes` CLI on this host over SSH, which
       # keeps the full default preset (cli is deliberately not listed).
       platform_toolsets.telegram = ["messaging" "todo" "vision"];
+
+      # Voice notes → text, LOCALLY (faster-whisper in the container).
+      # No cloud provider, no API key: audio never leaves the homelab,
+      # matching the fail-closed provider posture. First use downloads
+      # the model from HuggingFace (public 443 — allowed by the egress
+      # jail) into /data. "small" trades a few seconds of CPU for
+      # noticeably better accuracy than "base" on an 8GB VM.
+      stt = {
+        enabled = true;
+        provider = "local";
+        language = "en";
+        local.model = "small";
+      };
       terminal = {
         backend = "local";
         timeout = 180;

@@ -92,6 +92,15 @@ services:
     depends_on:
       - ts-ntfy
     command: serve
+    environment:
+      # iOS can't get instant push from a self-hosted server on its own:
+      # only ntfy.sh is registered with Apple's APNs. With upstream-base-url
+      # set, this server relays a wake-up ping (topic reference only, no
+      # message content) through ntfy.sh; the app then fetches the actual
+      # message from here over the tailnet. Without it, alerts sit until
+      # the app is opened. base-url must be set for the relay to work.
+      NTFY_BASE_URL: https://ntfy.jaguar-duckbill.ts.net
+      NTFY_UPSTREAM_BASE_URL: https://ntfy.sh
     volumes:
       - ./ntfy/cache:/var/cache/ntfy
       - ./ntfy/config:/etc/ntfy

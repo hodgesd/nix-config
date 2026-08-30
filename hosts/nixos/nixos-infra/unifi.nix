@@ -40,7 +40,7 @@ in {
   majordouble.mcpServers.unifi = {
     description = "UniFi read-only MCP server (View-Only account, pinned cert)";
     command = "${pythonEnv}/bin/python3";
-    args = ["${./unifi-mcp/server.py}" consoleUrl "${consoleCert}"];
+    args = ["${./unifi-mcp/server.py}" consoleUrl "${consoleCert}" "/var/lib/wan-watch/events.log"];
     environmentFile = config.sops.secrets.unifi-hermes-key.path;
     readWritePaths = []; # read-only integration: writes nowhere
   };
@@ -63,6 +63,7 @@ in {
       "list_clients"
       "recent_events"
       "network_stats"
+      "wan_history"
     ];
   };
 

@@ -9,7 +9,7 @@
 #
 # Runs under majordouble.mcpServers (DynamicUser, ProtectSystem=strict),
 # bound to loopback; hermes reaches it via http://127.0.0.1:9101/mcp/.
-# argv: <console-url> <ca-pem-path>   (non-secret config)
+# argv: <console-url> <ca-pem-path> [wan-events-log]   (non-secret config)
 # env:  UNIFI_USERNAME, UNIFI_PASSWORD (sops), UNIFI_SITE (optional)
 import os
 import ssl
@@ -21,6 +21,7 @@ from fastmcp import FastMCP
 
 CONSOLE = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "https://192.168.1.1"
 CA_PEM = sys.argv[2] if len(sys.argv) > 2 else None
+WAN_LOG = sys.argv[3] if len(sys.argv) > 3 else None
 SITE = os.environ.get("UNIFI_SITE", "default")
 API = f"/proxy/network/api/s/{SITE}"
 
@@ -105,6 +106,7 @@ def list_clients() -> list[dict]:
     keys = [
         "mac", "name", "hostname", "ip", "network", "is_wired", "essid",
         "ap_mac", "signal", "uptime", "oui",
+        "tx_rate", "rx_rate", "tx_bytes-r", "rx_bytes-r",  # who's hogging
     ]
     return _pick(data, keys, 200)
 
@@ -133,6 +135,21 @@ def network_stats() -> dict:
         "clients_wired": sum(1 for c in clients if c.get("is_wired")),
         "clients_wireless": sum(1 for c in clients if not c.get("is_wired")),
     }
+
+
+@mcp.tool
+def wan_history(max_lines: int = 100) -> str:
+    """The wan-watch outage log: timestamped DOWN/UP-with-duration
+    transitions from the credential-free external-anchor prober.
+    Support-call ammunition. Read-only."""
+    if not WAN_LOG:
+        return "wan history not configured"
+    try:
+        with open(WAN_LOG, encoding="utf-8") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        return "no WAN transitions recorded yet (the log appears on the first flap)"
+    return "".join(lines[-max(1, min(max_lines, 1000)):]).strip() or "log is empty"
 
 
 if __name__ == "__main__":
