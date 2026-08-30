@@ -5,6 +5,10 @@
 # unattended box: everything below exists so it comes back on its own
 # after a reboot or a power cut, with nobody at the keyboard.
 {username, ...}: {
+  # Nightly Kuma-data mirror to the NAS (the VM's backup job stopped
+  # covering it when Kuma moved here).
+  imports = [./backup.nix];
+
   # Uptime Kuma + its Tailscale sidecar. stacks/uptime/docker-compose.yml is
   # authoritative; see modules/darwin/compose-stack.nix for the contract.
   # stateDir is under the user's home because OrbStack's docker socket is
