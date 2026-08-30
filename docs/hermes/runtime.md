@@ -114,6 +114,12 @@ allowlist the whole security model turns on. Never ship a server without it.
 (Servers for the Mac mini — Phases 1/4 — use the darwin launchd pattern
 instead; that plumbing is built in whichever of those phases runs first.)
 
+Live consumers: **unifi** (Phase 2, `hosts/nixos/nixos-infra/unifi.nix` —
+five read-only tools, View-Only account, pinned console cert; see
+`phase-2.md`). Operational note: hermes parks an MCP server after 3
+failed connects until a reconnect is requested — new servers must be
+`Before=` the gateway (see the ordering block in unifi.nix).
+
 ## Upgrade path (deliberate; upstream Nix support is best-effort)
 
 ```bash
