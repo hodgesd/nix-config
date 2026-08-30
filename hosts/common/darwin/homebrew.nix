@@ -102,6 +102,10 @@
       # macOS-specific and not in nixpkgs' closure here:
       "mactop" # Apple-Silicon per-core/GPU top
       "screenresolution"
+      # Phase 4 apple bridge: fast EventKit reads (events + reminders).
+      # Deliberately brew, not nix (not in nixpkgs) — and the TCC grant
+      # keys on this stable binary, surviving nix env rebuilds.
+      "ical-buddy"
     ];
     taps = [
       "jackielii/tap"

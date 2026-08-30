@@ -20,6 +20,7 @@
     ./hermes-egress.nix
     ./unifi.nix
     ./vault.nix
+    ./apple.nix
     ./kuma-watchdog.nix
   ];
 

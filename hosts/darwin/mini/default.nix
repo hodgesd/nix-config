@@ -59,6 +59,35 @@ in {
       owner = username;
       mode = "0400";
     };
+    secrets.apple-mcp-token = {
+      owner = username;
+      mode = "0400";
+    };
+  };
+
+  # Phase 4: the Apple bridge (apple-mcp/server.py) — Reminders writes
+  # staged to the "Hermes Review" list only, Calendar read-only in v1.
+  # Reads via icalBuddy (brew; EventKit; TCC keys on that stable binary),
+  # writes via /usr/bin/osascript (TCC Automation on the python env — a
+  # `just update` that changes the env re-prompts at the screen; until
+  # approved, tools time out and the brief degrades honestly).
+  launchd.user.agents.apple-mcp = {
+    path = [vaultMcpEnv pkgs.coreutils];
+    serviceConfig = {
+      RunAtLoad = true;
+      KeepAlive = true;
+      ThrottleInterval = 15;
+      # Same App Nap lesson as vault-mcp: without this, SSE never flushes.
+      ProcessType = "Interactive";
+      StandardOutPath = "/Users/${username}/Library/Logs/apple-mcp.log";
+      StandardErrorPath = "/Users/${username}/Library/Logs/apple-mcp.log";
+    };
+    script = ''
+      set -eu
+      APPLE_MCP_TOKEN=$(cat ${lib.escapeShellArg config.sops.secrets.apple-mcp-token.path})
+      export APPLE_MCP_TOKEN
+      exec python3 ${./apple-mcp/server.py} 9103
+    '';
   };
 
   # The vault MCP server (vault-mcp/server.py — the whole tool surface,

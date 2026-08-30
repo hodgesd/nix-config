@@ -38,6 +38,8 @@
     # CGNAT reject below. Every future integration adds its own line here
     # rather than widening anything.
     "-d 100.122.244.86 -p tcp --dport 8321 -j ACCEPT"
+    # Phase 4: the mini's Apple bridge (Reminders/Calendar).
+    "-d 100.122.244.86 -p tcp --dport 8322 -j ACCEPT"
     "-d 10.0.0.0/8 -j REJECT"
     "-d 172.16.0.0/12 -j REJECT"
     "-d 192.168.0.0/16 -j REJECT"
