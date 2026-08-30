@@ -19,6 +19,7 @@
     ./hermes.nix
     ./hermes-egress.nix
     ./unifi.nix
+    ./fastmail.nix
     ./vault.nix
     ./apple.nix
     ./kuma-watchdog.nix
