@@ -144,6 +144,11 @@ in {
     };
     environmentFiles = [config.sops.secrets.hermes-env.path];
 
+    # The container is UTC by default, which silently shifts cron
+    # schedules (the 05:30 daily-note job would fire at 00:30 CT).
+    # Match the host so "30 5 * * *" means 05:30 Chicago, DST included.
+    environment.TZ = "America/Chicago";
+
     # Agent policy (hermes-policy.md): tiers, injection rules, escalation.
     # Delivered as workspace AGENTS.md because that's the file the gateway
     # injects into every session's system prompt (prompt_builder loads
