@@ -71,6 +71,11 @@ in {
       RunAtLoad = true;
       KeepAlive = true;
       ThrottleInterval = 15;
+      # Without this, App Nap throttles the agent's asyncio loop: uvicorn
+      # accepts and logs requests but SSE responses never flush — clients
+      # hang while the server's log looks healthy. Diagnosed by running
+      # the identical binary manually (worked) vs under launchd (hung).
+      ProcessType = "Interactive";
       StandardOutPath = "/Users/${username}/Library/Logs/vault-mcp.log";
       StandardErrorPath = "/Users/${username}/Library/Logs/vault-mcp.log";
     };
