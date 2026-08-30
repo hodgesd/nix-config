@@ -151,9 +151,13 @@ in {
     # SOUL.md would need to live in HERMES_HOME, which `documents` can't
     # reach). Since Phase 0.5 it arrives via the read-only store mount in
     # container.extraVolumes above — NOT via `documents`, whose installed
-    # copy would be agent-owned and editable. The stale Phase-0 host copy
-    # at /var/lib/hermes/workspace/AGENTS.md is shadowed by the mount;
-    # remove it once during the 0.5 deploy.
+    # copy would be agent-owned and editable. WARNING (learned in 0.5
+    # validation): the host file at /var/lib/hermes/workspace/AGENTS.md is
+    # the bind mount's ANCHOR, not clutter — host and volume share a
+    # filesystem, so rm'ing it while the container runs unlinks the
+    # mountpoint dentry, silently detaches the ro shadow, and leaves the
+    # path agent-writable. Never remove it; docker recreates it empty at
+    # container creation if absent.
   };
 
   # The upstream module copies the rendered config.yaml into $HERMES_HOME at

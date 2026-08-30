@@ -17,7 +17,7 @@ container IS the sandbox. Verified against the pinned module source:
 | `/data` (= host `/var/lib/hermes`) | Read-write. Its own config, workspace, sessions, logs — including `config.yaml` and the audit log (see honesty note below). |
 | Host filesystem otherwise | Not mounted. No SSH keys, no other services' state, no `/run/secrets`. |
 | Secrets | Only what activation merges into `/data/.hermes/.env` (0640 `hermes:hermes`): the four hermes-env keys. Other sops secrets never enter the container. |
-| Network | **`--network=host`** — the biggest residual risk. The agent's shell can originate connections as the VM: to the LAN, the NAS, the UniFi console, and every tailnet node the VM can reach. This is the prompt-injection → lateral-movement path; mitigations are dst-side (tokens, read-only accounts) and the ACL work in `tailscale-acl.md`. **Owner: Phase 0.5** (v1.1) — move the container to a default-deny-egress bridge network; the phase prompt carries the test plan (Telegram long-poll, DNS, the watchdog's `docker inspect` assumptions). |
+| Network | `--network=host` (upstream hardcodes it, no option) — **mitigated since Phase 0.5** by default-deny egress keyed to the hermes UID (`hermes-egress.nix`): east-west (RFC1918/tailnet/link-local) rejected, only port 53 and public tcp/443 allowed, rest log-then-rejected. Residuals: DNS exfil (until the named-domain proxy stage), loopback access to VM-local listeners, and inbound listener binding on trusted `tailscale0` (owner-match is egress-only). See `phase-0.5.md`. |
 | User | Dedicated non-privileged `hermes` user (UID mapped into the container). Not in wheel, no sudo. |
 
 ## Audit trail
@@ -35,31 +35,38 @@ hermes-audit                 # live tail (journalctl -t hermes-audit -f)
 hermes-audit --since -2h     # any journalctl args pass through
 ```
 
-Honesty note: the agent owns `/data`, so a fully compromised agent could
-truncate `audit.jsonl` or edit `config.yaml` to drop the hook (the hook
-*code* is store-read-only, its *registration* is not). The trail is
-tamper-evident (gaps are visible in journald), not tamper-proof.
-**v1.1.1 — worse than v1.0 stated, confirmed against the merge script:**
-activation preserves agent-*added* config keys (Nix keys win, new keys
-survive), `mcp_servers` is not Nix-declared, config.yaml is owned by the
-agent's user, and the agent can force a restart by crashing. So config
-drift does NOT fully revert on deploy — the tool ceiling is bypassable by
-a compromised agent until **Phase 0.5 gate 3** (read-only bind-mounts of
-config.yaml and AGENTS.md into the container) closes it.
+Honesty note: the agent owns most of `/data`, so a fully compromised
+agent could truncate `audit.jsonl` — the trail is tamper-evident (gaps
+visible in journald), not tamper-proof. The config-editing bypass that
+v1.1.1 confirmed (activation merge preserves agent-added keys +
+agent-owned config.yaml + crash-forced restarts) is **closed since
+Phase 0.5 gate 3**: config.yaml and AGENTS.md are read-only bind-mounts
+in the container (plus empty ro shadows over `.hermes.md`/`HERMES.md`,
+which would otherwise outrank AGENTS.md in the context loader).
+Operational hazard, learned the hard way: the host file
+`/var/lib/hermes/workspace/AGENTS.md` is the bind's mount anchor —
+removing it host-side while the container runs silently detaches the ro
+shadow. Never remove it; see `phase-0.5.md`.
 
 ## Provider data flow (v1.1, corrected v1.1.1)
 
-Primary inference: Anthropic (`claude-sonnet-5`). Fallback on primary
-failure (one-shot per session): OpenRouter → DeepSeek open-weights — and
-it receives **full session context**. v1.1.1 correction: **OpenRouter
-does not by itself guarantee US-only or fixed-provider inference** — its
-routing can select among providers and apply its own fallbacks unless an
-explicit provider allowlist is set and provider fallbacks are disabled;
-the comment in hermes.nix previously overstated this. Phase 0.5 task 4
-decides: drop `fallback_providers` (fail closed to Anthropic — the
-default recommendation) or pin providers and verify end-to-end. **Voice
-transcription: no provider configured** — one must be chosen and
-documented here before Phase 1's voice-capture use case is enabled.
+Primary inference: Anthropic (`claude-sonnet-5`), and since Phase 0.5
+that is the ONLY provider: `fallback_providers = []` (fail closed — an
+Anthropic outage silences the bot rather than shipping session context
+to whichever provider OpenRouter routes to; OpenRouter guarantees
+neither US-only nor fixed-provider inference without explicit pinning).
+`OPENROUTER_API_KEY` remains in the secret, unused. If a fallback ever
+returns it comes with verified provider pinning. **Voice transcription:
+no provider configured** — one must be chosen and documented here before
+Phase 1's voice-capture use case is enabled.
+
+## Surfaces (since Phase 0.5)
+
+Telegram: `messaging`, `todo`, `vision` only — no terminal, web,
+browser, file, skills, or cron from the phone. Operator surface: the
+`hermes` CLI on the VM over SSH keeps the full default preset. Config is
+declarative-only (in-container `hermes config set` / `/personality`
+saves fail against the ro mount).
 
 ## Agent policy
 
