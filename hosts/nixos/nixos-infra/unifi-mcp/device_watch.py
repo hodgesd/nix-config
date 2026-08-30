@@ -19,6 +19,7 @@ STATE = os.path.join(STATE_DIR, "known_macs.txt")
 ctx = ssl.create_default_context()
 ctx.load_verify_locations(CA_PEM)
 ctx.check_hostname = False  # pinned cert, IP endpoint — same as server.py
+ctx.verify_flags |= ssl.VERIFY_X509_PARTIAL_CHAIN  # self-signed leaf pin
 
 client = httpx.Client(base_url=CONSOLE, verify=ctx, timeout=15)
 client.post(

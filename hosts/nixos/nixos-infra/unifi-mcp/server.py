@@ -33,6 +33,12 @@ ctx = ssl.create_default_context()
 if CA_PEM:
     ctx.load_verify_locations(CA_PEM)
     ctx.check_hostname = False
+    # The console cert is a self-signed LEAF with no basicConstraints —
+    # OpenSSL 3 rejects it as a trust anchor ("invalid CA certificate")
+    # unless partial-chain verification is on, which accepts a trusted
+    # non-CA cert when it exactly matches the presented leaf. That exact
+    # match IS the pin.
+    ctx.verify_flags |= ssl.VERIFY_X509_PARTIAL_CHAIN
 else:
     raise SystemExit("refusing to start without a pinned CA (argv[2])")
 
