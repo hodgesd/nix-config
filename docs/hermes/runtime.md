@@ -152,3 +152,16 @@ just deploy
 | Policy | Remove the `documents."AGENTS.md"` line + deploy (delete the installed file on the VM to take effect immediately) |
 | Telegram entirely | Remove `"messaging"` from `extraDependencyGroups` + deploy |
 | Credentials | Revoke service-side (Anthropic console, BotFather, etc.) — independent of this repo |
+
+## Post-phase enhancements (2026-08-30)
+
+One batch after Phases 1/2/4 closed: **local voice transcription**
+(faster-whisper `small` in-container via the `voice` dependency group —
+audio never leaves the homelab; first use downloads the model over
+public 443), **`wan_history`** on the unifi server (reads the wan-watch
+outage log via a pid1 `BindReadOnlyPaths` mount — `/var/lib/private` is
+0700 and untraversable, a trap now handled by the mcp-server module
+option), **traffic-rate fields** in `list_clients`,
+**`append_to_daily`** on the vault server (the logging workhorse), and
+the **ntfy → ntfy.sh iOS push relay** (wake-up ping only; content stays
+tailnet-local). Tool counts: unifi 6, vault 6, apple 6.
