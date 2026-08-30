@@ -95,9 +95,23 @@
       "jackielii/tap/my-skhd"
       "mas" # keep brew's mas current; nix's pkgs.mas is only the PATH fallback
       "opencode"
+      # 2026-08-30 formulae curation (mini converge): everything else on the
+      # old installed set was either nix-duplicated (git, gh, btop, go, nmap,
+      # wget, iperf3, fastfetch, … — see common-packages.nix) or runtime
+      # cruft nix manages better (php, node, nvm, python@). These two are
+      # macOS-specific and not in nixpkgs' closure here:
+      "mactop" # Apple-Silicon per-core/GPU top
+      "screenresolution"
     ];
     taps = [
       "jackielii/tap"
+      # Kept from the 2026-08-30 mini cleanup (deliberately NOT untapped):
+      "hpedrorodrigues/tools"
+      "nikitabobko/tap"
+      # Deliberately allowed to untap: mongodb/brew, theboredteam/* (with
+      # its boring-notch cask), and the deprecated homebrew/bundle,
+      # homebrew/services, github/gh — those three are absorbed into brew
+      # core and re-declaring them can error on modern brews.
     ];
 
     # One cask list for every darwin host. The per-role allowlist was
@@ -126,21 +140,32 @@
       "default-folder-x"
       "desktoppr" # Command-line wallpaper manager
       "discord"
+      # 2026-08-30 mini-converge keepers: previously installed, now declared
+      # so cleanup keeps them. Deliberately dropped in the same pass (will
+      # uninstall wherever present): boring-notch, iterm2, utm, warp,
+      # grammarly-desktop, zoom, raycast.
+      "docker-desktop"
+      "dockutil"
       "fastmail"
       "ghostty"
+      "git-credential-manager"
       "google-chrome"
       "google-gemini"
       "istat-menus"
       "launchbar"
       "libreoffice"
+      "licecap"
       "lm-studio"
       "macwhisper"
+      "microsoft-auto-update"
+      "microsoft-teams"
       "netnewswire"
       "obsidian"
       "opencode-desktop"
       "popclip"
       "rectangle"
       "reminders-menubar"
+      "remoteviewer"
       "sf-symbols"
       "steam"
       "syntax-highlight"
