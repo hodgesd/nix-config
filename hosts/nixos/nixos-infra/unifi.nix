@@ -45,6 +45,14 @@ in {
     readWritePaths = []; # read-only integration: writes nowhere
   };
 
+  # Hermes parks an MCP server after 3 failed connects and won't retry
+  # until asked — so make sure the server is up before the gateway starts
+  # (observed: a deploy restarting both raced, and hermes parked unifi).
+  systemd.services.hermes-agent = {
+    after = ["mcp-unifi.service"];
+    wants = ["mcp-unifi.service"];
+  };
+
   # Hermes side: the client allowlist mirrors the server's whole catalog.
   # Defense-in-depth only — the server has nothing else to expose.
   services.hermes-agent.mcpServers.unifi = {
