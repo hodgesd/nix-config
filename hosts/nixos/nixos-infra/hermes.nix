@@ -64,6 +64,16 @@ in {
       # leave them unset for this model.
       model.default = "claude-sonnet-5";
       model.base_url = "https://api.anthropic.com/v1";
+
+      # Phase 0.5 gate 1: the Telegram surface is minimal by design. The
+      # default hermes-telegram preset ships terminal+web+browser+file in
+      # one session — that's untrusted web content, a shell, and a
+      # dotenv-readable file tool side by side; the user-ID allowlist
+      # authenticates senders, not content. Kept: messaging (reply path),
+      # todo (internal task list), vision (images Derrick sends). The
+      # operator surface is the `hermes` CLI on this host over SSH, which
+      # keeps the full default preset (cli is deliberately not listed).
+      platform_toolsets.telegram = ["messaging" "todo" "vision"];
       terminal = {
         backend = "local";
         timeout = 180;
