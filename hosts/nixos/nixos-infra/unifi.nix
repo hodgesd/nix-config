@@ -40,9 +40,12 @@ in {
   majordouble.mcpServers.unifi = {
     description = "UniFi read-only MCP server (View-Only account, pinned cert)";
     command = "${pythonEnv}/bin/python3";
-    args = ["${./unifi-mcp/server.py}" consoleUrl "${consoleCert}" "/var/lib/wan-watch/events.log"];
+    args = ["${./unifi-mcp/server.py}" consoleUrl "${consoleCert}" "/run/wan-watch/events.log"];
     environmentFile = config.sops.secrets.unifi-hermes-key.path;
     readWritePaths = []; # read-only integration: writes nowhere
+    # wan-watch is a DynamicUser service: its state hides under
+    # /var/lib/private (0700). pid1 bind-mounts it in read-only.
+    bindReadOnlyPaths = ["/var/lib/private/wan-watch:/run/wan-watch"];
   };
 
   # Hermes parks an MCP server after 3 failed connects and won't retry

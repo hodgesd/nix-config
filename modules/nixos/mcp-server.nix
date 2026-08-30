@@ -43,6 +43,11 @@ in {
           default = [];
           description = "The ONLY paths the server may write (ProtectSystem=strict denies everything else). Empty for read-only integrations.";
         };
+        bindReadOnlyPaths = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [];
+          description = "source:dest read-only bind mounts, established by pid1 as root — the way to read another DynamicUser service's state under /var/lib/private (0700, untraversable by any other user).";
+        };
         description = lib.mkOption {
           type = lib.types.str;
           default = "";
@@ -83,6 +88,7 @@ in {
               ProtectSystem = "strict";
               ProtectHome = true;
               ReadWritePaths = server.readWritePaths;
+              BindReadOnlyPaths = server.bindReadOnlyPaths;
               PrivateTmp = true;
               PrivateDevices = true;
               ProtectKernelTunables = true;
