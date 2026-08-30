@@ -58,6 +58,20 @@ the VM's tailscale identity. Two consequences:
 }
 ```
 
+## Syntax note (v1.1)
+
+When you apply this, express the rules as **`grants`** rather than legacy
+`acls` entries — Tailscale recommends grants for new policy work, and the
+translation is mechanical (`src`/`dst`/`ip` fields carry the same
+substance):
+
+```jsonc
+"grants": [
+  {"src": ["tag:hermes"], "dst": ["mini"], "ip": ["8321"]},
+  {"src": ["tag:hermes"], "dst": ["UNIFI-CONSOLE"], "ip": ["443"]},
+],
+```
+
 ## How to apply the tag
 
 Admin console → Machines → `nixos-infra` → ⋯ → Edit ACL tags → `tag:hermes`.

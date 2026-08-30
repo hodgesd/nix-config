@@ -17,7 +17,7 @@ container IS the sandbox. Verified against the pinned module source:
 | `/data` (= host `/var/lib/hermes`) | Read-write. Its own config, workspace, sessions, logs — including `config.yaml` and the audit log (see honesty note below). |
 | Host filesystem otherwise | Not mounted. No SSH keys, no other services' state, no `/run/secrets`. |
 | Secrets | Only what activation merges into `/data/.hermes/.env` (0640 `hermes:hermes`): the four hermes-env keys. Other sops secrets never enter the container. |
-| Network | **`--network=host`** — the biggest residual risk. The agent's shell can originate connections as the VM: to the LAN, the NAS, the UniFi console, and every tailnet node the VM can reach. This is the prompt-injection → lateral-movement path; mitigations are dst-side (tokens, read-only accounts) and the ACL work in `tailscale-acl.md`. Removing host networking is a possible future hardening but needs a test window (Telegram long-poll egress, DNS, the watchdog's `docker inspect` assumptions). |
+| Network | **`--network=host`** — the biggest residual risk. The agent's shell can originate connections as the VM: to the LAN, the NAS, the UniFi console, and every tailnet node the VM can reach. This is the prompt-injection → lateral-movement path; mitigations are dst-side (tokens, read-only accounts) and the ACL work in `tailscale-acl.md`. **Owner: Phase 0.5** (v1.1) — move the container to a default-deny-egress bridge network; the phase prompt carries the test plan (Telegram long-poll, DNS, the watchdog's `docker inspect` assumptions). |
 | User | Dedicated non-privileged `hermes` user (UID mapped into the container). Not in wheel, no sudo. |
 
 ## Audit trail
@@ -41,6 +41,17 @@ truncate `audit.jsonl` or edit `config.yaml` to drop the hook (the hook
 tamper-evident (gaps are visible in journald, config drift reverts on every
 deploy), not tamper-proof. Out-of-container logging would need a different
 transport — revisit if the audit log ever matters adversarially.
+
+## Provider data flow (v1.1)
+
+Primary inference: Anthropic (`claude-sonnet-5`). Fallback on primary
+failure (one-shot per session): OpenRouter → DeepSeek open-weights,
+deliberately US-hosted — but it receives **full session context**, which
+in later phases can include vault or mail content. Revisit (restrict or
+drop the fallback) before Phase 3a/1 go live if that's unacceptable for
+those data classes. **Voice transcription: no provider configured** —
+one must be chosen and documented here before Phase 1's voice-capture
+use case is enabled.
 
 ## Agent policy
 
