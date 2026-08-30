@@ -73,9 +73,17 @@ def list_events(days_ahead: int = 1, days_back: int = 0) -> str:
 
 
 @mcp.tool
-def list_reminders(due_within_days: int = 7) -> str:
-    """Uncompleted reminders across all lists: overdue plus those due
-    within the window, and undated items. Each entry names its list."""
+def list_reminders(due_within_days: int = 7, list_name: str = "") -> str:
+    """Uncompleted reminders. Default view: due/overdue within the
+    window across all lists. With list_name (e.g. "Inbox"): EVERY
+    uncompleted item in that one list, undated included — the GTD
+    processing view."""
+    if list_name:
+        out = _run([
+            ICALBUDDY, "-nc", "-npn", "-b", "* ", "-ps", "| — |",
+            "-ic", list_name, "uncompletedTasks",
+        ])
+        return out.strip() or f"no open reminders in {list_name}"
     horizon = date.today() + timedelta(days=max(0, min(due_within_days, 60)))
     out = _run([
         ICALBUDDY, "-nc", "-npn", "-b", "* ", "-ps", "| — |",
@@ -95,23 +103,7 @@ def create_reminder(title: str, due: str = "", notes: str = "") -> str:
     props.append(f'body:"{body}"')
     due_lines = ""
     if due:
-        try:
-            d = (
-                datetime.strptime(due, "%Y-%m-%d %H:%M")
-                if " " in due
-                else datetime.combine(date.fromisoformat(due), datetime.min.time().replace(hour=9))
-            )
-        except ValueError as e:
-            raise ValueError(f"due must be YYYY-MM-DD or 'YYYY-MM-DD HH:MM': {e}") from None
-        # Build the AS date from integer components — locale-proof, and
-        # nothing string-typed from the user reaches this part.
-        due_lines = (
-            "set d to current date\n"
-            "set day of d to 1\n"
-            f"set year of d to {d.year}\nset month of d to {d.month}\n"
-            f"set day of d to {d.day}\n"
-            f"set time of d to {d.hour * 3600 + d.minute * 60}\n"
-        )
+        due_lines = _as_date_lines(_parse_due(due))
         props.append("due date:d")
     script = (
         f"{due_lines}"
@@ -123,6 +115,50 @@ def create_reminder(title: str, due: str = "", notes: str = "") -> str:
     )
     _run([OSASCRIPT, "-e", script])
     return f"created in {TARGET_LIST}: {title}" + (f" (due {due})" if due else "")
+
+
+def _as_date_lines(d: datetime) -> str:
+    """AppleScript that leaves a date in variable d — integer components
+    only (locale-proof; no user strings reach this)."""
+    return (
+        "set d to current date\n"
+        "set day of d to 1\n"
+        f"set year of d to {d.year}\nset month of d to {d.month}\n"
+        f"set day of d to {d.day}\n"
+        f"set time of d to {d.hour * 3600 + d.minute * 60}\n"
+    )
+
+
+def _parse_due(due: str) -> datetime:
+    try:
+        if " " in due:
+            return datetime.strptime(due, "%Y-%m-%d %H:%M")
+        return datetime.combine(
+            date.fromisoformat(due), datetime.min.time().replace(hour=9)
+        )
+    except ValueError as e:
+        raise ValueError(
+            f"due must be YYYY-MM-DD or 'YYYY-MM-DD HH:MM': {e}"
+        ) from None
+
+
+@mcp.tool
+def snooze_reminder(title: str, new_due: str) -> str:
+    """Change a reminder's due date (any list, any reminder — a date
+    edit is fully reversible and audited; same Tier-1 call as move).
+    new_due: 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM' (local)."""
+    d = _parse_due(new_due)
+    script = (
+        f"{_as_date_lines(d)}"
+        'tell application "Reminders"\n'
+        f'  set r to (first reminder whose name contains "{_as_str(title)}" and completed is false)\n'
+        "  set oldDue to due date of r\n"
+        "  set due date of r to d\n"
+        '  return name of r & " [was: " & (oldDue as string) & "]"\n'
+        "end tell\n"
+    )
+    out = _run([OSASCRIPT, "-e", script])
+    return f"snoozed to {new_due}: {out.strip()}"
 
 
 @mcp.tool

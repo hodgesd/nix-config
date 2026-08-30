@@ -19,6 +19,7 @@
       "list_reminders"
       "create_reminder"
       "move_reminder"
+      "snooze_reminder"
       "complete_reminder"
     ];
   };
