@@ -126,6 +126,32 @@ def create_reminder(title: str, due: str = "", notes: str = "") -> str:
 
 
 @mcp.tool
+def move_reminder(title: str, to_list: str) -> str:
+    """Move a reminder (any list, any reminder) to another EXISTING
+    list. Reversible by design — nothing is deleted; the confirmation
+    names exactly what moved. Unrestricted per Derrick's Tier-1 call
+    (reminders = reversible low-stakes writes); re-examine this scope
+    when untrusted content arrives in Phase 3a."""
+    lists = _run(
+        [OSASCRIPT, "-e", 'tell application "Reminders" to get name of every list']
+    ).strip()
+    names = [n.strip() for n in lists.split(",")]
+    if to_list not in names:
+        raise ValueError(f"no list named {to_list!r}; existing lists: {names}")
+    script = (
+        'tell application "Reminders"\n'
+        f'  set r to (first reminder whose name contains "{_as_str(title)}" and completed is false)\n'
+        "  set fromList to name of container of r\n"
+        "  set fullName to name of r\n"
+        f'  move r to list "{_as_str(to_list)}"\n'
+        '  return fullName & " [from " & fromList & "]"\n'
+        "end tell\n"
+    )
+    out = _run([OSASCRIPT, "-e", script])
+    return f"moved to {to_list}: {out.strip()}"
+
+
+@mcp.tool
 def complete_reminder(title: str) -> str:
     """Mark a Hermes-created reminder complete — only Inbox items whose
     notes carry the #hermes marker."""

@@ -18,6 +18,7 @@
       "list_events"
       "list_reminders"
       "create_reminder"
+      "move_reminder"
       "complete_reminder"
     ];
   };

@@ -73,4 +73,4 @@ ASGI wrapper, tailscale serve, store-free token, one egress hole).
 
 | Name | Where | Scope |
 |---|---|---|
-| `apple-mcp-token` | sops `secrets/mini.yaml` + `hermes-env` | Bearer for the apple bridge only: two reads, two Inbox-scoped #hermes-marked writes |
+| `apple-mcp-token` | sops `secrets/mini.yaml` + `hermes-env` | Bearer for the apple bridge only: reads, Inbox creates (#hermes-marked notes), move-any (Tier 1, revisit at 3a), marker-scoped complete |
