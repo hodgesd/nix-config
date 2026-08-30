@@ -19,7 +19,7 @@ ASGI wrapper, tailscale serve, store-free token, one egress hole).
   the safety property was never the quarantine list but the tool shape:
   create-only, no delete, and `complete_reminder` scoped to
   #hermes-marked items only. AppleScript cannot set real tags; the
-  marker is title text.) The obsolete "Hermes Review" list can be
+  marker lives in the NOTES field — revised again same-day from title-suffix, keeping titles clean.) The obsolete "Hermes Review" list can be
   deleted in Reminders.
 - **Reads via icalBuddy (brew), writes via /usr/bin/osascript** —
   nixpkgs has no pyobjc-EventKit and Swift-in-nix is a project.

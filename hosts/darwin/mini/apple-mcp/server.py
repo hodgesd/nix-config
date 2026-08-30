@@ -3,9 +3,9 @@
 # Same philosophy as the vault server: the file is short, and the
 # dangerous tools do not exist. Calendar is READ-ONLY in v1 (no
 # create_event anywhere — "schedule X" becomes a reminder instead).
-# Reminder writes land ONLY in the Inbox list (GTD: one inbox), every
-# title marked #hermes; completion is scoped to marked items. No
-# delete, no edits to anything else.
+# Reminder writes land ONLY in the Inbox list (GTD: one inbox), each
+# carrying a #hermes marker in its notes; completion is scoped to
+# marked items. No delete, no edits to anything else.
 #
 # Reads go through icalBuddy (EventKit — fast, structurally read-only;
 # TCC Calendar+Reminders grants key on the stable brew binary). Writes
@@ -30,11 +30,11 @@ if len(TOKEN) < 32:
 
 ICALBUDDY = "/opt/homebrew/bin/icalBuddy"
 OSASCRIPT = "/usr/bin/osascript"
-# GTD: ONE inbox. Hermes writes into Derrick's real Inbox list, every
-# title suffixed " #hermes" for provenance (AppleScript cannot set real
-# tags — the marker is title text; iOS may tagify it on edit). Safety
-# is the tool shape, not a quarantine list: create-only, and
-# complete_reminder only touches #hermes-marked items.
+# GTD: ONE inbox. Hermes writes into Derrick's real Inbox list; the
+# #hermes provenance marker lives in the NOTES field (his call — titles
+# stay clean; AppleScript cannot set real tags). Safety is the tool
+# shape, not a quarantine list: create-only, and complete_reminder only
+# touches notes-marked items.
 TARGET_LIST = "Inbox"
 MARKER = "#hermes"
 MAX_OUT = 20_000
@@ -87,11 +87,12 @@ def list_reminders(due_within_days: int = 7) -> str:
 
 @mcp.tool
 def create_reminder(title: str, due: str = "", notes: str = "") -> str:
-    """Create a reminder in Derrick's Inbox list, title-tagged #hermes. due: 'YYYY-MM-DD' or
-    'YYYY-MM-DD HH:MM' (local time)."""
-    props = [f'name:"{_as_str(title)} {MARKER}"']
-    if notes:
-        props.append(f'body:"{_as_str(notes)}"')
+    """Create a reminder in the Inbox list; its notes carry a #hermes
+    provenance marker. due: 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM' (local)."""
+    props = [f'name:"{_as_str(title)}"']
+    # Marker always rides in the notes/body, after any user notes.
+    body = f"{_as_str(notes)}\\n{MARKER}" if notes else MARKER
+    props.append(f'body:"{body}"')
     due_lines = ""
     if due:
         try:
@@ -126,11 +127,12 @@ def create_reminder(title: str, due: str = "", notes: str = "") -> str:
 
 @mcp.tool
 def complete_reminder(title: str) -> str:
-    """Mark a #hermes-created reminder complete (Inbox, marked items only)."""
+    """Mark a Hermes-created reminder complete — only Inbox items whose
+    notes carry the #hermes marker."""
     script = (
         'tell application "Reminders"\n'
         f'  tell list "{TARGET_LIST}"\n'
-        f'    set r to (first reminder whose name contains "{MARKER}" and name contains "{_as_str(title)}" and completed is false)\n'
+        f'    set r to (first reminder whose name contains "{_as_str(title)}" and body contains "{MARKER}" and completed is false)\n'
         "    set completed of r to true\n"
         "    return name of r\n"
         "  end tell\n"
