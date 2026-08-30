@@ -116,9 +116,13 @@ instead; that plumbing is built in whichever of those phases runs first.)
 
 Live consumers: **unifi** (Phase 2, `hosts/nixos/nixos-infra/unifi.nix` —
 five read-only tools, View-Only account, pinned console cert; see
-`phase-2.md`) and **vault** (Phase 1, mini-hosted bridge at
-`mini:8321`, five jailed tools, bearer via `${VAULT_MCP_TOKEN}` dotenv
-expansion; see `phase-1.md`). Operational notes: hermes parks an MCP
+`phase-2.md`), **vault** (Phase 1, mini-hosted bridge at `mini:8321`,
+five jailed tools, bearer via `${VAULT_MCP_TOKEN}` dotenv expansion; see
+`phase-1.md`), and **apple** (Phase 4, mini `mini:8322` — calendar
+read-only, reminder writes Inbox-only, #hermes-marked; see
+`phase-4.md` incl. the TCC runbook). The 05:30 cron job is
+**morning-brief** (events + reminders + WAN + daily note), operator-
+managed via the `hermes cron` CLI. Operational notes: hermes parks an MCP
 server after 3 failed connects until a reconnect is requested — VM-local
 servers must be ordered `Before=` the gateway (unifi.nix), and remote
 ones (the mini bridge) simply need to be up; a parked server recovers on

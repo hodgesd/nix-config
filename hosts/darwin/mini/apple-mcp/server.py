@@ -2,9 +2,10 @@
 #
 # Same philosophy as the vault server: the file is short, and the
 # dangerous tools do not exist. Calendar is READ-ONLY in v1 (no
-# create_event anywhere — "schedule X" becomes a staged reminder).
-# Reminder writes land ONLY in the "Hermes Review" list (hardcoded).
-# No delete, no edits to anything outside that list.
+# create_event anywhere — "schedule X" becomes a reminder instead).
+# Reminder writes land ONLY in the Inbox list (GTD: one inbox), every
+# title marked #hermes; completion is scoped to marked items. No
+# delete, no edits to anything else.
 #
 # Reads go through icalBuddy (EventKit — fast, structurally read-only;
 # TCC Calendar+Reminders grants key on the stable brew binary). Writes
@@ -29,7 +30,13 @@ if len(TOKEN) < 32:
 
 ICALBUDDY = "/opt/homebrew/bin/icalBuddy"
 OSASCRIPT = "/usr/bin/osascript"
-STAGING_LIST = "Hermes Review"  # the ONLY writable reminders list
+# GTD: ONE inbox. Hermes writes into Derrick's real Inbox list, every
+# title suffixed " #hermes" for provenance (AppleScript cannot set real
+# tags — the marker is title text; iOS may tagify it on edit). Safety
+# is the tool shape, not a quarantine list: create-only, and
+# complete_reminder only touches #hermes-marked items.
+TARGET_LIST = "Inbox"
+MARKER = "#hermes"
 MAX_OUT = 20_000
 
 
@@ -80,10 +87,9 @@ def list_reminders(due_within_days: int = 7) -> str:
 
 @mcp.tool
 def create_reminder(title: str, due: str = "", notes: str = "") -> str:
-    """Create a reminder in the 'Hermes Review' staging list (the only
-    list this bridge can write to). due: 'YYYY-MM-DD' or
+    """Create a reminder in Derrick's Inbox list, title-tagged #hermes. due: 'YYYY-MM-DD' or
     'YYYY-MM-DD HH:MM' (local time)."""
-    props = [f'name:"{_as_str(title)}"']
+    props = [f'name:"{_as_str(title)} {MARKER}"']
     if notes:
         props.append(f'body:"{_as_str(notes)}"')
     due_lines = ""
@@ -109,29 +115,29 @@ def create_reminder(title: str, due: str = "", notes: str = "") -> str:
     script = (
         f"{due_lines}"
         'tell application "Reminders"\n'
-        f'  tell list "{STAGING_LIST}"\n'
+        f'  tell list "{TARGET_LIST}"\n'
         f"    make new reminder with properties {{{', '.join(props)}}}\n"
         "  end tell\n"
         "end tell\n"
     )
     _run([OSASCRIPT, "-e", script])
-    return f"created in {STAGING_LIST}: {title}" + (f" (due {due})" if due else "")
+    return f"created in {TARGET_LIST}: {title}" + (f" (due {due})" if due else "")
 
 
 @mcp.tool
 def complete_reminder(title: str) -> str:
-    """Mark a reminder complete — only within the 'Hermes Review' list."""
+    """Mark a #hermes-created reminder complete (Inbox, marked items only)."""
     script = (
         'tell application "Reminders"\n'
-        f'  tell list "{STAGING_LIST}"\n'
-        f'    set r to (first reminder whose name is "{_as_str(title)}" and completed is false)\n'
+        f'  tell list "{TARGET_LIST}"\n'
+        f'    set r to (first reminder whose name contains "{MARKER}" and name contains "{_as_str(title)}" and completed is false)\n'
         "    set completed of r to true\n"
         "    return name of r\n"
         "  end tell\n"
         "end tell\n"
     )
     out = _run([OSASCRIPT, "-e", script])
-    return f"completed in {STAGING_LIST}: {out.strip()}"
+    return f"completed in {TARGET_LIST}: {out.strip()}"
 
 
 _inner = mcp.http_app()
