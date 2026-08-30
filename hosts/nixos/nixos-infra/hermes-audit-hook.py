@@ -64,7 +64,15 @@ def main() -> None:
     home = os.environ.get("HERMES_HOME") or os.path.expanduser("~/.hermes")
     log_dir = os.path.join(home, "logs")
     os.makedirs(log_dir, exist_ok=True)
-    with open(os.path.join(log_dir, "audit.jsonl"), "a", encoding="utf-8") as f:
+    # Explicit 0660 on create: whoever fires the hook first would otherwise
+    # set the mode from their umask (owner rw + group for the forwarder's
+    # hermes-group tail; never world-readable).
+    fd = os.open(
+        os.path.join(log_dir, "audit.jsonl"),
+        os.O_CREAT | os.O_APPEND | os.O_WRONLY,
+        0o660,
+    )
+    with os.fdopen(fd, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
 
 
