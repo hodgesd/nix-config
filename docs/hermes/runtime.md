@@ -120,8 +120,11 @@ five read-only tools, View-Only account, pinned console cert; see
 five jailed tools, bearer via `${VAULT_MCP_TOKEN}` dotenv expansion; see
 `phase-1.md`), and **apple** (Phase 4, mini `mini:8322` — calendar
 read-only, reminder writes Inbox-only, #hermes-marked; see
-`phase-4.md` incl. the TCC runbook). The 05:30 cron job is
-**morning-brief** (events + reminders + WAN + daily note), operator-
+`phase-4.md` incl. the TCC runbook), and **fastmail** (Phase 3a,
+VM-local `127.0.0.1:9102` — read-only at token AND code layer,
+metadata-first tool shape; see `phase-3a.md`). The 05:30 cron job is
+**morning-brief** (events + reminders + inbox hygiene + mail triage +
+WAN + daily note), operator-
 managed via the `hermes cron` CLI. Operational notes: hermes parks an MCP
 server after 3 failed connects until a reconnect is requested — VM-local
 servers must be ordered `Before=` the gateway (unifi.nix), and remote
