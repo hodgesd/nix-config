@@ -173,6 +173,7 @@
       "sf-symbols"
       "steam"
       "syntax-highlight"
+      "telegram" # native macOS client — desktop surface for the Hermes bot
       "thaw" # menu bar manager, maintained fork of the abandoned jordanbaird-ice
       "unifi-identity-endpoint"
       "vivaldi"
