@@ -168,3 +168,15 @@ option), **traffic-rate fields** in `list_clients`,
 **`append_to_daily`** on the vault server (the logging workhorse), and
 the **ntfy → ntfy.sh iOS push relay** (wake-up ping only; content stays
 tailnet-local). Tool counts: unifi 6, vault 6, apple 6.
+
+## Secrets single-writer rule (learned 2026-08-31)
+
+The `hermes-env` blob is one sops VALUE holding many keys — edits must
+go through `sops`/`sops set` against ONE checkout's copy of
+`secrets/nixos-infra.yaml`. **Never `cp` a secrets file between
+checkouts/worktrees**: keys added in one copy silently vanish when the
+other is copied over it. That exact failure dropped both bridge tokens
+from hermes-env (fastmail-era deploy) and 401'd the vault/apple bridges
+until the 2026-08-31 morning brief exposed it. Symptom signature:
+"MCP server X failed initial OAuth authentication ... 401" in the
+gateway log while direct probes with the server-side token succeed.
