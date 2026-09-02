@@ -18,6 +18,7 @@
     ./homelab-stack.nix
     ./hermes.nix
     ./hermes-egress.nix
+    ./hermes-sentinel.nix
     ./unifi.nix
     ./fastmail.nix
     ./vault.nix
