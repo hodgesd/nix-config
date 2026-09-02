@@ -180,3 +180,17 @@ from hermes-env (fastmail-era deploy) and 401'd the vault/apple bridges
 until the 2026-08-31 morning brief exposed it. Symptom signature:
 "MCP server X failed initial OAuth authentication ... 401" in the
 gateway log while direct probes with the server-side token succeed.
+
+## Cron delivery rule (learned 2026-09-01)
+
+CLI-created `hermes cron` jobs MUST use an explicit target:
+`--deliver telegram:<chat_id>` (your DM chat id = your Telegram user id,
+first entry of TELEGRAM_ALLOWED_USERS). Bare `--deliver telegram` only
+resolves for jobs created from inside a chat; from the CLI it composes
+the whole brief, runs every tool, marks the run "ok" — then drops the
+output with a single WARNING (`cron.scheduler: ... no delivery target
+resolved for deliver=telegram`). Two mornings of briefs vanished this
+way. Verification after any job (re)creation: `hermes cron run <name>`
+then confirm that warning is ABSENT in `docker logs` and the message
+arrived. Composed output is kept under
+`/var/lib/hermes/.hermes/cron/output/<job-id>/` either way.
