@@ -194,3 +194,20 @@ way. Verification after any job (re)creation: `hermes cron run <name>`
 then confirm that warning is ABSENT in `docker logs` and the message
 arrived. Composed output is kept under
 `/var/lib/hermes/.hermes/cron/output/<job-id>/` either way.
+
+## Alert inventory (ntfy, tailnet-only; iOS relay via ntfy.sh wake-up ping)
+
+| Topic | Producer | Fires |
+|---|---|---|
+| `hermes-alerts` | wan-watch (1 min) | WAN down/recovered with duration; Sunday 08:00 weekly summary |
+| `hermes-alerts` | unifi-device-watch (15 min) | never-seen MAC joins |
+| `hermes-alerts` | **hermes-sentinel (10 min)** | outcome checks, edge-triggered: mini bridges' auth wall (401 = healthy), `mcp-unifi`/`mcp-fastmail` active (a revoked Fastmail token = crash-loop = alert), today's morning brief ran AND delivered (judged after 05:40), nightly `homelab-backup` result |
+| `hermes-watchdog` | hermes-watchdog (5 min) | agent unit/container down |
+| `kuma-watchdog` | kuma-watchdog (5 min) | Uptime Kuma (i.e. the mini) unreachable |
+
+Subscribe to all three topics. Verified 2026-09-02 by inducing a
+`mcp-fastmail` stop: FAILED and recovered alerts both delivered.
+Not yet covered: the mini's 04:00 Kuma backup outcome (logs only, on the
+mini), Anthropic API outages while the process stays up (the sentinel's
+brief check catches the daily consequence), and ntfy's own cache is 12h —
+old alerts age out of `/json?poll=1`, they were still delivered.
