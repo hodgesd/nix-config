@@ -148,8 +148,13 @@
       # so cleanup keeps them. Deliberately dropped in the same pass (will
       # uninstall wherever present): boring-notch, iterm2, utm, warp,
       # grammarly-desktop, zoom, raycast.
-      "docker-desktop"
-      "dockutil"
+      # 2026-09-02: two of those keepers dropped again after they broke the
+      # mbp switch. docker-desktop: its cask links
+      # /usr/local/bin/docker-credential-osxkeychain, which OrbStack (the
+      # declared runtime, see modules/darwin/compose-stack.nix) already owns
+      # on every host, so the install can never succeed. dockutil: no longer
+      # a cask upstream (formula only) and nothing here uses it. Both get
+      # uninstalled from the mini by cleanup on its next activation.
       "fastmail"
       "ghostty"
       "git-credential-manager"
