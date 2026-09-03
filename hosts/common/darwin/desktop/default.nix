@@ -6,5 +6,6 @@
     ./skhd.nix
     ./jankyborders.nix
     ./swiftbar-config.nix
+    ./quicklook.nix
   ];
 }
