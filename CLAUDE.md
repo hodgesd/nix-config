@@ -126,8 +126,15 @@ recreates that container (config-hash change) even if it resolves to the
 same image.
 
 Stacks: `stacks/homelab/docker-compose.yml` → `/srv/homelab` on
-nixos-infra; `stacks/uptime/docker-compose.yml` → `~/srv/uptime` on the
-mini (Uptime Kuma, deliberately not on the host it monitors).
+nixos-infra (the only deployed stack; `stacks/arr-stack` is parked). The
+darwin module is currently unused — the mini's uptime stack was retired
+when Gatus replaced Uptime Kuma on 2026-09-06.
+
+Monitoring is Gatus (`hosts/nixos/nixos-infra/gatus.nix`, native
+`services.gatus`, https://status.jaguar-duckbill.ts.net via the `ts-status`
+sidecar, alerts to ntfy topic `gatus`) plus an off-site dead-man for the VM
+itself (`healthchecks.nix` → healthchecks.io). Monitors are Nix, not UI
+state; see `docs/GATUS-EVAL.md`.
 
 On darwin the runtime is OrbStack, addressed only through the module's
 `dockerHost` option. Two macOS-specific traps are handled there and
@@ -181,7 +188,7 @@ hyper - o : open -a "Obsidian"
 ### Homelab services
 
 Edit `hosts/nixos/nixos-infra/*.nix` (easy-afd, proxy, backup, storage,
-homelab-stack, hermes, kuma-watchdog), then `just deploy-check` before
+homelab-stack, hermes, gatus, healthchecks), then `just deploy-check` before
 `just deploy`.
 
 ## Adding a New Machine
@@ -264,7 +271,7 @@ home/
   default.nix                   # User config entry point (portable)
   modules/                      # Tool-specific configs (core, cli, services)
 modules/                        # Custom modules (swiftbar, wallpaper, {nixos,darwin}/compose-stack)
-stacks/                         # Docker compose files (homelab + uptime deployed, arr-stack parked)
+stacks/                         # Docker compose files (homelab deployed, arr-stack parked)
 scripts/                        # bootstrap.sh + audit helpers
 docs/                           # STRUCTURE, ADDING_MACHINE, CUSTOMIZATION,
                                 # HOMEBREW, NIXOS-INFRA (homelab runbook)
@@ -296,7 +303,7 @@ re-ask these):
 
 - Agent host: "hermes" — a NixOS VM on Proxmox, managed declaratively in my nixos-infra flake repo (you are in this repo).
 - My Macs run nix-darwin (config may be in this repo or a sibling — ask me for the path if needed). The Apple bridge (Phase 4) will live on an ALWAYS-ON MAC MINI managed by nix-darwin.
-- All hosts are on a Tailscale tailnet. I already use a Tailscale-serve sidecar pattern for HTTPS on internal services (Uptime Kuma, Actual Budget) — find and reuse that pattern, do not invent a new one.
+- All hosts are on a Tailscale tailnet. I already use a Tailscale-serve sidecar pattern for HTTPS on internal services (Gatus, Actual Budget) — find and reuse that pattern, do not invent a new one.
 - My Obsidian vault uses PARA structure with a GTD inbox. NAS is a UNAS Pro 8.
 - My agent runtime is NousResearch's hermes-agent (open-source, Python core; github.com/NousResearch/hermes-agent), with its Telegram gateway ("Telegraph" is my name for that surface). Relevant native capabilities you should USE rather than reinvent: built-in MCP integration (declare our servers through its MCP config), built-in cron scheduler with delivery to Telegram (use it for briefs/digests instead of custom timers where sensible), and native Telegram user-ID allowlisting (TELEGRAM_ALLOWED_USERS / dmPolicy). Locate my Hermes install + config (likely a NixOS service; config dir ~/.hermes or service-equivalent), read its current version's docs for exact MCP config syntax, and conform. If you cannot determine how it's deployed, STOP and ask me.
 - CRITICAL: hermes-agent has terminal-execution backends — the agent can run shell commands. Its shell containment (Phase 0, task 6) is as important as MCP tool allowlists.

@@ -1,9 +1,10 @@
 # Host-specific configuration for mini (M2 Pro desktop, primaryUse = "server").
 #
-# The mini hosts Uptime Kuma, moved here from nixos-infra so the monitor
-# stops sharing a fate with its primary target. That makes this an
-# unattended box: everything below exists so it comes back on its own
-# after a reboot or a power cut, with nobody at the keyboard.
+# The mini is an unattended box: it hosts the Hermes bridges (vault-mcp,
+# apple-mcp), so everything below exists so it comes back on its own after
+# a reboot or a power cut, with nobody at the keyboard. (It hosted Uptime
+# Kuma from 2026-08-08 until Gatus replaced it on 2026-09-06 — see
+# hosts/nixos/nixos-infra/gatus.nix and docs/GATUS-EVAL.md.)
 {
   username,
   pkgs,
@@ -19,43 +20,25 @@
   # there is no vault named "Derrick", and "Pro Pilot" is a stale husk).
   vaultPath = "/Users/${username}/Library/Mobile Documents/iCloud~md~obsidian/Documents/Pro Pilot 2";
 in {
-  # Nightly Kuma-data mirror to the NAS (the VM's backup job stopped
-  # covering it when Kuma moved here).
-  imports = [./backup.nix];
-
-  # Uptime Kuma + its Tailscale sidecar. stacks/uptime/docker-compose.yml is
-  # authoritative; see modules/darwin/compose-stack.nix for the contract.
-  # stateDir is under the user's home because OrbStack's docker socket is
-  # user-owned, so the reconcile agent runs as this user and needs write
-  # access to the bind-mount roots.
-  #
-  # No envFile: the sidecar's identity comes from the migrated ts-uptime
-  # state dir, not an authkey. The compose file defaults TS_AUTHKEY to empty
-  # for exactly this reason. If the node key ever expires and the sidecar
-  # needs to re-register, mint a key and point envFile at a sops secret.
-  majordouble.composeStacks.uptime = {
-    composeFile = ../../../stacks/uptime/docker-compose.yml;
-    stateDir = "/Users/${username}/srv/uptime";
-  };
-
-  # NO auto-login here, deliberately. The compose module generates a *user*
-  # LaunchAgent (the docker socket is user-owned), so the stack only starts
-  # once a GUI session exists — and FileVault is on, which means macOS gates
-  # boot at the pre-boot unlock screen and ignores
+  # NO auto-login here, deliberately. The bridges are *user* LaunchAgents
+  # (they live in the user's iCloud session), so they only start once a GUI
+  # session exists — and FileVault is on, which means macOS gates boot at
+  # the pre-boot unlock screen and ignores
   # system.defaults.loginwindow.autoLoginUser entirely. Setting it would
   # imply reboots are handled when they are not.
   #
   # Consequence, worth knowing before you reboot this box:
   #   - Planned reboots: `sudo fdesetup authrestart` pre-authorizes the
   #     unlock, so the mini comes back to a live session unattended.
-  #   - Unexpected power cut: it stops at the unlock screen and monitoring
-  #     stays down until someone types the password. kuma-watchdog.nix on
-  #     nixos-infra is what tells you that has happened.
+  #   - Unexpected power cut: it stops at the unlock screen and the bridges
+  #     stay down until someone types the password. Gatus on nixos-infra
+  #     pings this box and the Hermes sentinel checks the bridges, so ntfy
+  #     is what tells you that has happened.
 
-  # First sops consumer on this host: the vault bridge's bearer token.
-  # Decrypted at activation using the mini's SSH host key (the .sops.yaml
-  # host_mini recipient); owner = the login user because the server runs
-  # as a launchd USER agent (iCloud files belong to the session).
+  # sops on this host: the bridges' bearer tokens. Decrypted at activation
+  # using the mini's SSH host key (the .sops.yaml host_mini recipient);
+  # owner = the login user because the servers run as launchd USER agents
+  # (iCloud files belong to the session).
   sops = {
     defaultSopsFile = ../../../secrets/mini.yaml;
     age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];

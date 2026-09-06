@@ -1,5 +1,6 @@
 # Easy A/FD (github.com/hodgesd/gvii_afd-backup) as a systemd service:
-# the app itself, the weekly data refresh, and the Kuma healthcheck.
+# the app itself and the weekly data refresh. Gatus (gatus.nix) polls
+# https://afd.hdgs.me/healthz directly and the refresh reports to it.
 # The nginx/ACME front is proxy.nix; NAS backup is backup.nix.
 #
 # KNOWN GAP (out of scope): source lives in /srv/easy-afd, rsynced from
@@ -15,7 +16,7 @@
 # is pandas-version-coupled (dev Mac runs pandas 3.x, nixpkgs ships 2.x).
 # The easy-afd-refresh service rebuilds all of data/ locally instead.
 #
-# Secrets (Autorouter credentials, Kuma push URLs) come from sops —
+# Secrets (Autorouter credentials, Gatus heartbeat URL + token) come from sops —
 # decrypted to /run/secrets/easy-afd-env at activation; systemd reads the
 # EnvironmentFile as root before dropping privileges.
 {
@@ -80,17 +81,9 @@
     # gracefully without it.
     ${pyEnv}/bin/python ${appDir}/scripts/refresh_openaip_data.py --data-dir ${stateDir}/data \
       || echo "openaip refresh failed (non-fatal)" >&2
-    # Success heartbeat for the Uptime Kuma push monitor. Set
-    # KUMA_REFRESH_PUSH_URL in the easy-afd-env secret; skipped when unset.
-    if [ -n "''${KUMA_REFRESH_PUSH_URL:-}" ]; then
-      ${pkgs.curl}/bin/curl -fsS -m 10 --retry 3 "''${KUMA_REFRESH_PUSH_URL}" >/dev/null \
-        || echo "kuma heartbeat push failed" >&2
-    fi
-    # Same heartbeat for the Gatus trial (external endpoint with a 192 h
-    # heartbeat window; hosts/nixos/nixos-infra/gatus.nix). Gatus wants a
-    # POST with a bearer token rather than Kuma's GET-with-token-in-URL.
-    # Both GATUS_* values live in the easy-afd-env secret; skipped when
-    # unset, so a Kuma-only setup is unaffected.
+    # Success heartbeat to the Gatus external endpoint (192 h window;
+    # hosts/nixos/nixos-infra/gatus.nix): a POST with a bearer token. Both
+    # GATUS_* values live in the easy-afd-env secret; skipped when unset.
     if [ -n "''${GATUS_REFRESH_PUSH_URL:-}" ]; then
       ${pkgs.curl}/bin/curl -fsS -m 10 --retry 3 -X POST \
         -H "Authorization: Bearer ''${GATUS_REFRESH_TOKEN:-}" \
@@ -200,32 +193,6 @@ in {
       OnCalendar = "weekly";
       Persistent = true;
       RandomizedDelaySec = "1h";
-    };
-  };
-
-  # Self-check dead-man's switch: Kuma's container can't route to the
-  # tailnet, so instead of polling us it expects a heartbeat. Checking
-  # via the public name exercises DNS, nginx, the LE cert, and the app
-  # in one shot; a stopped heartbeat (3 min window on the Kuma side)
-  # means one of those is down.
-  systemd.services.easy-afd-healthcheck = {
-    description = "Heartbeat Easy A/FD health to Uptime Kuma";
-    serviceConfig = {
-      Type = "oneshot";
-      EnvironmentFile = config.sops.secrets.easy-afd-env.path;
-    };
-    script = ''
-      ${pkgs.curl}/bin/curl -fsS -m 10 https://afd.hdgs.me/healthz >/dev/null
-      if [ -n "''${KUMA_AFD_PUSH_URL:-}" ]; then
-        ${pkgs.curl}/bin/curl -fsS -m 10 "''${KUMA_AFD_PUSH_URL}" >/dev/null
-      fi
-    '';
-  };
-  systemd.timers.easy-afd-healthcheck = {
-    wantedBy = ["timers.target"];
-    timerConfig = {
-      OnBootSec = "2m";
-      OnUnitActiveSec = "60s";
     };
   };
 }

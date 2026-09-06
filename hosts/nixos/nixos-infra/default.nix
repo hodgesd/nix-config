@@ -23,7 +23,7 @@
     ./fastmail.nix
     ./vault.nix
     ./apple.nix
-    ./kuma-watchdog.nix
+    ./healthchecks.nix
     ./gatus.nix
   ];
 
@@ -36,7 +36,8 @@
     defaultSopsFile = ../../../secrets/nixos-infra.yaml;
     age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
     secrets = {
-      # OPENAIP/Autorouter/FAA-NMS/Kuma credentials (gunicorn env).
+      # OPENAIP/Autorouter/FAA-NMS credentials + Gatus heartbeat URL/token
+      # (gunicorn env).
       # restartUnits because systemd restarts a service when its *unit*
       # changes, not when the contents of its EnvironmentFile change —
       # so rotating a credential here leaves the running process holding
@@ -44,9 +45,9 @@
       # disk. Not theoretical: it is exactly how the FAA NMS credentials
       # kept returning 401 after an otherwise successful deploy.
       #
-      # Only the long-running unit needs it. easy-afd-refresh and
-      # easy-afd-healthcheck are timer-driven oneshots that re-exec on
-      # every run, so they pick up new values already.
+      # Only the long-running unit needs it. easy-afd-refresh is a
+      # timer-driven oneshot that re-execs on every run, so it picks up
+      # new values already (same for hc-heartbeat in healthchecks.nix).
       easy-afd-env.restartUnits = ["easy-afd.service"];
       cloudflare-acme-env = {}; # DNS-01 token for afd.hdgs.me cert
       nas-backup-credentials = {}; # SMB creds for both UNAS shares

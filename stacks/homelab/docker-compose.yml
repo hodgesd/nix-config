@@ -3,12 +3,6 @@
 # digest (exact bytes; the comment is the human-readable version). To
 # upgrade a service: put its :latest (or a specific tag) here, deploy, then
 # re-pin to the new digest from `docker image inspect`.
-# Uptime Kuma used to live here (ts-uptime + uptime-kuma). It moved to the
-# mini on 2026-08-08 so the monitor no longer shares a fate with the host it
-# watches — see stacks/uptime/docker-compose.yml. Its data and the sidecar's
-# tailnet identity were migrated, so the URL and every push-monitor token
-# are unchanged. /srv/homelab/uptime-kuma and /srv/homelab/ts-uptime are now
-# stale on this host and can be deleted once the move has soaked.
 services:
   ts-budget:
     image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
@@ -203,10 +197,10 @@ services:
   # this network namespace. Two consequences vs the other sidecars:
   # serve.json is nix-generated and bind-mounted from /etc, and the proxy
   # target is host.docker.internal (the VM) instead of 127.0.0.1.
-  ts-gatus:
+  ts-status:
     image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
-    container_name: ts-gatus
-    hostname: gatus
+    container_name: ts-status
+    hostname: status
     restart: unless-stopped
     environment:
       TS_AUTHKEY: ${TS_AUTHKEY}
@@ -215,8 +209,8 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     volumes:
-      - ./ts-gatus/state:/var/lib/tailscale
-      - /etc/ts-gatus/serve.json:/config/serve.json:ro
+      - ./ts-status/state:/var/lib/tailscale
+      - /etc/ts-status/serve.json:/config/serve.json:ro
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - NET_ADMIN

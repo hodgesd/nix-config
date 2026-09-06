@@ -9,8 +9,7 @@
   pkgs,
   ...
 }: let
-  # Same reasoning as kuma-watchdog.nix: ntfy is tailnet-only, so the topic
-  # name isn't a secret. Subscribe with:
+  # ntfy is tailnet-only, so the topic name isn't a secret. Subscribe with:
   #   ntfy subscribe https://ntfy.jaguar-duckbill.ts.net/hermes-watchdog
   ntfyUrl = "https://ntfy.jaguar-duckbill.ts.net/hermes-watchdog";
   curl = lib.getExe pkgs.curl;
@@ -227,11 +226,11 @@ in {
   ];
 
   # Watchdog: a dead Telegram bot is indistinguishable from a quiet day
-  # (the same failure class kuma-watchdog.nix exists for), so check the
-  # unit AND the container every 5 minutes and alert via ntfy. Same
-  # edge-triggered one-alert-per-outage pattern as kuma-watchdog.nix.
-  # Known blind spot: a poller wedged inside a healthy container isn't
-  # caught — that would need a Kuma push dead-man monitor.
+  # so check the unit AND the container every 5 minutes and alert via ntfy,
+  # edge-triggered (one alert per outage), the pattern hermes-sentinel.nix
+  # also uses. Known blind spot: a poller wedged inside a healthy container
+  # isn't caught — that would need a heartbeat into a Gatus external
+  # endpoint (gatus.nix).
   systemd.services.hermes-watchdog = {
     description = "Watch hermes-agent, alert via ntfy";
     serviceConfig = {

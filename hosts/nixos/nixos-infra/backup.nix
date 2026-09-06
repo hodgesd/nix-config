@@ -3,7 +3,7 @@
 # user nixos-backup scoped to that share). History/versioning comes
 # from snapshots on the share, so this is a plain --delete mirror.
 # Covered: the docker estate /srv/homelab (actual-budget ledger,
-# uptime-kuma, ntfy, homepage, compose file), hermes-agent state
+# ntfy, homepage, compose file), hermes-agent state
 # /var/lib/hermes/.hermes (sessions + config; small, no quiesce needed), and a
 # break-glass plaintext copy of the sops secrets (from /run/secrets — lets
 # you recover even if every age key is lost). /etc/nixos is no longer

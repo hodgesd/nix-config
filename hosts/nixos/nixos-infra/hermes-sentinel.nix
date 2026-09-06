@@ -17,7 +17,7 @@
 #
 # Edge-triggered per check (flag file in the state dir): one alert on
 # failure, one on recovery, silence otherwise — same discipline as
-# kuma-watchdog.nix. Read-only everywhere; no credentials.
+# hermes.nix's hermes-watchdog. Read-only everywhere; no credentials.
 #
 # Disable: remove ./hermes-sentinel.nix from the host imports.
 {

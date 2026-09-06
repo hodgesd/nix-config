@@ -1,16 +1,18 @@
-# Gatus — side-by-side trial against Uptime Kuma (which stays untouched on
-# the mini; see stacks/uptime/docker-compose.yml). Every Kuma monitor is
-# mirrored here so both tools alert in parallel; docs/GATUS-EVAL.md holds
-# the inventory, the mapping, and the comparison.
+# Gatus — the homelab's monitor and status page, https://status.jaguar-duckbill.ts.net.
+# Replaced Uptime Kuma on 2026-09-06 after a side-by-side trial; the
+# inventory, mapping and comparison are in docs/GATUS-EVAL.md.
 #
 # Shape: a native systemd service (upstream services.gatus module) fronted
-# by a Tailscale sidecar container (ts-gatus in stacks/homelab) that gives
-# it https://gatus.jaguar-duckbill.ts.net with a Let's Encrypt cert, the
-# same way Kuma and Actual Budget are exposed. Because Gatus is native
-# rather than a container sharing the sidecar's network namespace, two
-# things Kuma never needed appear below: the sidecar reaches Gatus over
+# by a Tailscale sidecar container (ts-status in stacks/homelab) that gives
+# it a tailnet name and a Let's Encrypt cert, the same way Actual Budget
+# and the other containers are exposed. Because Gatus is native rather
+# than a container sharing the sidecar's network namespace, two things the
+# other sidecars don't need appear below: the sidecar reaches Gatus over
 # Docker's bridge (hence the firewall rule) and its serve.json is generated
 # by nix instead of being hand-made in the stack dir.
+#
+# What Gatus cannot see from here is this VM dying — it shares the VM's
+# fate, and so does ntfy. healthchecks.nix covers that from outside.
 #
 # ICMP checks: the upstream module already grants CAP_NET_RAW via
 # AmbientCapabilities + CapabilityBoundingSet (see
@@ -18,23 +20,22 @@
 # slice of root needed to open raw sockets for ping; the process otherwise
 # runs as an unprivileged DynamicUser with NoNewPrivileges. Nothing to add.
 #
-# Disable: remove ./gatus.nix from default.nix imports and the ts-gatus
+# Disable: remove ./gatus.nix from default.nix imports and the ts-status
 # service from stacks/homelab/docker-compose.yml, deploy. State to delete
-# afterwards: /var/lib/private/gatus and /srv/homelab/ts-gatus (the
+# afterwards: /var/lib/private/gatus and /srv/homelab/ts-status (the
 # sidecar's tailnet identity — also remove the node in the admin console).
 {config, ...}: let
   ntfy = "https://ntfy.jaguar-duckbill.ts.net";
-  gatusUrl = "https://gatus.jaguar-duckbill.ts.net";
+  statusUrl = "https://status.jaguar-duckbill.ts.net";
 
-  # Kuma's accepted status codes are "200-299" on every HTTP monitor.
+  # Accept any 2xx, following redirects (adguard answers 302 → 200).
   http2xx = ["[STATUS] >= 200" "[STATUS] < 300"];
 
   # One alert channel for everything; thresholds come from default-alert.
   alerts = [{type = "ntfy";}];
 
-  # Kuma defaults: 60 s interval, 48 s timeout (45 s here). Kuma's
-  # "retries" has no direct equivalent — the alert's failure-threshold of
-  # 3 plays that role for every endpoint.
+  # 60 s interval, 45 s timeout. "Retries" are the alert's
+  # failure-threshold of 3: three consecutive failures before paging.
   http = group: name: url: extraConditions: {
     inherit group name url alerts;
     interval = "60s";
@@ -70,8 +71,8 @@ in {
       };
 
       # SQLite under the unit's StateDirectory (/var/lib/gatus →
-      # /var/lib/private/gatus because of DynamicUser). Not backed up
-      # during the trial: it is only check history.
+      # /var/lib/private/gatus because of DynamicUser). Deliberately not
+      # backed up: it is only check history, and the config is this file.
       storage = {
         type = "sqlite";
         path = "/var/lib/gatus/data.db";
@@ -80,25 +81,19 @@ in {
 
       ui = {
         title = "Homelab | Gatus";
-        header = "Homelab";
-        buttons = [
-          {
-            name = "Uptime Kuma";
-            link = "https://uptime.jaguar-duckbill.ts.net";
-          }
-        ];
+        # Groups are boxes (below); opening grouped means each section
+        # header answers "is this machine OK?" at a glance.
+        default-sort-by = "group";
       };
 
-      # Kuma has no notification providers at all (verified 2026-09-06);
-      # homelab alerting is the ntfy watchdog timers. Gatus gets its own
-      # topic so trial alerts are easy to tell apart. The topic lives in
-      # sops at the user's request, although kuma-watchdog.nix treats
-      # topic names as non-secret (ntfy is tailnet-only).
+      # ntfy is tailnet-only, so the topic name isn't really a secret, but
+      # it lives in sops alongside the heartbeat token for tidiness.
+      # priority is ntfy's 1-5 scale; a string here crashes Gatus at start.
       alerting.ntfy = {
         url = ntfy;
         topic = "\${GATUS_NTFY_TOPIC}";
-        priority = 4; # ntfy scale 1-5; 4 = high (a string here fails to parse)
-        click = gatusUrl;
+        priority = 4;
+        click = statusUrl;
         default-alert = {
           failure-threshold = 3;
           success-threshold = 2;
@@ -106,30 +101,28 @@ in {
         };
       };
 
-      # Groups are new (Kuma had none); grouped by the host being watched.
+      # One group per box being watched.
       endpoints = [
+        # The always-on Mac (Hermes bridges). Reachability only; its
+        # services are checked by the sentinel in hermes-sentinel.nix.
+        (icmp "mini" "ping" "100.122.244.86")
+        # UNAS Pro 8 on the LAN — backup and Data share target.
+        (icmp "nas" "ping" "192.168.1.142")
+        # This VM's services, all through their tailnet/public names so
+        # DNS, the sidecar, TLS and the app are exercised together.
         (http "nixos-infra" "actual-budget" "https://budget.jaguar-duckbill.ts.net" [])
         (http "nixos-infra" "ntfy" "http://ntfy.jaguar-duckbill.ts.net/dashboard" [])
         (http "nixos-infra" "adguard" "https://adguard.jaguar-duckbill.ts.net" [])
-        # The one Kuma monitor with certificate-expiry alerts enabled.
         (http "nixos-infra" "librespeed" "https://librespeed.jaguar-duckbill.ts.net" ["[CERTIFICATE_EXPIRATION] > 72h"])
-        # Kuma's afd-healthz is a push dead-man switch because its container
-        # couldn't route to the tailnet. Gatus runs on the host, so this is
-        # a direct poll of the public name (DNS + nginx + LE cert + app).
-        # Trade-off: it can no longer notice the VM itself dying — Kuma on
-        # the mini keeps that job.
+        # Public name: DNS + nginx + the LE cert + the app in one poll.
         (http "nixos-infra" "easy-afd" "https://afd.hdgs.me/healthz" [])
-        # Mirrors what kuma-watchdog.nix checks every 5 min.
-        (http "mini" "uptime-kuma" "https://uptime.jaguar-duckbill.ts.net/dashboard" [])
-        # New checks, not in Kuma — exercise the raw-socket path.
-        (icmp "infra" "mini" "100.122.244.86")
-        (icmp "infra" "nas" "192.168.1.142")
       ];
 
-      # Kuma's easy-afd-refresh push monitor (8-day window). The refresh
-      # script in easy-afd.nix POSTs here on success; no POST for 192 h
-      # means the weekly data rebuild failed or never ran. Key derived by
-      # Gatus from group + name: nixos-infra_easy-afd-refresh.
+      # Dead-man switch for the weekly Easy A/FD data refresh. The refresh
+      # script in easy-afd.nix POSTs here on success (bearer token from the
+      # shared GATUS_REFRESH_TOKEN); no POST for 192 h means the rebuild
+      # failed or never ran and the app is serving stale aeronautical data.
+      # Key derived by Gatus from group + name: nixos-infra_easy-afd-refresh.
       external-endpoints = [
         {
           group = "nixos-infra";
@@ -151,13 +144,13 @@ in {
     iptables -A nixos-fw -s 172.16.0.0/12 -p tcp --dport 8080 -j nixos-fw-accept
   '';
 
-  # serve.json for ts-gatus, bind-mounted read-only by the compose file.
+  # serve.json for ts-status, bind-mounted read-only by the compose file.
   # Both stanzas are required (docs/NIXOS-INFRA.md gotchas): TCP 443 makes
   # the sidecar terminate TLS, Web proxies to the host — host.docker.internal
   # is the compose-provided name for "the VM itself". A change here needs
-  # `docker restart ts-gatus`; compose won't restart it for a mount's
+  # `docker restart ts-status`; compose won't restart it for a mount's
   # contents.
-  environment.etc."ts-gatus/serve.json".text = builtins.toJSON {
+  environment.etc."ts-status/serve.json".text = builtins.toJSON {
     TCP."443".HTTPS = true;
     Web."\${TS_CERT_DOMAIN}:443".Handlers."/".Proxy = "http://host.docker.internal:8080";
   };

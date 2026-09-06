@@ -1,10 +1,10 @@
 # Gatus vs Uptime Kuma — side-by-side trial
 
-Started 2026-09-06. Gatus runs natively on `nixos-infra`
-(`hosts/nixos/nixos-infra/gatus.nix`, https://gatus.jaguar-duckbill.ts.net);
-Uptime Kuma is unchanged on the mini (`stacks/uptime/docker-compose.yml`,
-https://uptime.jaguar-duckbill.ts.net). Gatus alerts to the ntfy topic
-`gatus`; Kuma alerts to nothing (see the inventory).
+Trial run 2026-09-06; **outcome: switched to Gatus the same day** (§6).
+Sections 1–5 are the trial record as written: Gatus ran natively on
+`nixos-infra` (`hosts/nixos/nixos-infra/gatus.nix`, then at
+https://gatus.jaguar-duckbill.ts.net) beside an untouched Uptime Kuma on the
+mini. Gatus alerted to the ntfy topic `gatus`; Kuma alerted to nothing.
 
 ## 1. Kuma inventory
 
@@ -162,3 +162,45 @@ Remove `./gatus.nix` from `hosts/nixos/nixos-infra/default.nix` and the
 delete `/var/lib/private/gatus` and `/srv/homelab/ts-gatus`, remove the
 `gatus` node in the Tailscale admin console, and drop `gatus-env` +
 the `GATUS_*` lines from `easy-afd-env` in sops.
+
+## 6. Decision (2026-09-06): switched
+
+Gatus is the monitor; Uptime Kuma is retired. What changed after the trial:
+
+- Tailnet name is now **https://status.jaguar-duckbill.ts.net** (sidecar
+  `ts-status`; delete the trial's `gatus` node in the admin console).
+- Groups are boxes — `mini`, `nas`, `nixos-infra` — and the dashboard opens
+  grouped (`ui.default-sort-by: group`).
+- The `uptime-kuma` endpoint, `kuma-watchdog.nix`, the `easy-afd-healthcheck`
+  timer and the Kuma push URLs are gone. Gatus polls `/healthz` directly and
+  the refresh script pushes only to Gatus.
+- **`healthchecks.nix`** adds the off-site dead-man that neither tool could
+  provide from inside the house: the VM checks in with healthchecks.io every
+  5 min; silence for ~10 min alerts through healthchecks.io's own channels.
+  Kuma-on-the-mini never actually had this covered either — it had no
+  notification providers.
+- On the mini: the uptime compose stack and its NAS backup job are removed
+  (`hosts/darwin/mini/backup.nix`, `stacks/uptime/`); the last Kuma data
+  mirror stays on the NAS under `backups/mini/uptime/` with 64 days of
+  snapshots.
+
+Switch-over verification (2026-09-06, VM side):
+
+- `deploy-check` matched the plan exactly: stop `kuma-watchdog.timer`,
+  `easy-afd-healthcheck.timer`, recreate `compose-homelab` + `gatus`, restart
+  `easy-afd` (trimmed secret), add `healthchecks-env`.
+- After deploy: `gatus`, `hc-heartbeat.timer`, `easy-afd`, `compose-homelab`
+  active; Kuma units gone; all 7 endpoints + heartbeat green under the new
+  groups; `ts-status` registered and https://status.jaguar-duckbill.ts.net →
+  200 with a new LE cert (`gatus.…` now unreachable).
+- healthchecks.io: the pre-existing account already had an email
+  integration; two stale checks were deleted, `nixos-infra` created (5 min /
+  5 min). First ping after the secret deploy: exit 0, ~4 KB exchanged.
+  Lesson: the ping URL was first saved into the *main* checkout's secrets
+  file, not the worktree's — check `pwd` before `sops`.
+- Dead-man test: `hc-heartbeat.timer` stopped 16:01 CDT with a
+  `systemd-run --on-active=12m` restart. VM side confirmed: last ping
+  16:00:53, silence for 12.5 min (> period 5 + grace 5), restart fired
+  16:13:22 and the heartbeat resumed on its 5-min cadence; the transient
+  test units cleaned themselves up. healthchecks.io delivered both the DOWN
+  and the UP email (user-confirmed). The off-site dead-man works end to end.
