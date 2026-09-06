@@ -133,12 +133,18 @@ Fallbacks: poll the app's own health URL, or keep those in Kuma.
 - Reachability: `http://100.98.163.36:8080` → 200 from the tailnet;
   `http://192.168.1.216:8080` from the LAN → no connection (firewall).
 - `/var/lib/private/gatus/data.db` created (SQLite WAL).
-- **Open:** `ts-gatus` is restart-looping with `invalid key: API key does
-  not exist` — the `TS_AUTHKEY` in `homelab-env` has been deleted/expired.
-  Until a new reusable tagged key is minted and put in `homelab-env`,
-  https://gatus.jaguar-duckbill.ts.net does not exist; the dashboard is
-  reachable over plain HTTP on the VM's tailnet IP only. The other six
-  sidecars are unaffected (their identities live in their state dirs).
+- `ts-gatus` first restart-looped with `invalid key: API key does not
+  exist` — the `TS_AUTHKEY` in `homelab-env` had been deleted. A new
+  reusable `tag:homelab` key (90-day key expiry is irrelevant once the node
+  is registered; tagged nodes have no node-key expiry) fixed it. Note:
+  changing `homelab-env` does not re-run `compose-homelab` (only the compose
+  file is a restart trigger), so `systemctl restart compose-homelab` was
+  needed to recreate `ts-gatus` with the new env. The node came up as
+  `gatus.jaguar-duckbill.ts.net`, tags `tag:homelab,tag:infra` (the second
+  was added by mistake; strip it in the admin console).
+- https://gatus.jaguar-duckbill.ts.net → 200 from the Mac about 30 s after
+  registration; Let's Encrypt cert issued (expires 2026-12-05); the API over
+  HTTPS lists all 9 endpoints green.
 - **Not yet tested:** an end-to-end ntfy alert (needs the `gatus` topic
   subscribed first; then break one endpoint for 3 minutes).
 
