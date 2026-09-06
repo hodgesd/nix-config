@@ -145,8 +145,15 @@ Fallbacks: poll the app's own health URL, or keep those in Kuma.
 - https://gatus.jaguar-duckbill.ts.net → 200 from the Mac about 30 s after
   registration; Let's Encrypt cert issued (expires 2026-12-05); the API over
   HTTPS lists all 9 endpoints green.
-- **Not yet tested:** an end-to-end ntfy alert (needs the `gatus` topic
-  subscribed first; then break one endpoint for 3 minutes).
+- **Alert test, end to end:** pointed the `librespeed` check at a closed
+  port (`http://127.0.0.1:9`) via a temporary config change. Three failures
+  at 60 s → ntfy alert on topic `gatus` at 12:40:51 (priority 4, per-condition
+  🔴/🟢 breakdown in the body). Reverted; two successes → "resolved" alert at
+  12:42:23. Both arrived on the phone. A first attempt using a 404 path did
+  nothing: the librespeed SPA returns 200 for any path, so a "404 test" is
+  not a test.
+- After the revert the system profile is the same store path as before the
+  test, so the deployed config is byte-identical to the reviewed one.
 
 ## Disable
 
