@@ -96,8 +96,12 @@ Fallbacks: poll the app's own health URL, or keep those in Kuma.
 - Exposing a *native* service through the sidecar pattern: needs a
   firewall rule plus `host.docker.internal`, neither of which
   Kuma-in-a-container ever needed.
-- A new tailnet node means a new auth key; the one in `homelab-env` may
-  have expired.
+- A new tailnet node means a new auth key; the one in `homelab-env` had
+  been deleted ("API key does not exist"), so the sidecar could not
+  register on the first deploy.
+- Type strictness: `ntfy.priority` must be an integer; the README's
+  `"default"` wording is misleading and a string crashes the service at
+  start. `deploy-check` cannot catch this (it never runs the binary).
 - No 1:1 for Kuma's per-monitor retries; thresholds are per alert.
 - The rendered YAML can't be built on the Mac (x86_64-linux derivation), so
   it was checked via `nix eval --json …services.gatus.settings` instead.
@@ -111,12 +115,32 @@ Fallbacks: poll the app's own health URL, or keep those in Kuma.
   including the 8-day dead-man.
 - The whole thing is one file plus a sidecar stanza, all in git.
 
-## 5. Verification log
+## 5. Verification log (2026-09-06)
 
-`just deploy-check` 2026-09-06: would add secret `gatus-env`, modify
-`easy-afd-env`, reload `firewall`, restart `easy-afd` (EnvironmentFile
-changed → `restartUnits`), start `compose-homelab` and `gatus`.
-Post-deploy checks: pending.
+- `just deploy-check`: add secret `gatus-env`, modify `easy-afd-env`,
+  reload `firewall`, restart `easy-afd` (its EnvironmentFile changed →
+  `restartUnits`), start `compose-homelab` and `gatus`.
+- First `just deploy` failed: `gatus.service` panicked on
+  `alerting.ntfy.priority: "high"` — Gatus 5.31 wants an integer (1–5).
+  Everything else activated. Fixed to `4`, redeployed clean.
+- `systemctl show gatus`: `AmbientCapabilities=cap_net_raw`,
+  `CapabilityBoundingSet=cap_net_raw`, `DynamicUser=yes`.
+- Journal: "Validated 8 endpoints", "Validated 1 external endpoints"; all 8
+  polled endpoints `success=true` on the first pass, ICMP included (mini
+  2 ms, NAS 1 ms) — the capability works.
+- Manual heartbeat POST with the token from `/run/secrets/easy-afd-env` →
+  HTTP 200; `nixos-infra_easy-afd-refresh` shows `success=true`.
+- Reachability: `http://100.98.163.36:8080` → 200 from the tailnet;
+  `http://192.168.1.216:8080` from the LAN → no connection (firewall).
+- `/var/lib/private/gatus/data.db` created (SQLite WAL).
+- **Open:** `ts-gatus` is restart-looping with `invalid key: API key does
+  not exist` — the `TS_AUTHKEY` in `homelab-env` has been deleted/expired.
+  Until a new reusable tagged key is minted and put in `homelab-env`,
+  https://gatus.jaguar-duckbill.ts.net does not exist; the dashboard is
+  reachable over plain HTTP on the VM's tailnet IP only. The other six
+  sidecars are unaffected (their identities live in their state dirs).
+- **Not yet tested:** an end-to-end ntfy alert (needs the `gatus` topic
+  subscribed first; then break one endpoint for 3 minutes).
 
 ## Disable
 
