@@ -18,14 +18,15 @@ with `just deploy` (see [Deploying](#deploying)).
 |---|---|---|---|
 | `easy-afd` | `easy-afd.nix` | Easy A/FD (gunicorn :8000, tailnet-only via firewall) | always |
 | `nginx` | `proxy.nix` | TLS front for **https://afd.hdgs.me** (LE cert, DNS-01 via Cloudflare) | always |
-| `easy-afd-refresh` | `easy-afd.nix` | Rebuilds NASR/OurAirports/openAIP data, restarts app, Kuma heartbeat | weekly (Mon ~00:45) |
-| `easy-afd-healthcheck` | `easy-afd.nix` | Curls own /healthz via public name → Kuma heartbeat | every 60 s |
+| `easy-afd-refresh` | `easy-afd.nix` | Rebuilds NASR/OurAirports/openAIP data, restarts app, Gatus heartbeat | weekly (Mon ~00:45) |
 | `homelab-backup` | `backup.nix` | Mirror /srv/homelab + secrets → NAS `backups` share | nightly 03:30 |
 | `mnt-data.automount` | `storage.nix` | `//192.168.1.142/Data` at /mnt/data (MeTube downloads) | on access |
 | `compose-homelab` | `homelab-stack.nix` | Deploys `stacks/homelab/docker-compose.yml` → `docker compose up -d` | on change |
 | `acme-afd.hdgs.me` timers | `proxy.nix` | Cert renewal | automatic |
 | `hermes-agent` | `hermes.nix` | NousResearch Hermes agent (Claude via Anthropic API): Telegram bot + host `hermes` CLI, container mode on the host docker daemon | always |
 | `hermes-watchdog` | `hermes.nix` | Checks hermes unit + container, alerts via ntfy (`hermes-watchdog` topic) | every 5 min |
+| `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls the six VM services, heartbeat for the weekly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
+| `hc-heartbeat` | `healthchecks.nix` | Checks in with healthchecks.io (off-site dead-man for this VM) | every 5 min |
 
 Shared server baseline (tailscale from locked unstable, docker_29,
 openssh with LAN key, firewall trusting only `tailscale0`, Cachix
@@ -42,27 +43,32 @@ homepage, librespeed, metube. All reachable at
 a tag, `just deploy`, then re-pin to the new digest
 (`docker image inspect --format '{{index .RepoDigests 0}}' <image>`).
 
-**Monitoring (Uptime Kuma — now on the mini, not here):** Kuma moved off
-this host on 2026-08-08 so it would survive the VM dying; see
-`stacks/uptime/docker-compose.yml` and `hosts/darwin/mini/`. Its data and
-the sidecar's tailnet identity were migrated wholesale, so it is still
-`https://uptime.jaguar-duckbill.ts.net` and every push-monitor token URL
-is unchanged. Easy A/FD monitors remain **push-based dead-man switches**:
-`afd-healthz` (3-min window) and `easy-afd-refresh` (8-day window), push
-URLs in the `easy-afd-env` secret. They could now become real HTTP polls
-— Kuma is a tailnet peer rather than a container behind this host's
-firewall — but were deliberately left alone during the move.
+**Monitoring (Gatus, on this host):** `gatus.nix` — native `services.gatus`,
+monitors declared in Nix, SQLite history under `/var/lib/gatus`, dashboard
+at **https://status.jaguar-duckbill.ts.net** through the `ts-status`
+sidecar. Pings the mini and the NAS, polls the six services here by their
+tailnet/public names, and holds a 192 h heartbeat for the weekly Easy A/FD
+refresh (the refresh script POSTs to it; URL + token in `easy-afd-env`).
+Alerts go to ntfy topic `gatus` after 3 consecutive failures, resolved after
+2 successes. Uptime Kuma (2026-08 → 2026-09-06, on the mini) was replaced
+after a side-by-side trial; `docs/GATUS-EVAL.md` has the mapping and the
+reasons.
 
-`kuma-watchdog.nix` closes the other half of the loop: this host checks
-Kuma every 5 min and alerts via ntfy when it is unreachable, because a
-dead Kuma is otherwise indistinguishable from everything being fine. Note
-the two boxes now watch each other, so an outage taking out both is a
-blind spot only an off-site check would cover.
+Two things Gatus here cannot do, handled separately:
 
-`hermes-watchdog` (in `hermes.nix`) applies the same pattern to the
-Hermes agent: unit + container checked every 5 min, edge-triggered ntfy
-alert. It won't catch a Telegram poller wedged inside a healthy
-container — that would need a Kuma push dead-man monitor (future work).
+- **See this VM die.** Gatus and ntfy both live on the VM. `healthchecks.nix`
+  checks in with healthchecks.io every 5 min; if the check-ins stop (VM,
+  power, or internet down), healthchecks.io alerts through its own channels.
+  Period 5 min, grace 5 min → ~10 min to alert.
+- **Route to the sidecar directly.** Gatus is native, so `ts-status` reaches
+  it over the compose bridge, which the firewall does not trust; `gatus.nix`
+  adds one iptables rule for TCP 8080 from Docker's range. The LAN stays
+  blocked.
+
+`hermes-watchdog` (in `hermes.nix`) checks the Hermes unit + container
+every 5 min with an edge-triggered ntfy alert. It won't catch a Telegram
+poller wedged inside a healthy container — that would need a heartbeat into
+a Gatus external endpoint (future work).
 
 **DNS:** `hdgs.me` on Cloudflare (moved from Hover 2026-07-25). `afd` A
 → 100.98.163.36 (DNS-only; public name, tailnet-only reachability).
@@ -101,11 +107,15 @@ aborts activation *before* any service restarts.
 
 | Secret | Consumers |
 |---|---|
-| `easy-afd-env` | easy-afd, refresh, healthcheck (OPENAIP_API_KEY, AUTOROUTER_*, KUMA_*_PUSH_URL) |
+| `easy-afd-env` | easy-afd, refresh (OPENAIP_API_KEY, AUTOROUTER_*, FAA_NMS_*, GATUS_REFRESH_PUSH_URL/TOKEN) |
+| `healthchecks-env` | hc-heartbeat (HC_PING_URL — the healthchecks.io check URL is the credential) |
 | `cloudflare-acme-env` | ACME (CLOUDFLARE_DNS_API_TOKEN + propagation tuning) |
 | `nas-backup-credentials` | /mnt/data mount + backup script (SMB user `nixos-backup`) |
 | `homelab-env` | compose interpolation (TS_AUTHKEY for sidecars) |
 | `hermes-env` | hermes-agent (ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, Telegram user-ID allowlist — kept in ciphertext because the repo is public) |
+| `unifi-hermes-key` | mcp-unifi (read-only UniFi API key) |
+| `fastmail-hermes-ro-token` | mcp-fastmail (read-only JMAP token) |
+| `gatus-env` | gatus (GATUS_NTFY_TOPIC, GATUS_REFRESH_TOKEN — the same token sits in `easy-afd-env` so the refresh can push its heartbeat) |
 | `hodgesd-password` | `hashedPasswordFile` (seeds login on fresh installs) |
 
 Edit: `sops secrets/nixos-infra.yaml` (opens your editor decrypted,
@@ -158,10 +168,14 @@ between machines) and `/mnt/data/Videos/MeTube` (regenerable media).
   into the module's `let` section become unused local variables —
   silently, no error, identical rebuild closure. Config goes in the
   module body. Check the store path changed after rebuild.
-- **Kuma no longer runs here**, so the old "can't poll tailnet/host
-  services" constraint is gone — it is a tailnet peer on the mini now and
-  its traffic arrives on tailscale0. The existing push monitors still
-  work and were kept as-is; new checks can be plain HTTP monitors.
+- **Gatus is native, its sidecar is not.** A `ts-<name>` sidecar normally
+  shares a network namespace with its app and proxies to 127.0.0.1. Gatus
+  runs on the host, so `ts-status` proxies to `host.docker.internal` and
+  the traffic arrives on the compose bridge, which the firewall does not
+  trust — hence the iptables rule in `gatus.nix`. Also: `ntfy.priority`
+  must be an integer (a string crashes Gatus at start, and `deploy-check`
+  never runs the binary), and to fail an endpoint for an alert test use a
+  closed port, not a 404 path — SPAs return 200 for anything.
 - **UNAS SMB auth:** username is auto-generated (`nixos-backup`), and
   the password is set via "Reset Password" under File Services creds —
   not the account's display name/password. Auth failures = STATUS_LOGON_FAILURE.
@@ -204,5 +218,5 @@ New since the flake migration (2026-07-26):
 - App repo: `github.com/hodgesd/gvii_afd-backup` (deploy via its
   `deploy.sh`; /healthz shows deployed SHA + data ages)
 - Dashboards: homepage `https://homepage.jaguar-duckbill.ts.net`,
-  Kuma `https://uptime.jaguar-duckbill.ts.net` (hosted on the mini)
+  Gatus `https://status.jaguar-duckbill.ts.net`
 - Machine registry entry: `lib/machines.nix` (`nixos-infra`)

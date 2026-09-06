@@ -8,9 +8,9 @@
 #   re-run `ssh-keyscan -t ed25519 <vm> | ssh-to-age`, update here, then
 #   `sops updatekeys secrets/nixos-infra.yaml`.
 # - host_mini: same derivation from the mini's host key. The mini hosts
-#   Uptime Kuma (moved off nixos-infra) and needs the NAS credentials for
-#   its own backup of Kuma's data. Reinstalling macOS regenerates the host
-#   key — same re-key dance as above.
+#   the Hermes bridges (vault-mcp, apple-mcp) and decrypts their bearer
+#   tokens. Reinstalling macOS regenerates the host key — same re-key
+#   dance as above.
 #
 # Edit secrets with: sops secrets/<host>.yaml
 keys:

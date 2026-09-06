@@ -111,9 +111,10 @@ A Proxmox guest VM on the HP mini PC, fully managed by this flake
   (`afd.hdgs.me`, tailnet-only reachability)
 - **Docker compose estate** (`/srv/homelab`) — 6 apps, each with a Tailscale
   sidecar: Actual Budget, Homepage, ntfy, AdGuard Home, LibreSpeed, MeTube
-  (compose snapshot: `stacks/homelab/docker-compose.yml`). Uptime Kuma moved
-  to the mini so the monitor outlives the host it watches
-  (`stacks/uptime/docker-compose.yml`)
+  (compose snapshot: `stacks/homelab/docker-compose.yml`)
+- **Monitoring** — Gatus (`hosts/nixos/nixos-infra/gatus.nix`) at
+  https://status.jaguar-duckbill.ts.net, alerting via ntfy; the VM itself is
+  watched from outside by a healthchecks.io dead-man (`healthchecks.nix`)
 - **Hermes agent** (NousResearch) — Claude-backed agent in a container on the
   host docker daemon; Telegram bot front end + `hermes` CLI on the VM
 - **Nightly NAS backups** (03:30 → UNAS Pro 8) and weekly aeronautical-data refresh

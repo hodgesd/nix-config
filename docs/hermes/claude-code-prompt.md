@@ -12,7 +12,7 @@ You are working on my personal agent infrastructure. Read this entire context be
 ENVIRONMENT
 - Agent host: "hermes" — a NixOS VM on Proxmox, managed declaratively in my nixos-infra flake repo (you are in this repo).
 - My Macs run nix-darwin (config may be in this repo or a sibling — ask me for the path if needed). The Apple bridge (Phase 4) will live on an ALWAYS-ON MAC MINI managed by nix-darwin.
-- All hosts are on a Tailscale tailnet. I already use a Tailscale-serve sidecar pattern for HTTPS on internal services (Uptime Kuma, Actual Budget) — find and reuse that pattern, do not invent a new one.
+- All hosts are on a Tailscale tailnet. I already use a Tailscale-serve sidecar pattern for HTTPS on internal services (Gatus, Actual Budget) — find and reuse that pattern, do not invent a new one.
 - My Obsidian vault uses PARA structure with a GTD inbox. NAS is a UNAS Pro 8.
 - My agent runtime is NousResearch's hermes-agent (open-source, Python core; github.com/NousResearch/hermes-agent), with its Telegram gateway ("Telegraph" is my name for that surface). Relevant native capabilities you should USE rather than reinvent: built-in MCP integration (declare our servers through its MCP config), built-in cron scheduler with delivery to Telegram (use it for briefs/digests instead of custom timers where sensible), and native Telegram user-ID allowlisting (TELEGRAM_ALLOWED_USERS / dmPolicy). Locate my Hermes install + config (likely a NixOS service; config dir ~/.hermes or service-equivalent), read its current version's docs for exact MCP config syntax, and conform. If you cannot determine how it's deployed, STOP and ask me.
 - CRITICAL: hermes-agent has terminal-execution backends — the agent can run shell commands. Its shell containment (Phase 0, task 6) is as important as MCP tool allowlists.
@@ -302,7 +302,7 @@ bot (allowlist and tool surface are global per bot).
 - Behaviors: calendar-aware — when a deep-work block starts, offer (not auto-fire) the focus+lights shortcut via Telegram; "tell the house dinner's ready" from my phone.
 
 6E — HOMELAB SENTINEL
-- Read-only: Uptime Kuma status API + journald error scan across hermes services. Behavior: "anything unhealthy?" on demand + push on new sustained failures. No restart/exec tools.
+- Read-only: Gatus status API (`/api/v1/endpoints/statuses`) + journald error scan across hermes services. Behavior: "anything unhealthy?" on demand + push on new sustained failures. No restart/exec tools.
 
 ACCEPTANCE (each sub-block)
 - Works via one natural Telegram exchange; read-only verified; disable is one line; documented in phase-6.md.
