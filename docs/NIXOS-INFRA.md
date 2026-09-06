@@ -26,6 +26,7 @@ with `just deploy` (see [Deploying](#deploying)).
 | `acme-afd.hdgs.me` timers | `proxy.nix` | Cert renewal | automatic |
 | `hermes-agent` | `hermes.nix` | NousResearch Hermes agent (Claude via Anthropic API): Telegram bot + host `hermes` CLI, container mode on the host docker daemon | always |
 | `hermes-watchdog` | `hermes.nix` | Checks hermes unit + container, alerts via ntfy (`hermes-watchdog` topic) | every 5 min |
+| `gatus` | `gatus.nix` | Gatus status page (:8080, tailnet-only), mirrors every Kuma monitor for the side-by-side trial; alerts via ntfy (`gatus` topic). HTTPS via the `ts-gatus` sidecar → **https://gatus.jaguar-duckbill.ts.net**. See `docs/GATUS-EVAL.md` | always (trial) |
 
 Shared server baseline (tailscale from locked unstable, docker_29,
 openssh with LAN key, firewall trusting only `tailscale0`, Cachix
@@ -52,6 +53,13 @@ is unchanged. Easy A/FD monitors remain **push-based dead-man switches**:
 URLs in the `easy-afd-env` secret. They could now become real HTTP polls
 — Kuma is a tailnet peer rather than a container behind this host's
 firewall — but were deliberately left alone during the move.
+
+**Gatus trial (since 2026-09-06):** `gatus.nix` runs Gatus natively on this
+host with every Kuma monitor mirrored, alerting to ntfy topic `gatus`, so
+the two tools can be compared side by side. Kuma is unchanged. The
+afd-healthz push became a direct poll of https://afd.hdgs.me/healthz and
+the refresh push became a Gatus external endpoint (192 h heartbeat).
+Inventory, mapping and comparison: `docs/GATUS-EVAL.md`.
 
 `kuma-watchdog.nix` closes the other half of the loop: this host checks
 Kuma every 5 min and alerts via ntfy when it is unreachable, because a
@@ -106,6 +114,9 @@ aborts activation *before* any service restarts.
 | `nas-backup-credentials` | /mnt/data mount + backup script (SMB user `nixos-backup`) |
 | `homelab-env` | compose interpolation (TS_AUTHKEY for sidecars) |
 | `hermes-env` | hermes-agent (ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, Telegram user-ID allowlist — kept in ciphertext because the repo is public) |
+| `unifi-hermes-key` | mcp-unifi (read-only UniFi API key) |
+| `fastmail-hermes-ro-token` | mcp-fastmail (read-only JMAP token) |
+| `gatus-env` | gatus (GATUS_NTFY_TOPIC, GATUS_REFRESH_TOKEN — the token also sits in `easy-afd-env` as GATUS_REFRESH_PUSH_URL/GATUS_REFRESH_TOKEN for the refresh heartbeat) |
 | `hodgesd-password` | `hashedPasswordFile` (seeds login on fresh installs) |
 
 Edit: `sops secrets/nixos-infra.yaml` (opens your editor decrypted,

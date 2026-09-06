@@ -86,6 +86,17 @@
       ${pkgs.curl}/bin/curl -fsS -m 10 --retry 3 "''${KUMA_REFRESH_PUSH_URL}" >/dev/null \
         || echo "kuma heartbeat push failed" >&2
     fi
+    # Same heartbeat for the Gatus trial (external endpoint with a 192 h
+    # heartbeat window; hosts/nixos/nixos-infra/gatus.nix). Gatus wants a
+    # POST with a bearer token rather than Kuma's GET-with-token-in-URL.
+    # Both GATUS_* values live in the easy-afd-env secret; skipped when
+    # unset, so a Kuma-only setup is unaffected.
+    if [ -n "''${GATUS_REFRESH_PUSH_URL:-}" ]; then
+      ${pkgs.curl}/bin/curl -fsS -m 10 --retry 3 -X POST \
+        -H "Authorization: Bearer ''${GATUS_REFRESH_TOKEN:-}" \
+        "''${GATUS_REFRESH_PUSH_URL}" >/dev/null \
+        || echo "gatus heartbeat push failed" >&2
+    fi
   '';
 
   hardening = {

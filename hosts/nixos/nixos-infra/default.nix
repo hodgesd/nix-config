@@ -24,6 +24,7 @@
     ./vault.nix
     ./apple.nix
     ./kuma-watchdog.nix
+    ./gatus.nix
   ];
 
   # Secrets: decrypted at activation by sops-nix into /run/secrets (tmpfs)
