@@ -25,6 +25,7 @@
     ./apple.nix
     ./healthchecks.nix
     ./gatus.nix
+    ./changedetection.nix
   ];
 
   # Secrets: decrypted at activation by sops-nix into /run/secrets (tmpfs)

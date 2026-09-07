@@ -192,6 +192,64 @@ services:
       - /mnt/data/Videos/MeTube:/downloads
       - ./metube/state:/state
 
+  # changedetection.io — web-page change monitor (hosts/nixos/nixos-infra/
+  # changedetection.nix has the why, the serve.json and the disable steps).
+  # Same shape as actual-budget: the app shares this sidecar's network
+  # namespace; serve.json is nix-generated and bind-mounted from /etc like
+  # ts-status, so nothing about this service is hand-made on the VM.
+  ts-changes:
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
+    container_name: ts-changes
+    hostname: changes
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./ts-changes/state:/var/lib/tailscale
+      - /etc/ts-changes/serve.json:/config/serve.json:ro
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  changedetection:
+    image: ghcr.io/dgtlmoon/changedetection.io@sha256:9458e933634f0ad8a777b92c3c71734e3e06b86aae7de3a6aad410427e254e81 # 0.60.2
+    container_name: changedetection
+    restart: unless-stopped
+    network_mode: service:ts-changes
+    depends_on:
+      - ts-changes
+      - sockpuppetbrowser
+    environment:
+      BASE_URL: https://changes.jaguar-duckbill.ts.net # links in notifications
+      USE_X_SETTINGS: "1" # trust X-Forwarded-* from tailscale serve
+      HIDE_REFERER: "true"
+      PLAYWRIGHT_DRIVER_URL: ws://sockpuppetbrowser:3000
+      TZ: America/Chicago # per-watch time windows use this
+    volumes:
+      - ./changedetection:/datastore
+
+  # Headless Chrome for changedetection's Playwright fetcher (Browser
+  # Steps, Visual Selector, JS-rendered sites). Deliberately NOT in the
+  # ts-changes namespace and with no published ports: it is reachable only
+  # by service name over the compose network, so Chrome's CDP endpoint is
+  # never exposed on the tailnet. SYS_ADMIN is what upstream ships for
+  # Chrome's sandbox. Concurrency is capped below upstream's 10 because
+  # this is a small VM.
+  sockpuppetbrowser:
+    image: dgtlmoon/sockpuppetbrowser@sha256:f166a963b550c29af465c2fac518212e7e3a75f14f0d2b840cf4b79677295764 # latest as of 2026-09-06
+    container_name: sockpuppetbrowser
+    restart: unless-stopped
+    environment:
+      SCREEN_WIDTH: "1920"
+      SCREEN_HEIGHT: "1024"
+      SCREEN_DEPTH: "16"
+      MAX_CONCURRENT_CHROME_PROCESSES: "4"
+    cap_add:
+      - SYS_ADMIN
+
   # Tailscale front for Gatus, which runs natively on the host (see
   # hosts/nixos/nixos-infra/gatus.nix) rather than as a container sharing
   # this network namespace. Two consequences vs the other sidecars:
