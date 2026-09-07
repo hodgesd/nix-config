@@ -25,4 +25,16 @@
       locations."/".proxyPass = "http://127.0.0.1:8000";
     };
   };
+
+  # Let containers reach this vhost. Homepage's Easy A/FD siteMonitor polls
+  # https://afd.hdgs.me/healthz from inside the homelab compose project;
+  # the name resolves to this host's tailnet IP, but the packet arrives
+  # over the Docker bridge (homelab_default, 172.19.0.0/16), which the
+  # firewall does not trust — it trusts tailscale0 only — so the check
+  # timed out. Same trap and same fix as Gatus's 8080 rule in gatus.nix:
+  # accept 443 from Docker's private range only. The LAN (192.168.1.0/24)
+  # stays blocked, so the vhost remains tailnet-only from outside the box.
+  networking.firewall.extraCommands = ''
+    iptables -A nixos-fw -s 172.16.0.0/12 -p tcp --dport 443 -j nixos-fw-accept
+  '';
 }
