@@ -25,7 +25,7 @@ with `just deploy` (see [Deploying](#deploying)).
 | `acme-afd.hdgs.me` timers | `proxy.nix` | Cert renewal | automatic |
 | `hermes-agent` | `hermes.nix` | NousResearch Hermes agent (Claude via Anthropic API): Telegram bot + host `hermes` CLI, container mode on the host docker daemon | always |
 | `hermes-watchdog` | `hermes.nix` | Checks hermes unit + container, alerts via ntfy (`hermes-watchdog` topic) | every 5 min |
-| `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls the six VM services, heartbeat for the weekly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
+| `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls the seven VM services, heartbeat for the weekly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
 | `hc-heartbeat` | `healthchecks.nix` | Checks in with healthchecks.io (off-site dead-man for this VM) | every 5 min |
 
 Shared server baseline (tailscale from locked unstable, docker_29,
@@ -37,7 +37,9 @@ deployed to /srv/homelab on every switch):** each app pairs with a
 `ts-<name>` Tailscale sidecar (hostname = tailnet name, HTTPS via
 `TS_SERVE_CONFIG` proxying 443 → app port). Apps: actual-budget
 (`budget`), ntfy, adguardhome (`adguard`),
-homepage, librespeed, metube. All reachable at
+homepage, librespeed, metube, changedetection (`changes`; plus a
+ports-less `sockpuppetbrowser` Chrome container it talks to over the
+compose network). All reachable at
 `https://<name>.jaguar-duckbill.ts.net`. Images are **pinned by digest**
 (human version in a trailing comment). To upgrade one: set its image to
 a tag, `just deploy`, then re-pin to the new digest
@@ -46,7 +48,7 @@ a tag, `just deploy`, then re-pin to the new digest
 **Monitoring (Gatus, on this host):** `gatus.nix` — native `services.gatus`,
 monitors declared in Nix, SQLite history under `/var/lib/gatus`, dashboard
 at **https://status.jaguar-duckbill.ts.net** through the `ts-status`
-sidecar. Pings the mini and the NAS, polls the six services here by their
+sidecar. Pings the mini and the NAS, polls the seven services here by their
 tailnet/public names, and holds a 192 h heartbeat for the weekly Easy A/FD
 refresh (the refresh script POSTs to it; URL + token in `easy-afd-env`).
 Alerts go to ntfy topic `gatus` after 3 consecutive failures, resolved after
@@ -161,6 +163,9 @@ between machines) and `/mnt/data/Videos/MeTube` (regenerable media).
   run refresh scripts. Tailscale: `tailscale up --ssh` and re-auth;
   sidecars re-auth via TS_AUTHKEY (mint a new one if expired, update the
   `homelab-env` secret).
+- **changedetection.io:** `/srv/homelab/changedetection` (from the NAS
+  mirror) is the whole state — watches, history, password, notification
+  URLs. The sidecar identity is `/srv/homelab/ts-changes`.
 
 ## Gotchas (hard-won)
 
@@ -209,6 +214,11 @@ New since the flake migration (2026-07-26):
   `Web` handler *and* `TCP: {"443": {"HTTPS": true}}`. Without the TCP
   section, 443 is refused (this is how adguard's HTTPS URL was silently
   broken pre-migration).
+- **Two sidecars have nix-generated serve.json** (`ts-status` from
+  `gatus.nix`, `ts-changes` from `changedetection.nix`), bind-mounted
+  from `/etc`; the rest are hand-made under `/srv/homelab/ts-<name>/config`.
+  After changing a generated one, `docker restart ts-<name>` — compose
+  does not recreate a container for a bind mount's contents.
 - **`mnt-data.automount` can't be "reloaded"** — switch-to-configuration
   exits 4 when it tries; `systemctl restart mnt-data.automount` is the
   fix and the mount itself is unaffected.
