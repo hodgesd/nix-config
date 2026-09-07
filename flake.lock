@@ -275,11 +275,11 @@
     "swiftbar_plugins": {
       "flake": false,
       "locked": {
-        "lastModified": 1788015002,
-        "narHash": "sha256-E6SLYD+YINFwrWiB8EFCjV9P7vtuR0R+NBtDmNI0BUI=",
+        "lastModified": 1788825017,
+        "narHash": "sha256-9qLAlRw5GHZ4/NQDo2GrOY3UfVoNuz9v5mV+Y48zHpk=",
         "owner": "hodgesd",
         "repo": "swiftbar_plugins",
-        "rev": "a5909dd02500c63db40484b5d8d29ef3438fcdbb",
+        "rev": "8f2f430e2682ed414921d09f8ab610ac8702d876",
         "type": "github"
       },
       "original": {
