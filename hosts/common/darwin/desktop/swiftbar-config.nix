@@ -40,6 +40,9 @@
     "com.ameba.SwiftBar" = {
       PluginDirectory = "${config.users.users.${config.majordouble.user}.home}/Library/Application Support/SwiftBar/Plugins";
       MakePluginExecutable = 1;
+      # Larger tooltip text for the AI summaries in daily_news (AppKit default is 11pt).
+      # Scoped to SwiftBar's domain so other apps keep the system tooltip size.
+      NSToolTipsFontSize = 14;
     };
   };
 }
