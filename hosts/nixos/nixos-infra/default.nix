@@ -53,6 +53,10 @@
       cloudflare-acme-env = {}; # DNS-01 token for afd.hdgs.me cert
       nas-backup-credentials = {}; # SMB creds for both UNAS shares
       homelab-env = {}; # TS_AUTHKEY for the compose tailscale sidecars
+      # Bearer token for Homepage's MCP endpoint (/api/mcp). Rendered into
+      # the compose env file by the template in homelab-stack.nix; the
+      # restart makes a rotation recreate the container (see easy-afd-env).
+      homepage-mcp-token.restartUnits = ["compose-homelab.service"];
       # Decrypted pre-user-creation; makes DR rebuilds come up with the
       # same login password (mutableUsers is on, so this only seeds new
       # installs — the live shadow entry already matches).

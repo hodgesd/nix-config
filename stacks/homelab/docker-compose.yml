@@ -57,6 +57,12 @@ services:
       - ts-homepage
     environment:
       HOMEPAGE_ALLOWED_HOSTS: homepage.jaguar-duckbill.ts.net
+      # MCP endpoint at /api/mcp, tailnet-only via the ts-homepage sidecar.
+      # Token lives in sops (homepage-mcp-token); writes are on so an
+      # assistant can add services/widgets (YAML is validated before save).
+      HOMEPAGE_MCP_ENABLED: "true"
+      HOMEPAGE_MCP_ALLOW_WRITE: "true"
+      HOMEPAGE_MCP_TOKEN: ${HOMEPAGE_MCP_TOKEN}
     volumes:
       - ./homepage/config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
