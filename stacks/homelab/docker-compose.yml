@@ -256,6 +256,58 @@ services:
     cap_add:
       - SYS_ADMIN
 
+  # Stirling PDF — PDF toolbox (hosts/nixos/nixos-infra/stirling-pdf.nix
+  # has the why, the serve.json and the disable steps). Same shape as
+  # changedetection: the app shares this sidecar's network namespace and
+  # serve.json is nix-generated and bind-mounted from /etc.
+  ts-pdf:
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
+    container_name: ts-pdf
+    hostname: pdf
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./ts-pdf/state:/var/lib/tailscale
+      - /etc/ts-pdf/serve.json:/config/serve.json:ro
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf@sha256:3b3670fce70b396ec56ba380a3cc7858e0abf83fe13f31c88f7737847763a396 # 2.14.3 (standard: OCR + office conversion; not -fat, not -ultra-lite)
+    container_name: stirling-pdf
+    restart: unless-stopped
+    network_mode: service:ts-pdf
+    depends_on:
+      - ts-pdf
+    environment:
+      # The tailnet is the auth boundary. 2.x ships with login ON and a
+      # default admin/stirling password; leaving that on would put a
+      # known-default login on the tailnet for no gain.
+      SECURITY_ENABLELOGIN: "false"
+      # Skips loading the login/SSO/enterprise jar entirely — less code
+      # on the listening path, and it is what upstream's own compose does.
+      DISABLE_ADDITIONAL_FEATURES: "true"
+      SYSTEM_DEFAULTLOCALE: en-US
+      SYSTEM_ENABLEANALYTICS: "false" # no phone-home from the homelab
+      SHOW_SURVEY: "false"
+      TZ: America/Chicago
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/api/v1/info/status | grep -q UP"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s # JVM + LibreOffice warm-up on a 2-vCPU VM
+    volumes:
+      - ./stirling-pdf/tessdata:/usr/share/tessdata # OCR language packs
+      - ./stirling-pdf/configs:/configs
+      - ./stirling-pdf/logs:/logs
+      - ./stirling-pdf/pipeline:/pipeline
+
   # Tailscale front for Gatus, which runs natively on the host (see
   # hosts/nixos/nixos-infra/gatus.nix) rather than as a container sharing
   # this network namespace. Two consequences vs the other sidecars:

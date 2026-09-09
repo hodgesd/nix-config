@@ -26,6 +26,7 @@
     ./healthchecks.nix
     ./gatus.nix
     ./changedetection.nix
+    ./stirling-pdf.nix
   ];
 
   # Secrets: decrypted at activation by sops-nix into /run/secrets (tmpfs)
