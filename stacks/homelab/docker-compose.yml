@@ -79,7 +79,7 @@ services:
       - SYS_MODULE
 
   ntfy:
-    image: binwiederhier/ntfy@sha256:b32b4221a64ec2e7c000f0782b2feef24022e1a09a24e531640f4cbba6cfa1e6 # as of 2026-07-26
+    image: binwiederhier/ntfy@sha256:b32b4221a64ec2e7c000f0782b2feef24022e1a09a24e531640f4cbba6cfa1e6 # v2.23.0 (as of 2026-07-26)
     container_name: ntfy
     restart: unless-stopped
     network_mode: service:ts-ntfy
