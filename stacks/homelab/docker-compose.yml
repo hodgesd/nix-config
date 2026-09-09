@@ -308,6 +308,48 @@ services:
       - ./stirling-pdf/logs:/logs
       - ./stirling-pdf/pipeline:/pipeline
 
+  # draw.io — diagram editor (hosts/nixos/nixos-infra/drawio.nix has the
+  # why, the serve.json and the disable steps). Same shape as stirling-pdf:
+  # the app shares this sidecar's network namespace and serve.json is
+  # nix-generated and bind-mounted from /etc. Stateless: no app volume.
+  ts-drawio:
+    image: tailscale/tailscale@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0 # v1.98.4
+    container_name: ts-drawio
+    hostname: drawio
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./ts-drawio/state:/var/lib/tailscale
+      - /etc/ts-drawio/serve.json:/config/serve.json:ro
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  drawio:
+    image: jgraph/drawio@sha256:a2c1de83dae975d44eb4ff4ccaa4f2d9f954c4915c767b000bc78909ae4e4dff # 31.4.5
+    container_name: drawio
+    restart: unless-stopped
+    network_mode: service:ts-drawio
+    depends_on:
+      - ts-drawio
+    environment:
+      # Absolute URL the app uses for its own links (embed/share/plugins);
+      # without it the default is http://localhost:8080.
+      DRAWIO_BASE_URL: https://drawio.jaguar-duckbill.ts.net
+      TZ: America/Chicago
+    healthcheck:
+      # curl is in the image (the entrypoint uses it). Tomcat serves the
+      # editor at / once the webapp has deployed.
+      test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s # JVM warm-up on a 2-vCPU VM
+
   # Tailscale front for Gatus, which runs natively on the host (see
   # hosts/nixos/nixos-infra/gatus.nix) rather than as a container sharing
   # this network namespace. Two consequences vs the other sidecars:

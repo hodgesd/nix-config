@@ -109,9 +109,9 @@ A Proxmox guest VM on the HP mini PC, fully managed by this flake
 
 - **easy-afd** — Flask/gunicorn app behind nginx with a Let's Encrypt DNS-01 cert
   (`afd.hdgs.me`, tailnet-only reachability)
-- **Docker compose estate** (`/srv/homelab`) — 8 apps, each with a Tailscale
+- **Docker compose estate** (`/srv/homelab`) — 9 apps, each with a Tailscale
   sidecar: Actual Budget, Homepage, ntfy, AdGuard Home, LibreSpeed, MeTube,
-  changedetection.io, Stirling PDF (compose snapshot:
+  changedetection.io, Stirling PDF, draw.io (compose snapshot:
   `stacks/homelab/docker-compose.yml`).
   Homepage's own config (`/srv/homelab/homepage/config`) is runtime state,
   not in the repo — update it by hand when a service is added or retired.
