@@ -115,6 +115,7 @@ in {
         (http "nixos-infra" "adguard" "https://adguard.jaguar-duckbill.ts.net" [])
         (http "nixos-infra" "librespeed" "https://librespeed.jaguar-duckbill.ts.net" ["[CERTIFICATE_EXPIRATION] > 72h"])
         (http "nixos-infra" "changedetection" "https://changes.jaguar-duckbill.ts.net" [])
+        (http "nixos-infra" "stirling-pdf" "https://pdf.jaguar-duckbill.ts.net" [])
         # Public name: DNS + nginx + the LE cert + the app in one poll.
         (http "nixos-infra" "easy-afd" "https://afd.hdgs.me/healthz" [])
       ];
