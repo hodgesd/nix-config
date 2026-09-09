@@ -49,7 +49,7 @@ services:
       - SYS_MODULE
 
   homepage:
-    image: ghcr.io/gethomepage/homepage@sha256:d8d784e5090111b6e4c56dfd90e272d2953a2094e87349f647165df0fa6c4401 # v1.13.1
+    image: ghcr.io/gethomepage/homepage@sha256:753eeb0cc22ab7baad39ed47cbd1aae14e193dd1b264e965f193a9ea1d1e1bdd # v2.2.0
     container_name: homepage
     restart: unless-stopped
     network_mode: service:ts-homepage
