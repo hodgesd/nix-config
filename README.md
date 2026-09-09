@@ -109,9 +109,11 @@ A Proxmox guest VM on the HP mini PC, fully managed by this flake
 
 - **easy-afd** — Flask/gunicorn app behind nginx with a Let's Encrypt DNS-01 cert
   (`afd.hdgs.me`, tailnet-only reachability)
-- **Docker compose estate** (`/srv/homelab`) — 6 apps, each with a Tailscale
-  sidecar: Actual Budget, Homepage, ntfy, AdGuard Home, LibreSpeed, MeTube
-  (compose snapshot: `stacks/homelab/docker-compose.yml`)
+- **Docker compose estate** (`/srv/homelab`) — 7 apps, each with a Tailscale
+  sidecar: Actual Budget, Homepage, ntfy, AdGuard Home, LibreSpeed, MeTube,
+  changedetection.io (compose snapshot: `stacks/homelab/docker-compose.yml`).
+  Homepage's own config (`/srv/homelab/homepage/config`) is runtime state,
+  not in the repo — update it by hand when a service is added or retired.
 - **Monitoring** — Gatus (`hosts/nixos/nixos-infra/gatus.nix`) at
   https://status.jaguar-duckbill.ts.net, alerting via ntfy; the VM itself is
   watched from outside by a healthchecks.io dead-man (`healthchecks.nix`)
