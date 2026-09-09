@@ -39,7 +39,7 @@ deployed to /srv/homelab on every switch):** each app pairs with a
 (`budget`), ntfy, adguardhome (`adguard`),
 homepage, librespeed, metube, changedetection (`changes`; plus a
 ports-less `sockpuppetbrowser` Chrome container it talks to over the
-compose network). All reachable at
+compose network), stirling-pdf (`pdf`). All reachable at
 `https://<name>.jaguar-duckbill.ts.net`. Images are **pinned by digest**
 (human version in a trailing comment). To upgrade one: set its image to
 a tag, `just deploy`, then re-pin to the new digest
