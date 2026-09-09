@@ -139,7 +139,6 @@
       "citrix-workspace"
       "claude"
       "codexbar"
-      "crossover"
       "cursor"
       "default-folder-x"
       "desktoppr" # Command-line wallpaper manager
