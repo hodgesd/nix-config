@@ -176,7 +176,7 @@ services:
       - SYS_MODULE
 
   metube:
-    image: ghcr.io/alexta69/metube@sha256:3b3b847a125e78037983d3a27c76212e2fc7a0c3a813591ec0de53613e0be874 # as of 2026-07-26
+    image: ghcr.io/alexta69/metube@sha256:3b3b847a125e78037983d3a27c76212e2fc7a0c3a813591ec0de53613e0be874 # 2026.07.24 (as of 2026-07-26)
     container_name: metube
     restart: unless-stopped
     network_mode: service:ts-metube
@@ -239,7 +239,7 @@ services:
   # Chrome's sandbox. Concurrency is capped below upstream's 10 because
   # this is a small VM.
   sockpuppetbrowser:
-    image: dgtlmoon/sockpuppetbrowser@sha256:f166a963b550c29af465c2fac518212e7e3a75f14f0d2b840cf4b79677295764 # latest as of 2026-09-06
+    image: dgtlmoon/sockpuppetbrowser@sha256:f166a963b550c29af465c2fac518212e7e3a75f14f0d2b840cf4b79677295764 # latest as of 2026-09-06 (untagged upstream; image revision 954a742a)
     container_name: sockpuppetbrowser
     restart: unless-stopped
     environment:
