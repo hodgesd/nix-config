@@ -31,6 +31,7 @@
         "microcenter_deals_uv.6hr.py"
         "bball.1d.py"
         "lottery_value_uv.12h.py"
+        "software_versions.2h.py"
       ];
     };
   };
