@@ -86,6 +86,14 @@
     };
   };
 
+  # Journald ships with no size cap and drifts to its default ceiling of 10%
+  # of the filesystem — 3.9 GB here, holding ~10 weeks. 1G is roughly a month
+  # at the current rate, and more once sockpuppetbrowser's per-3-second stats
+  # spam stops landing here (see its `logging:` block in the homelab compose
+  # file). This only bounds future growth: reclaiming the existing overage
+  # needs a one-time `journalctl --vacuum-size=1G` on the host.
+  services.journald.extraConfig = "SystemMaxUse=1G";
+
   services.openssh = {
     enable = true;
     settings = {
