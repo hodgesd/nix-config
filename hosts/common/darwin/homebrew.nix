@@ -154,6 +154,15 @@
       # on every host, so the install can never succeed. dockutil: no longer
       # a cask upstream (formula only) and nothing here uses it. Both get
       # uninstalled from the mini by cleanup on its next activation.
+
+      # draw.io Desktop. Deliberately NOT a client for the self-hosted
+      # instance at drawio.jaguar-duckbill.ts.net — it bundles its own
+      # copy of the editor and talks to nothing but itself (upstream
+      # disables all external connections; DRAWIO_DISABLE_UPDATE=true
+      # kills even the version check). Worth having alongside the
+      # container because reaching the VM hairpins out through the ISP
+      # and back, so loading the 9.6 MB web editor takes ~14 s from here.
+      "drawio"
       "fastmail"
       "ghostty"
       "git-credential-manager"
