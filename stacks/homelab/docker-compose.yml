@@ -253,6 +253,16 @@ services:
       SCREEN_HEIGHT: "1024"
       SCREEN_DEPTH: "16"
       MAX_CONCURRENT_CHROME_PROCESSES: "4"
+    # Its stats thread logs "Active count 0 of max 4" every 3 seconds — ~58k
+    # messages/day, a third of the entire journal, none of it actionable. The
+    # host-wide docker log driver is journald, so override it here only: the
+    # local driver keeps `docker logs sockpuppetbrowser` working for debugging
+    # Chrome fetch failures, bounds it at 30 MB, and keeps it out of journald.
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
     cap_add:
       - SYS_ADMIN
 
