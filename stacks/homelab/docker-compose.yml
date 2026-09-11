@@ -221,7 +221,7 @@ services:
       - SYS_MODULE
 
   changedetection:
-    image: ghcr.io/dgtlmoon/changedetection.io@sha256:9458e933634f0ad8a777b92c3c71734e3e06b86aae7de3a6aad410427e254e81 # 0.60.2
+    image: ghcr.io/dgtlmoon/changedetection.io@sha256:7bb6963b730df6a1070f7a08a607b0eb7a87fe65abfa4742d876ad33bb1267eb # 0.60.4
     container_name: changedetection
     restart: unless-stopped
     network_mode: service:ts-changes
