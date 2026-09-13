@@ -164,6 +164,7 @@
       # and back, so loading the 9.6 MB web editor takes ~14 s from here.
       "drawio"
       "fastmail"
+      "fluidvoice" # voice-to-text dictation; installed by hand on mbp 2026-09-13
       "ghostty"
       "git-credential-manager"
       "google-chrome"
