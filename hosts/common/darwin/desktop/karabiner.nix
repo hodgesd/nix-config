@@ -49,9 +49,12 @@
       '';
       # Force overwrite to prevent .hm-backup files
       force = true;
-      # Restart Karabiner to apply changes
+      # Karabiner hot-reloads karabiner.json on its own; the restart is a
+      # belt-and-braces reconnect to the root grabber, which can drop the
+      # console_user_server across sleep/wake and stop remapping until one
+      # reconnects. Label must match `launchctl list | grep pqrs` (15.x).
       onChange = ''
-        /bin/launchctl kickstart -k gui/$(id -u)/org.pqrs.karabiner.karabiner_console_user_server 2>/dev/null || true
+        /bin/launchctl kickstart -k gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server 2>/dev/null || true
       '';
     };
   };
