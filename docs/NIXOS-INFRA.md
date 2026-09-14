@@ -27,6 +27,7 @@ with `just deploy` (see [Deploying](#deploying)).
 | `hermes-watchdog` | `hermes.nix` | Checks hermes unit + container, alerts via ntfy (`hermes-alerts` topic) | every 5 min |
 | `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls the seven VM services, heartbeat for the weekly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
 | `hc-heartbeat` | `healthchecks.nix` | Checks in with healthchecks.io (off-site dead-man for this VM) | every 5 min |
+| `hc-ntfy` | `healthchecks.nix` | Checks in with a second healthchecks.io check only while ntfy's `/v1/health` is healthy (alerts when the alerter is down) | every 5 min |
 | `samsclub-popcorn` | `samsclub-popcorn.nix` | **Temporary, expires 2026-12-12.** Curls a Sam's Club product page, alerts via ntfy (`changes` topic) when delivery from the O'Fallon club comes back in stock; after expiry it only reminds you to remove it. Manual test: `samsclub-popcorn-check --test` | every 2 h, 06–22 |
 
 Shared server baseline (tailscale from locked unstable, docker_29,
@@ -57,12 +58,16 @@ Alerts go to ntfy topic `gatus` after 3 consecutive failures, resolved after
 after a side-by-side trial; `docs/GATUS-EVAL.md` has the mapping and the
 reasons.
 
-Two things Gatus here cannot do, handled separately:
+Things Gatus here cannot do, handled separately:
 
 - **See this VM die.** Gatus and ntfy both live on the VM. `healthchecks.nix`
   checks in with healthchecks.io every 5 min; if the check-ins stop (VM,
   power, or internet down), healthchecks.io alerts through its own channels.
   Period 5 min, grace 5 min → ~10 min to alert.
+- **See ntfy die.** Gatus alerts *through* ntfy, so a dead ntfy is silent.
+  `hc-ntfy` pings a second healthchecks.io check only while ntfy's
+  `/v1/health` (via its tailnet name) says healthy. Period 5 min, grace
+  10 min, so a deploy's container recreate doesn't page.
 - **Route to the sidecar directly.** Gatus is native, so `ts-status` reaches
   it over the compose bridge, which the firewall does not trust; `gatus.nix`
   adds one iptables rule for TCP 8080 from Docker's range. The LAN stays
@@ -111,7 +116,7 @@ aborts activation *before* any service restarts.
 | Secret | Consumers |
 |---|---|
 | `easy-afd-env` | easy-afd, refresh (OPENAIP_API_KEY, AUTOROUTER_*, FAA_NMS_*, GATUS_REFRESH_PUSH_URL/TOKEN) |
-| `healthchecks-env` | hc-heartbeat (HC_PING_URL — the healthchecks.io check URL is the credential) |
+| `healthchecks-env` | hc-heartbeat (HC_PING_URL), hc-ntfy (HC_NTFY_PING_URL) — each healthchecks.io ping URL is a credential |
 | `cloudflare-acme-env` | ACME (CLOUDFLARE_DNS_API_TOKEN + propagation tuning) |
 | `nas-backup-credentials` | /mnt/data mount + backup script (SMB user `nixos-backup`) |
 | `homelab-env` | compose interpolation (TS_AUTHKEY for sidecars) |
