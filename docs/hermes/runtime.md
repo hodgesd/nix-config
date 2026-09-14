@@ -212,5 +212,6 @@ VM, power, or internet being down.
 Subscribe to both topics (`hermes-alerts`, `gatus`). Verified 2026-09-02 by inducing a
 `mcp-fastmail` stop: FAILED and recovered alerts both delivered.
 Not yet covered: Anthropic API outages while the process stays up (the sentinel's
-brief check catches the daily consequence), and ntfy's own cache is 12h —
+brief check catches the daily consequence), and ntfy's cache is 72h, persisted to
+`/srv/homelab/ntfy/cache/cache.db` (since 2026-09-14) —
 old alerts age out of `/json?poll=1`, they were still delivered.

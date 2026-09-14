@@ -85,7 +85,7 @@ services:
       - SYS_MODULE
 
   ntfy:
-    image: binwiederhier/ntfy@sha256:b32b4221a64ec2e7c000f0782b2feef24022e1a09a24e531640f4cbba6cfa1e6 # v2.23.0 (as of 2026-07-26)
+    image: binwiederhier/ntfy@sha256:6ef4b819f722fccdc036af611c4774cfdc2de821ab74fdd48bbf4c9d6f8973da # v2.28.0 (as of 2026-09-14)
     container_name: ntfy
     restart: unless-stopped
     network_mode: service:ts-ntfy
@@ -101,6 +101,13 @@ services:
       # the app is opened. base-url must be set for the relay to work.
       NTFY_BASE_URL: https://ntfy.jaguar-duckbill.ts.net
       NTFY_UPSTREAM_BASE_URL: https://ntfy.sh
+      # Persist the message cache (SQLite, under /srv/homelab so the nightly
+      # backup mirrors it). Without a cache file ntfy keeps messages in memory
+      # only: a container recreate or VM reboot drops them, including ones the
+      # iPhone app hasn't fetched yet after its ntfy.sh wake-up ping. 72h
+      # (default 12h) lets a phone that was offline over a weekend catch up.
+      NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+      NTFY_CACHE_DURATION: 72h
     volumes:
       - ./ntfy/cache:/var/cache/ntfy
       - ./ntfy/config:/etc/ntfy
