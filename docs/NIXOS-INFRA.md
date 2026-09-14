@@ -166,7 +166,11 @@ between machines) and `/mnt/data/Videos/MeTube` (regenerable media).
   `homelab-env` secret).
 - **changedetection.io:** `/srv/homelab/changedetection` (from the NAS
   mirror) is the whole state — watches, history, password, notification
-  URLs. The sidecar identity is `/srv/homelab/ts-changes`.
+  URLs. The sidecar identity is `/srv/homelab/ts-changes`. Notification
+  priority is set per tag, not globally (since 2026-09-14): the `software`
+  tag posts `ntfys://ntfy.jaguar-duckbill.ts.net/changes?priority=low`
+  (silent on iPhone) and `price` posts `?priority=high`. The global URL
+  (default priority) only applies to untagged watches.
 
 ## Gotchas (hard-won)
 
