@@ -9,9 +9,11 @@
   pkgs,
   ...
 }: let
-  # ntfy is tailnet-only, so the topic name isn't a secret. Subscribe with:
-  #   ntfy subscribe https://ntfy.jaguar-duckbill.ts.net/hermes-watchdog
-  ntfyUrl = "https://ntfy.jaguar-duckbill.ts.net/hermes-watchdog";
+  # ntfy is tailnet-only, so the topic name isn't a secret. Same topic as
+  # wan-watch and hermes-sentinel: the one the phone actually subscribes to.
+  # (Until 2026-09-13 this used its own hermes-watchdog topic, which the
+  # phone wasn't subscribed to, so Hermes-down alerts went nowhere.)
+  ntfyUrl = "https://ntfy.jaguar-duckbill.ts.net/hermes-alerts";
   curl = lib.getExe pkgs.curl;
   dockerPkg = config.virtualisation.docker.package;
 
