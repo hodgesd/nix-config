@@ -10,7 +10,7 @@
 # "check is broken" alert fires, and the fix is to remove this module,
 # not to work around the block.
 #
-# How: hourly (06–22), fetch the page, read the DELIVERY entry of
+# How: every 2 hours (06–22), fetch the page, read the DELIVERY entry of
 # fulfillmentOptions from its __NEXT_DATA__ JSON, and ntfy on each
 # OUT_OF_STOCK → in-stock edge (topic `changes`, alongside
 # changedetection's alerts). Going out of stock is silent.
@@ -87,8 +87,9 @@
         exit 0
       fi
 
-      # A failed check is never a stock signal. Alert once after 6 in a
-      # row (about six daytime hours), then stay quiet until it recovers.
+      # A failed check is never a stock signal. Alert once after 3 in a
+      # row (about six daytime hours at a 2 h interval), then stay quiet
+      # until it recovers.
       fail() {
         echo "check failed: $1" >&2
         if [ "$test_mode" = 1 ]; then
@@ -97,7 +98,7 @@
         local count
         count=$(( $(cat "$state_dir/failures" 2>/dev/null || echo 0) + 1 ))
         echo "$count" > "$state_dir/failures"
-        if [ "$count" -ge 6 ] && [ ! -e "$state_dir/broken" ]; then
+        if [ "$count" -ge 3 ] && [ ! -e "$state_dir/broken" ]; then
           notify "Sam's Club popcorn check is broken" high warning \
             "$count checks in a row failed: $1. If Sam's Club now blocks curl, remove ./samsclub-popcorn.nix rather than working around it."
           touch "$state_dir/broken"
@@ -186,9 +187,9 @@ in {
   systemd.timers.samsclub-popcorn = {
     wantedBy = ["timers.target"];
     timerConfig = {
-      # Hourly 06:00–22:00 Central (time.timeZone in nixos-common.nix);
+      # Every 2 hours, 06:00–22:00 Central (time.timeZone in nixos-common.nix);
       # overnight restocks show up at the 06:00 check.
-      OnCalendar = "*-*-* 06..22:00:00";
+      OnCalendar = "*-*-* 06..22/2:00:00";
       RandomizedDelaySec = "10m";
     };
   };
