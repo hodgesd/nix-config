@@ -27,7 +27,7 @@ with `just deploy` (see [Deploying](#deploying)).
 | `hermes-watchdog` | `hermes.nix` | Checks hermes unit + container, alerts via ntfy (`hermes-watchdog` topic) | every 5 min |
 | `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls the seven VM services, heartbeat for the weekly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
 | `hc-heartbeat` | `healthchecks.nix` | Checks in with healthchecks.io (off-site dead-man for this VM) | every 5 min |
-| `samsclub-popcorn` | `samsclub-popcorn.nix` | **Temporary, expires 2026-12-12.** Curls a Sam's Club product page, alerts via ntfy (`changes` topic) when delivery from the O'Fallon club comes back in stock; after expiry it only reminds you to remove it. Manual test: `samsclub-popcorn-check --test` | hourly 06–22 |
+| `samsclub-popcorn` | `samsclub-popcorn.nix` | **Temporary, expires 2026-12-12.** Curls a Sam's Club product page, alerts via ntfy (`changes` topic) when delivery from the O'Fallon club comes back in stock; after expiry it only reminds you to remove it. Manual test: `samsclub-popcorn-check --test` | every 2 h, 06–22 |
 
 Shared server baseline (tailscale from locked unstable, docker_29,
 openssh with LAN key, firewall trusting only `tailscale0`, Cachix
