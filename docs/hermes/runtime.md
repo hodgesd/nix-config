@@ -203,7 +203,7 @@ arrived. Composed output is kept under
 | `hermes-alerts` | unifi-device-watch (15 min) | never-seen MAC joins |
 | `hermes-alerts` | **hermes-sentinel (10 min)** | outcome checks, edge-triggered: mini bridges' auth wall (401 = healthy), `mcp-unifi`/`mcp-fastmail` active (a revoked Fastmail token = crash-loop = alert), today's morning brief ran AND delivered (judged after 05:40), nightly `homelab-backup` result |
 | `hermes-alerts` | hermes-watchdog (5 min) | agent unit/container down |
-| `gatus` | Gatus (`gatus.nix`, 60 s checks, alert after 3 failures) | any homelab endpoint down/recovered: mini + NAS ping, the six VM services, the weekly Easy A/FD refresh heartbeat |
+| `gatus` | Gatus (`gatus.nix`, 60 s checks, alert after 3 failures) | any homelab endpoint down/recovered: mini + NAS ping, all nine compose apps + Easy A/FD, the weekly Easy A/FD refresh heartbeat |
 
 Off-tailnet: healthchecks.io (`healthchecks.nix`) alerts through its own
 channels when the VM stops checking in — the only signal that survives the
