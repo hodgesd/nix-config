@@ -158,7 +158,8 @@ between machines) and `/mnt/data/Videos/MeTube` (regenerable media).
 - **Whole VM:** Proxmox → storage → Backups → newest archive → Restore
   (same or new VMID) → boot. Verify /healthz + docker ps. Note: a
   restored VM keeps its host key, so sops still decrypts.
-- **From scratch (no vzdump):** install NixOS 25.11 → clone this repo →
+- **From scratch (no vzdump):** install NixOS 26.05 (the flake's release;
+  `system.stateVersion` stays "25.11" — never bump it) → clone this repo →
   **rotate the sops host key** (see above; needs the Mac age key, or
   restore secrets from the NAS `nixos-infra/secrets/` plaintext mirror)
   → copy `hardware-configuration.nix` from the new install into
