@@ -238,11 +238,14 @@ byte-for-byte as generated on the VM — don't format it.
 ## Flake Inputs
 
 Tracked in `flake.lock`, update with `just update`:
-- `nixpkgs` — nixos-25.11 (shared by darwin and NixOS)
+- `nixpkgs` — nixos-26.05 (shared by darwin and NixOS). Release branches
+  stop getting fixes ~7 months after release (26.05: 2026-12-31); `just
+  update` never crosses to the next release, so bump the branch refs here,
+  in `nix-darwin` and in `home-manager` together.
 - `nixpkgs-unstable` — rolling; provides `unstablePkgs` (incl. tailscale on
   the VM — check for MagicDNS regressions before bumping, see NIXOS-INFRA.md)
-- `nix-darwin` — nix-darwin-25.11
-- `home-manager` — release-25.11
+- `nix-darwin` — nix-darwin-26.05
+- `home-manager` — release-26.05
 - `nix-homebrew` — declarative Homebrew. No `package` override: it pins its
   own brew (6.x). Third-party taps need `brew trust`, which the activation
   script emits for each entry in `homebrew.taps`.

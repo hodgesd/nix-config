@@ -35,7 +35,9 @@
 
     # Homebrew Bundle
     echo >&2 "Homebrew bundle..."
-    if [ -f "${config.homebrew.brewPrefix}/brew" ]; then
+    # nix-darwin 26.05 replaced homebrew.brewPrefix (the bin dir) with
+    # homebrew.prefix (`brew --prefix`), hence the explicit /bin.
+    if [ -f "${config.homebrew.prefix}/bin/brew" ]; then
       fakeMacOS=""
       if [ "$(/usr/bin/sw_vers -productVersion | cut -d. -f1)" -gt 26 ]; then
         fakeMacOS="HOMEBREW_FAKE_MACOS=26.0"
@@ -49,17 +51,20 @@
       # state a rebuilt Mac would silently lose. `|| true` because older
       # brews have no `trust` subcommand.
       ${lib.concatMapStringsSep "\n" (tap: ''
-        PATH="${config.homebrew.brewPrefix}:$PATH" \
+        PATH="${config.homebrew.prefix}/bin:$PATH" \
         sudo --user=${lib.escapeShellArg config.homebrew.user} --set-home \
           brew trust ${lib.escapeShellArg tap.name} >/dev/null 2>&1 || true
       '')
       config.homebrew.taps}
 
-      PATH="${config.homebrew.brewPrefix}:${lib.makeBinPath [pkgs.mas]}:$PATH" \
+      # Same invocation as upstream nix-darwin 26.05 (--preserve-env=PATH
+      # plus `env`), with $fakeMacOS slotted in as an env assignment.
+      PATH="${config.homebrew.prefix}/bin:${lib.makeBinPath [pkgs.mas]}:$PATH" \
       sudo \
+        --preserve-env=PATH \
         --user=${lib.escapeShellArg config.homebrew.user} \
         --set-home \
-        $fakeMacOS ${config.homebrew.onActivation.brewBundleCmd}
+        env $fakeMacOS ${config.homebrew.onActivation.brewBundleCmd}
     else
       echo -e "\e[1;31merror: Homebrew is not installed, skipping...\e[0m" >&2
     fi
