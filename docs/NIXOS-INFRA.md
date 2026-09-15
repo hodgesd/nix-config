@@ -233,6 +233,15 @@ New since the flake migration (2026-07-26):
 - **`mnt-data.automount` can't be "reloaded"** — switch-to-configuration
   exits 4 when it tries; `systemctl restart mnt-data.automount` is the
   fix and the mount itself is unaffected.
+- **A release upgrade makes `just deploy` look like it failed, twice.**
+  Seen on 25.11 → 26.05 (2026-09-15): the switch restarts sshd, so the ssh
+  session dies mid-activation and the recipe prints "activation unit
+  failed" — check `systemctl show -p Result nixos-deploy` (it was
+  `success`) and `readlink /run/current-system` before believing it. And
+  switch-to-configuration exits 4 on "Failed to reload dbus-broker.service"
+  because 26.05 switches D-Bus implementations; the reboot the upgrade
+  needs anyway clears it. `hc-ntfy` also fails once per deploy: ntfy is
+  down while docker restarts. The next timer run recovers it.
 
 ## Related
 
