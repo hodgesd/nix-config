@@ -108,6 +108,17 @@ in {
         (icmp "mini" "ping" "100.122.244.86")
         # UNAS Pro 8 on the LAN — backup and Data share target.
         (icmp "nas" "ping" "192.168.1.142")
+        # Home Assistant Yellow — the house. A separate box, so unlike the
+        # VM's own services Gatus can genuinely observe it dying; no
+        # dead-man needed. Both checks deliberately go over the tailnet:
+        # they exercise the Tailscale add-on, the only remote path to the
+        # box. Plain HTTP on :8123 on purpose — the tailnet is WireGuard-
+        # encrypted end to end, and the add-on's Tailscale Serve (HTTPS on
+        # 443) failed to start in 0.30.0 so it is left disabled; see
+        # docs/HOME-ASSISTANT.md. /manifest.json answers 200 without auth,
+        # so no long-lived HA token has to live in sops just to monitor it.
+        (icmp "yellow" "ping" "100.100.120.31")
+        (http "yellow" "home-assistant" "http://homeassistant.jaguar-duckbill.ts.net:8123/manifest.json" [])
         # This VM's services, all through their tailnet/public names so
         # DNS, the sidecar, TLS and the app are exercised together.
         (http "nixos-infra" "actual-budget" "https://budget.jaguar-duckbill.ts.net" [])
