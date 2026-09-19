@@ -39,7 +39,7 @@ port → restart (the web terminal through Ingress keeps working).
 
 Two things the CLI cannot do, learned the hard way:
 
-- **`ha addons options` does not exist** (CLI 4.x). Add-on options are
+- **`ha addons options` does not exist** (CLI 4.x and 5.5 alike). Add-on options are
   set with the Supervisor API from inside the SSH shell, and the body
   must be the *full* options object — a partial one fails schema
   validation:
@@ -105,19 +105,25 @@ before clicking anything else.
 
 Coordinator: a **ConBee II USB dongle** on `/dev/ttyACM0`
 (`/dev/serial/by-id/usb-dresden_elektronik_ingenieurtechnik_GmbH_ConBee_II_DE2292798-if00`),
-driven by ZHA with `radio_type: deconz`. Four devices. HA calls deCONZ
+driven by ZHA with `radio_type: deconz`. Three end devices, all Third
+Reality 3RSP02028BZ smart plugs (power-monitoring), plus the coordinator:
+`Outlet_Kobalt` (Dining Room), `Mac Mini Outlet` (Office),
+`Outlet_Dell_R720U` (Basement, on a Dell R720 server). All three are on
+firmware `0x1001305c`; `0x10013065` is offered. HA calls deCONZ
 "deprecated hardware with end-of-life firmware" and warns it degrades
-past ~15–20 devices; at four it is fine.
+past ~15–20 devices; at three it is fine.
 
 The Yellow's **onboard Silicon Labs radio (`/dev/ttyAMA1`) is unused.**
 Migrating ZHA onto it (Settings → ZHA → *Migrate radio*, or backup/restore
 of the coordinator) is a worthwhile, modest follow-up — with four devices
-even a full re-pair is a short job. Never run the multiprotocol
+even a full re-pair of three plugs is a short job. Never run the multiprotocol
 (Zigbee+Thread) firmware on it; that path is unstable and unsupported.
 
-Device firmware updates (e.g. the "Mac Mini Outlet" plug) are OTAs to end
-devices — slow and mesh-dependent, do one at a time, nothing else in
-flight. A *coordinator* firmware update is a different animal: its own
+Device firmware updates are OTAs to end devices — slow and
+mesh-dependent, one at a time, nothing else in flight. The three plugs
+are the same model, so the same OTA will come up for each: do `Mac Mini
+Outlet` first (it powers a retired machine), and `Outlet_Dell_R720U` last,
+when the server can tolerate a relay glitch. A *coordinator* firmware update is a different animal: its own
 day, its own backup.
 
 ## Monitoring
