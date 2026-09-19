@@ -108,7 +108,7 @@ Coordinator: a **ConBee II USB dongle** on `/dev/ttyACM0`
 driven by ZHA with `radio_type: deconz`. Three end devices, all Third
 Reality 3RSP02028BZ smart plugs (power-monitoring), plus the coordinator:
 `Outlet_Kobalt` (Dining Room), `Mac Mini Outlet` (Office),
-`Outlet_Dell_R720U` (Basement, on a Dell R720 server). All three are on
+`Outlet_Dell_R720U` (Basement, on a decommissioned Dell R720). All three are on
 firmware `0x1001305c`; `0x10013065` is offered. HA calls deCONZ
 "deprecated hardware with end-of-life firmware" and warns it degrades
 past ~15–20 devices; at three it is fine.
@@ -121,9 +121,10 @@ even a full re-pair of three plugs is a short job. Never run the multiprotocol
 
 Device firmware updates are OTAs to end devices — slow and
 mesh-dependent, one at a time, nothing else in flight. The three plugs
-are the same model, so the same OTA will come up for each: do `Mac Mini
-Outlet` first (it powers a retired machine), and `Outlet_Dell_R720U` last,
-when the server can tolerate a relay glitch. A *coordinator* firmware update is a different animal: its own
+are the same model, so the same OTA will come up for each. `Mac Mini
+Outlet` and `Outlet_Dell_R720U` both power decommissioned machines, so
+their OTAs are consequence-free; `Outlet_Kobalt` is the only plug with
+something live behind it — do that one last. A *coordinator* firmware update is a different animal: its own
 day, its own backup.
 
 ## Monitoring
