@@ -90,7 +90,13 @@ If more than ~3 releases behind, hop via the last release of each year.
 Three verified tars from the revival live on the Mac at
 `~/Backups/homeassistant/` (`pre_upgrade_2026-09-19`, `pre_core_2025-12-05`,
 `pre_core_2026-09-03`); copy them to the UNAS `backups` share. They are
-**unencrypted** — no key needed to restore.
+**unencrypted** — no key needed to restore. The same three are the only
+ones left in `/backup` on the box: on 2026-09-20 the ten others (2022–2025
+partials from Core versions that can no longer be restored, two 20 KB
+add-on stubs, and the two automatic pre-update backups `--backup` made
+during the hops) were removed with `ha backups remove <slug>` after the
+keepers' `sha256sum` matched the Mac copies. `ha backups reload` afterwards
+makes the Supervisor re-scan the directory.
 
 **Scheduled backups have never been configured** (`recurrence: never`).
 To set up: Settings → System → Storage → *Add network storage* →
@@ -152,11 +158,23 @@ box, so Gatus can genuinely observe it dying; no dead-man needed.
 
 ## Configuration
 
-`/config/configuration.yaml` is 11 lines of includes plus an `http:` block
-(`use_x_forwarded_for` + `trusted_proxies: [127.0.0.1, ::1]`) that is
-harmless today and required the moment Tailscale Serve works. Everything
+`/config/configuration.yaml` is 11 lines: `default_config`, the
+`google_translate` TTS platform, and the three `!include`s. Everything
 else — devices, entities, dashboards, most automations — is UI-managed
 JSON in `/config/.storage/`, which is **never hand-edited**.
+
+**There is no `http:` block, and adding one does nothing.** Since 2026.9
+the `http` integration is configured from the UI (Settings → System →
+Network) and stored in `/config/.storage/http`. On the first 2026.9.3
+boot Core migrated whatever YAML existed (nothing) into that store and set
+`yaml_migration_done`; from then on any `http:` YAML is **ignored
+entirely** and only raises the repair "HTTP YAML configuration is ignored
+after migration". A block with `use_x_forwarded_for` + `trusted_proxies`
+was added during the revival, six minutes *after* that migration, so it
+never took effect; it was removed on 2026-09-20 (`/config` commit
+`60e89a5`) and Core restarted to clear the repair. Reverse-proxy trust
+for the Tailscale add-on's loopback proxy (`127.0.0.1`, `::1`) has to be
+set in that UI page, not in YAML.
 
 `/config` is a git repo on the box (first commit "as found after
 upgrade"; `.gitignore` drops `.storage/`, `secrets.yaml`, `*.db*`, logs,
@@ -178,11 +196,30 @@ been fine for a while.
   snippet above, `ha addons start a0d7b954_tailscale`, and *immediately*
   `ha addons logs a0d7b954_tailscale` to catch the failing step; revert
   is ~10 s. Not urgent — it buys a lock icon and parity with the `ts-*`
-  sidecars, not security.
-- **Reolink:** "Back Left" (`192.168.1.41`) is offline outright (bootstrap
-  waited 21 min on it); all three cameras (`.41`, `.87`, `.19`) also drop
-  weekly around **01:59–02:00 on Sundays** — some scheduled network
-  event, not HA.
+  sidecars, not security. **Before retrying**, set reverse-proxy trust
+  under Settings → System → Network (see Configuration): during the
+  trial HA had no trusted proxies at all — the YAML block meant to
+  provide them was being ignored — and its log filled with "A request
+  from a reverse proxy was received from 127.0.0.1, but your HTTP
+  integration is not set-up for reverse proxies". Whether that alone is
+  what made the add-on exit is unknown; it is the first thing to rule out.
+- **Reolink:** four RLC-822A cameras — Front `192.168.1.87`, Back Left
+  `.41`, Front Right `.38`, Back Right `.19`, all on firmware
+  `v3.1.0.1643_2402219215` (2024-02). **"Front Right" (`.38`) is offline
+  outright** — no HTTP, no RTSP — and Core's bootstrap waits up to ~27 min
+  on it at every start (an earlier draft of this doc blamed Back Left;
+  `.41` answers fine). Either bring the camera back or disable its
+  config entry so restarts are quick. All cameras also drop weekly around
+  **01:59–02:00 on Sundays** — some scheduled network event, not HA.
+- **`rpi_firmware_update_blocked`** (Settings → System → Repairs) is
+  **permanent by design — ignore it.** The Supervisor sees a newer CM4
+  bootloader EEPROM (`1767975133`, 2026-01, vs the installed `1638442201`,
+  2021-12) but the OS agent reports `blocked_reason:
+  eeprom_update_unavailable`: a CM4's EEPROM can only be flashed with
+  `rpiboot` over USB (jumper set, module in USB-boot mode), never in
+  place. There is no in-UI fix and never will be. State is at
+  `GET http://supervisor/os/boards/raspberrypi/firmware` with the token
+  from the SSH snippet above.
 - **iCloud** integration password expired (pre-existing): Settings →
   Integrations → iCloud → *Configure*.
 - **Tailscale key expiry** for the `homeassistant` node should be
