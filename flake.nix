@@ -13,6 +13,12 @@
     # Tier-2 (best-effort) upstream; deliberately NOT following our nixpkgs —
     # hermes pins its own tested deps. Update with: nix flake update hermes-agent
     hermes-agent.url = "github:NousResearch/hermes-agent";
+    # Tier-2 like hermes-agent: herdr, OpenCode and pi for the agent workbench
+    # (hosts/nixos/nixos-infra/agent-workbench.nix). Deliberately NOT following
+    # our nixpkgs — numtide only builds/caches against its own pin; following
+    # would rebuild herdr (Rust+Zig) on every deploy. Update with:
+    #   nix flake update llm-agents
+    llm-agents.url = "github:numtide/llm-agents.nix";
     swiftbar_plugins = {
       url = "github:hodgesd/swiftbar_plugins";
       flake = false; # repo has no flake.nix; treat as raw files
