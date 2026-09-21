@@ -29,6 +29,7 @@ with `just deploy` (see [Deploying](#deploying)).
 | `hc-heartbeat` | `healthchecks.nix` | Checks in with healthchecks.io (off-site dead-man for this VM) | every 5 min |
 | `hc-ntfy` | `healthchecks.nix` | Checks in with a second healthchecks.io check only while ntfy's `/v1/health` is healthy (alerts when the alerter is down) | every 5 min |
 | `samsclub-popcorn` | `samsclub-popcorn.nix` | **Temporary, expires 2026-12-12.** Curls a Sam's Club product page, alerts via ntfy (`changes` topic) when delivery from the O'Fallon club comes back in stock; after expiry it only reminds you to remove it. Manual test: `samsclub-popcorn-check --test` | every 2 h, 06–22 |
+| (user `agent`) | `agent-workbench.nix` | Agent workbench: herdr multiplexer + OpenCode + pi for the unprivileged `agent` user. Tailscale SSH only, no listeners, one credit-limited OpenRouter key. See [Agent workbench](#agent-workbench-agent-workbenchnix) | on demand |
 
 Shared server baseline (tailscale from locked unstable, docker_29,
 openssh with LAN key, firewall trusting only `tailscale0`, Cachix
@@ -83,6 +84,33 @@ a Gatus external endpoint (future work).
 Email = Fastmail (MX/SPF/DKIM/DMARC). API token (zone-scoped, DNS edit)
 in the `cloudflare-acme-env` secret for ACME + automation.
 
+### Agent workbench (`agent-workbench.nix`)
+
+An always-on desk for terminal coding agents, owned by the unprivileged
+`agent` user (no wheel / docker / hermes — the boundary that makes a
+prompt-free agent acceptable on this shared box). Packages come from the
+`llm-agents` flake input (numtide, daily-updated, own binary cache).
+
+- **herdr** — tmux-style multiplexer built for agents: background server,
+  agent-state sidebar, layout restore and agent resume after a restart.
+  Unix socket only; nothing listens on the network.
+- **OpenCode** — daily driver. Permission rails seeded on (`edit` and
+  unknown commands ask; `rm`, `git push`, `sudo` denied; the plan agent is
+  read-only), `share` disabled, autoupdate off.
+- **pi** — minimal harness with no permission prompts by design: for
+  cheap short tasks, scripted runs (`pi -p`), weak or local models, and
+  read-only exploration (`pi --tools read,grep,find,ls`).
+
+Use: `ssh -t agent@nixos-infra-1 herdr` (Tailscale SSH), type `opencode`
+or `pi` in a pane, `ctrl+b q` to detach; the same command reattaches and
+`herdr server stop` ends the desk. Both agents use one workbench-only
+OpenRouter key (sops `workbench-env`, credit-limited at OpenRouter) that
+wrapper scripts load into the agent's process only. The three config
+files are seeded once and then belong to the user (delete one and run
+`systemd-tmpfiles --create` to re-seed). `/home/agent` is not backed up.
+Update path: `nix flake update llm-agents` → `just deploy-check` →
+`just deploy`.
+
 ## Deploying
 
 From the Mac (repo on `main`):
@@ -124,6 +152,7 @@ aborts activation *before* any service restarts.
 | `unifi-hermes-key` | mcp-unifi (read-only UniFi API key) |
 | `fastmail-hermes-ro-token` | mcp-fastmail (read-only JMAP token) |
 | `gatus-env` | gatus (GATUS_NTFY_TOPIC, GATUS_REFRESH_TOKEN — the same token sits in `easy-afd-env` so the refresh can push its heartbeat) |
+| `workbench-env` | `pi` / `opencode` wrappers (OPENROUTER_API_KEY — workbench-only key with a credit limit; owner `agent`, 0400, re-read on every launch so no restartUnits) |
 | `hodgesd-password` | `hashedPasswordFile` (seeds login on fresh installs) |
 
 Edit: `sops secrets/nixos-infra.yaml` (opens your editor decrypted,
@@ -150,7 +179,9 @@ re-encrypts on save), then `just deploy`.
 
 **Deliberately NOT backed up:** `/var/lib/easy-afd` (refresh scripts
 rebuild it; `alternates.pickle` is pandas-version-coupled — NEVER copy
-between machines) and `/mnt/data/Videos/MeTube` (regenerable media).
+between machines), `/mnt/data/Videos/MeTube` (regenerable media), and
+`/home/agent` (agent workbench: repos live in git, sessions are
+disposable).
 
 ## Restore drills
 
