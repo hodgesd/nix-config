@@ -184,8 +184,11 @@ in {
   };
 
   # Parents are listed explicitly: tmpfiles would otherwise create them
-  # root-owned. `C` copies the store file (root, 0444) only when the
-  # target is missing; the `z` line right after hands it to the user.
+  # root-owned. `C` copies the store file only when the target is missing
+  # and applies the mode/user/group columns to the copy — they must be on
+  # the C line itself: a second line for the same path (e.g. a `z`) is
+  # dropped by tmpfiles as a duplicate ("Duplicate line for path"), which
+  # left the first deploy's seeds root-owned 0444.
   systemd.tmpfiles.rules = [
     "d /home/agent/.pi 0750 agent agent -"
     "d /home/agent/.pi/agent 0750 agent agent -"
@@ -196,11 +199,8 @@ in {
     # No Home Manager for this user either: suppress zsh's first-login
     # wizard (same as nixos-common.nix does for hodgesd).
     "f /home/agent/.zshrc 0644 agent agent -"
-    "C /home/agent/.pi/agent/settings.json - - - - ${piSettings}"
-    "z /home/agent/.pi/agent/settings.json 0644 agent agent -"
-    "C /home/agent/.config/herdr/config.toml - - - - ${herdrConfig}"
-    "z /home/agent/.config/herdr/config.toml 0644 agent agent -"
-    "C /home/agent/.config/opencode/opencode.json - - - - ${opencodeConfig}"
-    "z /home/agent/.config/opencode/opencode.json 0644 agent agent -"
+    "C /home/agent/.pi/agent/settings.json 0644 agent agent - ${piSettings}"
+    "C /home/agent/.config/herdr/config.toml 0644 agent agent - ${herdrConfig}"
+    "C /home/agent/.config/opencode/opencode.json 0644 agent agent - ${opencodeConfig}"
   ];
 }
