@@ -96,16 +96,17 @@
   # /model picker on first run; Ctrl+S there rewrites the seeded file.
   model = "anthropic/claude-sonnet-5";
 
-  piSettings = pkgs.writeText "pi-settings.json" (builtins.toJSON {
+  piSettingsText = builtins.toJSON {
     defaultProvider = "openrouter";
     defaultModel = model;
     defaultThinkingLevel = "medium";
-  });
+  };
+  piSettings = pkgs.writeText "pi-settings.json" piSettingsText;
 
   # Rails on, nothing leaves the box. `share = disabled`: OpenCode's /share
   # publishes a session to opencode.ai. Pushes are denied on purpose — do
   # them yourself in a shell pane; loosen in the user's copy when earned.
-  opencodeConfig = pkgs.writeText "opencode.json" (builtins.toJSON {
+  opencodeText = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
     model = "openrouter/${model}";
     provider.openrouter.options.apiKey = "{env:OPENROUTER_API_KEY}";
@@ -129,10 +130,11 @@
       edit = "deny";
       bash = "deny";
     };
-  });
+  };
+  opencodeConfig = pkgs.writeText "opencode.json" opencodeText;
 
   # Only deliberate settings; everything else is herdr's default.
-  herdrConfig = pkgs.writeText "herdr-config.toml" ''
+  herdrText = ''
     # Seeded by nix-config (agent-workbench.nix); yours to edit after that.
 
     [session]
@@ -144,6 +146,7 @@
     # Finished / needs-input pings reach the outer terminal over SSH.
     delivery = "terminal"
   '';
+  herdrConfig = pkgs.writeText "herdr-config.toml" herdrText;
 in {
   users.groups.agent = {};
   users.users.agent = {
@@ -168,6 +171,16 @@ in {
   nix.settings = {
     substituters = ["https://cache.numtide.com"];
     trusted-public-keys = ["niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="];
+  };
+
+  # Reference copies of the seeds, so what nix would write is visible on
+  # the VM (`cat /etc/agent-workbench/opencode.json`) and re-seeding is a
+  # plain copy. The tmpfiles sources stay the store files below: /etc
+  # entries are symlinks and `C` does not follow them.
+  environment.etc = {
+    "agent-workbench/pi-settings.json".text = piSettingsText;
+    "agent-workbench/opencode.json".text = opencodeText;
+    "agent-workbench/herdr-config.toml".text = herdrText;
   };
 
   # Parents are listed explicitly: tmpfiles would otherwise create them
