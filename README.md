@@ -120,6 +120,10 @@ A Proxmox guest VM on the HP mini PC, fully managed by this flake
   watched from outside by a healthchecks.io dead-man (`healthchecks.nix`)
 - **Hermes agent** (NousResearch) — Claude-backed agent in a container on the
   host docker daemon; Telegram bot front end + `hermes` CLI on the VM
+- **Agent workbench** (`agent-workbench.nix`) — herdr multiplexer + OpenCode +
+  pi for an unprivileged `agent` user, reached only over Tailscale SSH
+  (`ssh -t agent@nixos-infra-1 herdr`); packages from numtide's `llm-agents`
+  flake input, one credit-limited OpenRouter key in sops
 - **Nightly NAS backups** (03:30 → UNAS Pro 8) and weekly aeronautical-data refresh
 
 ### Deploying (from the Mac)

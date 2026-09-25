@@ -189,7 +189,8 @@ hyper - o : open -a "Obsidian"
 ### Homelab services
 
 Edit `hosts/nixos/nixos-infra/*.nix` (easy-afd, proxy, backup, storage,
-homelab-stack, hermes, gatus, healthchecks), then `just deploy-check` before
+homelab-stack, hermes, gatus, healthchecks, agent-workbench), then
+`just deploy-check` before
 `just deploy`.
 
 ## Adding a New Machine
@@ -251,6 +252,10 @@ Tracked in `flake.lock`, update with `just update`:
   own brew (6.x). Third-party taps need `brew trust`, which the activation
   script emits for each entry in `homebrew.taps`.
 - `sops-nix` — secrets
+- `llm-agents` — numtide's daily-updated packages for herdr, OpenCode and
+  pi (`hosts/nixos/nixos-infra/agent-workbench.nix`). Tier-2 like
+  `hermes-agent`: its own nixpkgs pin and binary cache, deliberately NOT
+  following ours. Update alone with `nix flake update llm-agents`.
 - `swiftbar_plugins` — custom SwiftBar plugins (non-flake)
 
 ## Directory Reference

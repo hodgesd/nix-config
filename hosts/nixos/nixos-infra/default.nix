@@ -29,6 +29,7 @@
     ./stirling-pdf.nix
     ./drawio.nix
     ./samsclub-popcorn.nix # TEMPORARY, expires 2026-12-12
+    ./agent-workbench.nix
   ];
 
   # Secrets: decrypted at activation by sops-nix into /run/secrets (tmpfs)
