@@ -42,10 +42,19 @@ deployed to /srv/homelab on every switch):** each app pairs with a
 homepage, librespeed, metube, changedetection (`changes`; plus a
 ports-less `sockpuppetbrowser` Chrome container it talks to over the
 compose network), stirling-pdf (`pdf`), drawio. All reachable at
-`https://<name>.jaguar-duckbill.ts.net`. Images are **pinned by digest**
-(human version in a trailing comment). To upgrade one: set its image to
-a tag, `just deploy`, then re-pin to the new digest
-(`docker image inspect --format '{{index .RepoDigests 0}}' <image>`).
+`https://<name>.jaguar-duckbill.ts.net`. Images are pinned as
+`repo:tag@sha256:…` — the digest decides what runs, the tag is there so
+Renovate can read the version.
+
+**Image updates (Renovate):** `renovate.json` at the repo root. Every
+Monday Renovate opens ONE grouped PR ("homelab images") with all
+minor/patch/digest bumps and their release notes; major versions only get
+a PR after you tick them on the Dependency Dashboard issue. Merging does
+not deploy anything. Weekly routine: read the PR → merge → `git pull` →
+`just deploy-check` → `just deploy` → watch Gatus. Rollback: `git revert`
+the merge, `just deploy`. Snapshot the VM first for a major bump of a
+stateful service (actual, adguard, changedetection, ntfy). Disable: remove
+`renovate.json` or uninstall the Renovate GitHub app.
 
 **Monitoring (Gatus, on this host):** `gatus.nix` — native `services.gatus`,
 monitors declared in Nix, SQLite history under `/var/lib/gatus`, dashboard
