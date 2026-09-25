@@ -12,8 +12,9 @@ name: Renovate 🔁
 
 on:
   schedule:
-    # Mondays 05:30 UTC = 00:30 Chicago, inside renovate.json's
-    # "* 0-5 * * 1" window and before the flake.lock bump at 06:00 UTC.
+    # Mondays 05:30 UTC, before the flake.lock bump at 06:00 UTC. This cron
+    # IS the schedule: renovate.json has none, so a manual dispatch opens
+    # PRs immediately instead of deferring to Monday.
     - cron: '30 5 * * 1'
   workflow_dispatch:
     inputs:

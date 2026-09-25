@@ -1,11 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Weekly update PR for the homelab compose images. Nix inputs are handled by the update-flake-lock workflow, so only docker-compose is enabled. Merging does not deploy — run `just deploy` afterwards.",
+  "description": "Weekly update PR for the homelab compose images, run by .github/workflows/renovate.yaml (its cron is the schedule — no `schedule` here, so a manual dispatch also opens PRs). Nix inputs are handled by update-flake-lock, so only docker-compose is enabled. Merging does not deploy — run `just deploy` afterwards.",
   "extends": ["config:recommended"],
   "enabledManagers": ["docker-compose"],
   "ignorePaths": ["stacks/arr-stack/**"],
   "timezone": "America/Chicago",
-  "schedule": ["* 0-5 * * 1"],
   "labels": ["dependencies"],
   "dependencyDashboard": true,
   "packageRules": [
