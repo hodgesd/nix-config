@@ -1,6 +1,6 @@
 # CI workflows
 
-Three workflows verify this config so breakage shows up before `darwin-rebuild switch`.
+These workflows verify this config so breakage shows up before `darwin-rebuild switch`.
 
 | Workflow | Trigger | Runner | What it does |
 |---|---|---|---|
@@ -8,10 +8,11 @@ Three workflows verify this config so breakage shows up before `darwin-rebuild s
 | `build.yaml` | `flake.lock` change, nightly, manual | macOS | Full `nix build` of all 3 hosts; pushes results to Cachix. |
 | `update-flake-lock.yaml` | weekly, manual | Linux | Opens a PR bumping `flake.lock`, gated by the above. |
 | `flake-checker.yaml` | every push, nightly | Linux | Audits `flake.lock` health (stale nixpkgs). |
+| `renovate.yaml` | weekly, manual | Linux | Self-hosted Renovate: opens one grouped PR bumping the homelab compose images (rules in `/renovate.json`). |
 
 ## One-time setup
 
-Only `build.yaml` needs setup (the Cachix cache). `eval.yaml` works immediately.
+`build.yaml` needs the Cachix cache and `renovate.yaml` needs a PAT; `eval.yaml` works immediately.
 
 ### 1. Create a free Cachix cache
 
@@ -48,3 +49,18 @@ Eval/Build automatically on the weekly bump PR, create a PAT with `repo` +
 ```bash
 gh secret set FLAKE_LOCK_PAT
 ```
+
+### 5. Renovate token
+
+`renovate.yaml` runs Renovate itself (no hosted app to install), so it needs a
+token that can open PRs and the Dependency Dashboard issue. Create a
+**fine-grained** PAT at <https://github.com/settings/personal-access-tokens/new>
+scoped to **this repository only** with Contents *read/write*, Pull requests
+*read/write*, Issues *read/write*, then:
+
+```bash
+gh secret set RENOVATE_TOKEN
+```
+
+Trigger a first run with `gh workflow run renovate.yaml` — it opens the
+Dependency Dashboard issue and the first grouped PR if anything is behind.
