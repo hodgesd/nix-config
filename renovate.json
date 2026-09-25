@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Weekly update PR for the homelab compose images. Nix inputs are handled by the update-flake-lock workflow, so only docker-compose is enabled. Merging does not deploy — run `just deploy` afterwards.",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["docker-compose"],
+  "ignorePaths": ["stacks/arr-stack/**"],
+  "timezone": "America/Chicago",
+  "schedule": ["* 0-5 * * 1"],
+  "labels": ["dependencies"],
+  "dependencyDashboard": true,
+  "packageRules": [
+    {
+      "description": "One PR per week for everything non-major, so there is a single item to review.",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "groupName": "homelab images"
+    },
+    {
+      "description": "Major versions can carry migrations for stateful services; wait until ticked on the Dependency Dashboard.",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "linuxserver tags are v<app>-ls<build>; treat the ls build number as part of the version.",
+      "matchPackageNames": ["linuxserver/**"],
+      "versioning": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-ls(?<build>\\d+)$"
+    }
+  ]
+}

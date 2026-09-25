@@ -121,7 +121,8 @@ option surface: `modules/nixos/compose-stack.nix` (systemd oneshot) and
 container runtimes expose a user-owned socket). Nix installs the repo's
 compose file into the stack dir and runs
 `docker compose up -d --remove-orphans` on change. The repo copy is
-authoritative and images are pinned by digest. Changing an image string
+authoritative and images are pinned as `repo:tag@sha256:…` (Renovate
+opens one grouped update PR weekly — see NIXOS-INFRA.md). Changing an image string
 recreates that container (config-hash change) even if it resolves to the
 same image.
 
