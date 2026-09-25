@@ -1,0 +1,45 @@
+# Self-hosted Renovate: opens the weekly "homelab images" PR for the compose
+# stack (rules in renovate.json at the repo root). Running it here instead of
+# installing the hosted Renovate GitHub app keeps the whole thing in git —
+# disable by deleting this file. It only reads registries and opens PRs;
+# nothing touches the VM until `just deploy`.
+#
+# Needs one secret: RENOVATE_TOKEN, a fine-grained PAT scoped to THIS repo
+# with Contents RW, Pull requests RW, Issues RW (Dependency Dashboard). A PAT
+# rather than GITHUB_TOKEN so Eval/Build actually run on the PRs it opens
+# (PRs from GITHUB_TOKEN never trigger other workflows).
+name: Renovate 🔁
+
+on:
+  schedule:
+    # Mondays 05:30 UTC = 00:30 Chicago, inside renovate.json's
+    # "* 0-5 * * 1" window and before the flake.lock bump at 06:00 UTC.
+    - cron: '30 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      log_level:
+        description: Renovate log level
+        default: info
+        type: choice
+        options: [info, debug]
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    name: Renovate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: renovatebot/github-action@v46.3.3
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          # renovate.json is already in the repo; never open an onboarding PR.
+          RENOVATE_ONBOARDING: 'false'
+          RENOVATE_REQUIRE_CONFIG: required
+          RENOVATE_GIT_AUTHOR: 'renovate <renovate@noreply.github.com>'
+          LOG_LEVEL: ${{ inputs.log_level || 'info' }}
