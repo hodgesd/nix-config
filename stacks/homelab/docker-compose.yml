@@ -5,7 +5,7 @@
 # (renovate.json; docs/NIXOS-INFRA.md). By hand: change tag AND digest.
 services:
   ts-budget:
-    image: tailscale/tailscale:v1.98.4@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-budget
     hostname: budget
     restart: unless-stopped
@@ -22,7 +22,7 @@ services:
       - SYS_MODULE
 
   actual-budget:
-    image: actualbudget/actual-server:26.5.2@sha256:1aeeb3985db55556e716dec25e08f6ce09308c2571b65cddbc6746ee6d5e0d45
+    image: actualbudget/actual-server:26.9.0@sha256:552beab3dec8c93d46b8b9245612d63c3f123b8a45063a474f53e229b17621d3
     container_name: actual-budget
     restart: unless-stopped
     network_mode: service:ts-budget
@@ -32,7 +32,7 @@ services:
       - ./actual-budget:/data
 
   ts-homepage:
-    image: tailscale/tailscale:v1.98.4@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-homepage
     hostname: homepage
     restart: unless-stopped
@@ -49,7 +49,7 @@ services:
       - SYS_MODULE
 
   homepage:
-    image: ghcr.io/gethomepage/homepage:v2.3.0@sha256:f820276654539cdc2cf0169f28188d135919a7984fad76d83d8d5ff1383f3705
+    image: ghcr.io/gethomepage/homepage:v2.4.0@sha256:643bd0be730d40f69d58028a55d1a896739333e8815786df42bc97f109ecbe61
     container_name: homepage
     restart: unless-stopped
     network_mode: service:ts-homepage
@@ -68,7 +68,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   ts-ntfy:
-    image: tailscale/tailscale:v1.98.4@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-ntfy
     hostname: ntfy
     restart: unless-stopped
@@ -113,7 +113,7 @@ services:
       - ./ntfy/config:/etc/ntfy
 
   ts-adguard:
-    image: tailscale/tailscale:v1.98.4@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-adguard
     hostname: adguard
     restart: unless-stopped
@@ -130,7 +130,7 @@ services:
       - SYS_MODULE
 
   adguardhome:
-    image: adguard/adguardhome:v0.107.76@sha256:7157eb1dc3b26c7af1d6898759a7b3f7d0fa09891fbd2d3caa6abc1057a9179b
+    image: adguard/adguardhome:v0.107.79@sha256:aba9e3bf0613be3ba3755e1fc311b126e2c24bec25e18b6483894a88283074f0
     container_name: adguardhome
     restart: unless-stopped
     network_mode: service:ts-adguard
@@ -141,7 +141,7 @@ services:
       - ./adguard/conf:/opt/adguardhome/conf
 
   ts-librespeed:
-    image: tailscale/tailscale:v1.98.4@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-librespeed
     hostname: librespeed
     restart: unless-stopped
@@ -158,7 +158,7 @@ services:
       - SYS_MODULE
 
   librespeed:
-    image: linuxserver/librespeed:v6.1.0-ls275@sha256:4f76560a263044e6bc5ca25287ab6f72259a1f22a53cbea585d87dfe34ff6e6a
+    image: linuxserver/librespeed:v6.3.0-ls291@sha256:5e7ba354832be35ed2638f58ff035e101c6494d7282a2cf88aa180545d7fd58c
     container_name: librespeed
     restart: unless-stopped
     network_mode: service:ts-librespeed
@@ -172,7 +172,7 @@ services:
       - ./librespeed/config:/config
 
   ts-metube:
-    image: tailscale/tailscale:v1.98.4@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-metube
     hostname: metube
     restart: unless-stopped
@@ -189,7 +189,7 @@ services:
       - SYS_MODULE
 
   metube:
-    image: ghcr.io/alexta69/metube:2026.07.24@sha256:3b3b847a125e78037983d3a27c76212e2fc7a0c3a813591ec0de53613e0be874
+    image: ghcr.io/alexta69/metube:2026.09.25@sha256:549f4b0eeb13b01ecae2a20b50153d17481b1d59b517de5ae0dddee03e058745
     container_name: metube
     restart: unless-stopped
     network_mode: service:ts-metube
@@ -211,7 +211,7 @@ services:
   # namespace; serve.json is nix-generated and bind-mounted from /etc like
   # ts-status, so nothing about this service is hand-made on the VM.
   ts-changes:
-    image: tailscale/tailscale:v1.98.4@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-changes
     hostname: changes
     restart: unless-stopped
@@ -228,7 +228,7 @@ services:
       - SYS_MODULE
 
   changedetection:
-    image: ghcr.io/dgtlmoon/changedetection.io:0.60.4@sha256:7bb6963b730df6a1070f7a08a607b0eb7a87fe65abfa4742d876ad33bb1267eb
+    image: ghcr.io/dgtlmoon/changedetection.io:0.60.7@sha256:096dae27b5d677b89f0e810fff95a70403271aa3ff3b6437952d2db9be7e74c5
     container_name: changedetection
     restart: unless-stopped
     network_mode: service:ts-changes
@@ -252,7 +252,7 @@ services:
   # Chrome's sandbox. Concurrency is capped below upstream's 10 because
   # this is a small VM.
   sockpuppetbrowser:
-    image: dgtlmoon/sockpuppetbrowser:latest@sha256:f166a963b550c29af465c2fac518212e7e3a75f14f0d2b840cf4b79677295764 # upstream publishes no version tags; Renovate bumps the digest
+    image: dgtlmoon/sockpuppetbrowser:latest@sha256:1d8f72d2ce2085faed4232e5ae1e65c02efe5b831a18e127829b267c260b4fb2 # upstream publishes no version tags; Renovate bumps the digest
     container_name: sockpuppetbrowser
     restart: unless-stopped
     environment:
@@ -278,7 +278,7 @@ services:
   # changedetection: the app shares this sidecar's network namespace and
   # serve.json is nix-generated and bind-mounted from /etc.
   ts-pdf:
-    image: tailscale/tailscale:v1.98.4@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-pdf
     hostname: pdf
     restart: unless-stopped
@@ -330,7 +330,7 @@ services:
   # the app shares this sidecar's network namespace and serve.json is
   # nix-generated and bind-mounted from /etc. Stateless: no app volume.
   ts-drawio:
-    image: tailscale/tailscale:v1.98.4@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-drawio
     hostname: drawio
     restart: unless-stopped
@@ -347,7 +347,7 @@ services:
       - SYS_MODULE
 
   drawio:
-    image: jgraph/drawio:31.4.5@sha256:a2c1de83dae975d44eb4ff4ccaa4f2d9f954c4915c767b000bc78909ae4e4dff
+    image: jgraph/drawio:31.4.6@sha256:139b43305b77c46575d5af5dcc7b6c38dc7ea22f430fdfe954fb8f96926643e5
     container_name: drawio
     restart: unless-stopped
     network_mode: service:ts-drawio
@@ -373,7 +373,7 @@ services:
   # serve.json is nix-generated and bind-mounted from /etc, and the proxy
   # target is host.docker.internal (the VM) instead of 127.0.0.1.
   ts-status:
-    image: tailscale/tailscale:v1.98.4@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-status
     hostname: status
     restart: unless-stopped
