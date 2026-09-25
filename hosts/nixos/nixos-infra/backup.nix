@@ -68,7 +68,12 @@
       exit "$rc"
     }
     trap cleanup EXIT
-    ${pkgs.cifs-utils}/bin/mount.cifs //192.168.1.142/backups "$mnt" \
+    # getExe' picks the `bin` output. Since nixpkgs 26.05 cifs-utils is split
+    # into outputs and the default one holds only lib/, so the plain
+    # ''${pkgs.cifs-utils} interpolation used before pointed at a mount.cifs
+    # that did not exist: the backup failed every night (exit 127) from
+    # 2026-09-15 to 2026-09-25 and nothing alerted.
+    ${lib.getExe' pkgs.cifs-utils "mount.cifs"} //192.168.1.142/backups "$mnt" \
       -o credentials="$creds",vers=3.0,dir_mode=0700,file_mode=0600
     dest="$mnt/nixos-infra"
     mkdir -p "$dest/secrets"
