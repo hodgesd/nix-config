@@ -16,6 +16,7 @@
 # NAS IP 192.168.1.142 also appears in storage.nix (Data share mount).
 {
   config,
+  lib,
   pkgs,
   ...
 }: let
@@ -34,7 +35,12 @@
     fi
     compose="${dockerPkg}/bin/docker compose -f /srv/homelab/docker-compose.yml"
     mnt=$(${pkgs.coreutils}/bin/mktemp -d)
-    ${pkgs.cifs-utils}/bin/mount.cifs //192.168.1.142/backups "$mnt" \
+    # getExe' picks the `bin` output. Since nixpkgs 26.05 cifs-utils is split
+    # into outputs and the default one holds only lib/, so the plain
+    # ''${pkgs.cifs-utils} interpolation used before pointed at a mount.cifs
+    # that did not exist: the backup failed every night (exit 127) from
+    # 2026-09-15 to 2026-09-25 and nothing alerted.
+    ${lib.getExe' pkgs.cifs-utils "mount.cifs"} //192.168.1.142/backups "$mnt" \
       -o credentials="$creds",vers=3.0,dir_mode=0700,file_mode=0600
     trap '$compose unpause >/dev/null 2>&1 || true; ${pkgs.util-linux}/bin/umount "$mnt" && rmdir "$mnt"' EXIT
     dest="$mnt/nixos-infra"
