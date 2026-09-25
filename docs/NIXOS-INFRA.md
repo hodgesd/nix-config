@@ -78,6 +78,13 @@ Things Gatus here cannot do, handled separately:
   `hc-ntfy` pings a second healthchecks.io check only while ntfy's
   `/v1/health` (via its tailnet name) says healthy. Period 5 min, grace
   10 min, so a deploy's container recreate doesn't page.
+- **See a backup fail.** `homelab-backup` ran and failed unnoticed every
+  night 2026-09-15 → 09-25. It now pings a third healthchecks.io check
+  (`HC_BACKUP_PING_URL`) at the end of a successful run and its `/fail`
+  endpoint when a run dies. Period 1 day, grace 26 h: a crash alerts the
+  same night, a run that never starts alerts once a night is missed.
+  Disable: drop the `EnvironmentFile` line and the `hc` calls in
+  `backup.nix`, then pause the check on healthchecks.io.
 - **Route to the sidecar directly.** Gatus is native, so `ts-status` reaches
   it over the compose bridge, which the firewall does not trust; `gatus.nix`
   adds one iptables rule for TCP 8080 from Docker's range. The LAN stays
@@ -153,7 +160,7 @@ aborts activation *before* any service restarts.
 | Secret | Consumers |
 |---|---|
 | `easy-afd-env` | easy-afd, refresh (OPENAIP_API_KEY, AUTOROUTER_*, FAA_NMS_*, GATUS_REFRESH_PUSH_URL/TOKEN) |
-| `healthchecks-env` | hc-heartbeat (HC_PING_URL), hc-ntfy (HC_NTFY_PING_URL) — each healthchecks.io ping URL is a credential |
+| `healthchecks-env` | hc-heartbeat (HC_PING_URL), hc-ntfy (HC_NTFY_PING_URL), homelab-backup (HC_BACKUP_PING_URL) — each healthchecks.io ping URL is a credential |
 | `cloudflare-acme-env` | ACME (CLOUDFLARE_DNS_API_TOKEN + propagation tuning) |
 | `nas-backup-credentials` | /mnt/data mount + backup script (SMB user `nixos-backup`) |
 | `homelab-env` | compose interpolation (TS_AUTHKEY for sidecars) |
@@ -178,7 +185,8 @@ re-encrypts on save), then `just deploy`.
    `/var/lib/hermes`, plus a break-glass plaintext copy of the sops
    secrets → `//192.168.1.142/backups/nixos-infra/`. Containers paused
    seconds for SQLite consistency. (`/etc/nixos` is no longer mirrored —
-   config lives in this repo on GitHub.)
+   config lives in this repo on GitHub.) Reports to healthchecks.io
+   (`HC_BACKUP_PING_URL`, success + `/fail`); see Monitoring above.
 2. **NAS snapshots**: `backups` share daily 05:00, keep 64 (~2 months).
    Restore a file = browse the snapshot in UniFi Drive.
 3. **Proxmox vzdump** (weekly, mode=snapshot → NAS): whole-VM archive.
