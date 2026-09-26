@@ -153,6 +153,10 @@ Heavyweight dev/media tools belong in the darwin-only block at the bottom
 
 **Darwin-only:** `hosts/common/darwin/packages.nix`
 
+**Workstation Macs only (not the mini):** gate a darwin module with
+`lib.mkIf (machine.primaryUse != "server")` — see
+`hosts/common/darwin/agent-workbench-client.nix`.
+
 **Unstable:** use `unstablePkgs.package-name` (available in all modules)
 
 **Machine-specific:** `hosts/darwin/<hostname>/default.nix` or
@@ -253,7 +257,9 @@ Tracked in `flake.lock`, update with `just update`:
   script emits for each entry in `homebrew.taps`.
 - `sops-nix` — secrets
 - `llm-agents` — numtide's daily-updated packages for herdr, OpenCode and
-  pi (`hosts/nixos/nixos-infra/agent-workbench.nix`). Tier-2 like
+  pi (`hosts/nixos/nixos-infra/agent-workbench.nix`; the Mac side is
+  `hosts/common/darwin/agent-workbench-client.nix`, herdr only — pi is
+  deliberately not installed on Macs). Tier-2 like
   `hermes-agent`: its own nixpkgs pin and binary cache, deliberately NOT
   following ours. Update alone with `nix flake update llm-agents`.
 - `swiftbar_plugins` — custom SwiftBar plugins (non-flake)

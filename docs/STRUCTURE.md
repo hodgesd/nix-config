@@ -25,6 +25,7 @@ nix-config/
 │   │       ├── homebrew.nix         # Homebrew packages
 │   │       ├── fonts.nix            # Font packages
 │   │       ├── packages.nix         # Darwin packages
+│   │       ├── agent-workbench-client.nix  # herdr client for the VM desk (workstations only)
 │   │       ├── system-defaults.nix  # System preferences
 │   │       ├── desktop/             # skhd, karabiner, jankyborders, swiftbar
 │   │       └── defaults/            # System defaults by category

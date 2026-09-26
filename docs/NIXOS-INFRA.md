@@ -120,6 +120,17 @@ files are seeded once and then belong to the user (delete one and run
 Update path: `nix flake update llm-agents` → `just deploy-check` →
 `just deploy`.
 
+From a Mac: the workstation Macs (mbp, air — not the mini) install herdr as
+a client (`hosts/common/darwin/agent-workbench-client.nix`, same
+`llm-agents` lock, so client and server versions match). `herdr --remote
+workbench` shows this desk in a local terminal; `workbench` is an ssh alias
+for user `agent` on nixos-infra-1 (`home/modules/services/ssh.nix`), and
+Tailscale SSH does the authentication. The tailnet rule for `agent` is in
+check mode, so if `--remote` stalls run `ssh workbench true` and finish the
+browser check first. pi is VM-only on purpose: it has no permission prompts,
+and on a Mac it would run as the admin user with the sops age key and SSH
+keys in reach — use it through the remote desk.
+
 ## Deploying
 
 From the Mac (repo on `main`):
