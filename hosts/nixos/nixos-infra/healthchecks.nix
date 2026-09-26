@@ -20,6 +20,10 @@
 # a container recreate during a deploy, so an alert means ntfy has been
 # down ~15 min. If the whole VM dies, both checks alert.
 #
+# A third check (HC_BACKUP_PING_URL, used by backup.nix) watches the
+# nightly homelab-backup: success ping at the end of a run, /fail ping when
+# it dies. Configure as period 1 day / grace 26 h.
+#
 # Disable: remove ./healthchecks.nix from default.nix imports and deploy;
 # then pause or delete the checks on healthchecks.io so they don't alert.
 # (hc-ntfy alone: delete its service + timer below, deploy, delete that check.)
@@ -29,10 +33,11 @@
   pkgs,
   ...
 }: {
-  # Dotenv: HC_PING_URL=https://hc-ping.com/<uuid> (VM heartbeat) and
-  # HC_NTFY_PING_URL=https://hc-ping.com/<uuid> (ntfy check). The
-  # timer-driven oneshots re-read this on every run, so no restartUnits is
-  # needed, and an empty or missing value is a harmless no-op.
+  # Dotenv: HC_PING_URL=https://hc-ping.com/<uuid> (VM heartbeat),
+  # HC_NTFY_PING_URL=https://hc-ping.com/<uuid> (ntfy check) and
+  # HC_BACKUP_PING_URL=https://hc-ping.com/<uuid> (homelab-backup, see
+  # backup.nix). The timer-driven oneshots re-read this on every run, so no
+  # restartUnits is needed, and an empty or missing value is a harmless no-op.
   sops.secrets.healthchecks-env = {};
 
   systemd.services.hc-heartbeat = {

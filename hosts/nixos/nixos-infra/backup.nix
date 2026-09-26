@@ -13,6 +13,15 @@
 # Containers are paused around the homelab copy so SQLite files
 # aren't torn mid-write (window is seconds for ~14 MB).
 #
+# Alerting: this unit failed silently every night 2026-09-15 → 09-25
+# (exit 127, nothing watched it). It now reports to a healthchecks.io check
+# (HC_BACKUP_PING_URL in the healthchecks-env secret, next to the VM
+# dead-man): a success ping at the very end of a run, a /fail ping from the
+# EXIT trap otherwise. Configure the check as period 1 day / grace 26 h, so
+# a broken run alerts the same night and a run that never starts (timer
+# gone, creds missing, VM asleep) alerts once a night is missed — through
+# the same off-site channel as the VM heartbeat, independent of ntfy/Gatus.
+#
 # NAS IP 192.168.1.142 also appears in storage.nix (Data share mount).
 {
   config,
@@ -28,13 +37,37 @@
   dockerPkg = config.virtualisation.docker.package;
   backup = pkgs.writeShellScript "homelab-backup" ''
     set -eu
+    # healthchecks.io ping; "$1" is "" (success) or "/fail". An empty or
+    # missing HC_BACKUP_PING_URL is a no-op (the check then alerts on its
+    # grace timer — still a signal). A ping failure never fails the backup.
+    hc() {
+      [ -n "''${HC_BACKUP_PING_URL:-}" ] || return 0
+      ${lib.getExe pkgs.curl} -fsS -m 10 --retry 3 --retry-delay 5 \
+        "$HC_BACKUP_PING_URL$1" >/dev/null \
+        || echo "healthchecks.io ping$1 failed (backup status unaffected)" >&2
+    }
     creds=${config.sops.secrets.nas-backup-credentials.path}
     if [ ! -f "$creds" ]; then
+      # Deliberately no success ping: a skipped backup is a missed backup,
+      # and the check's grace period should say so.
       echo "no $creds - skipping NAS backup" >&2
       exit 0
     fi
     compose="${dockerPkg}/bin/docker compose -f /srv/homelab/docker-compose.yml"
     mnt=$(${pkgs.coreutils}/bin/mktemp -d)
+    # Installed before the mount so that a failure anywhere (including the
+    # 2026-09 case, where mount.cifs itself was missing) reaches /fail.
+    cleanup() {
+      rc=$?
+      $compose unpause >/dev/null 2>&1 || true
+      if ${pkgs.util-linux}/bin/mountpoint -q "$mnt"; then
+        ${pkgs.util-linux}/bin/umount "$mnt" || rc=1
+      fi
+      rmdir "$mnt" 2>/dev/null || true
+      [ "$rc" -eq 0 ] || hc /fail
+      exit "$rc"
+    }
+    trap cleanup EXIT
     # getExe' picks the `bin` output. Since nixpkgs 26.05 cifs-utils is split
     # into outputs and the default one holds only lib/, so the plain
     # ''${pkgs.cifs-utils} interpolation used before pointed at a mount.cifs
@@ -42,7 +75,6 @@
     # 2026-09-15 to 2026-09-25 and nothing alerted.
     ${lib.getExe' pkgs.cifs-utils "mount.cifs"} //192.168.1.142/backups "$mnt" \
       -o credentials="$creds",vers=3.0,dir_mode=0700,file_mode=0600
-    trap '$compose unpause >/dev/null 2>&1 || true; ${pkgs.util-linux}/bin/umount "$mnt" && rmdir "$mnt"' EXIT
     dest="$mnt/nixos-infra"
     mkdir -p "$dest/secrets"
     $compose pause
@@ -66,6 +98,8 @@
     # hodgesd-password is neededForUsers, so it lives outside /run/secrets.
     ${pkgs.coreutils}/bin/install -m 600 ${config.sops.secrets.hodgesd-password.path} "$dest/secrets/"
     ${pkgs.coreutils}/bin/date -u +%FT%TZ > "$dest/last-backup.txt"
+    # Last line on purpose: anything after this would fail unreported.
+    hc ""
   '';
 in {
   # Runs as root: mounting and reading the secrets need privileges.
@@ -76,6 +110,11 @@ in {
     serviceConfig = {
       Type = "oneshot";
       ExecStart = backup;
+      # HC_BACKUP_PING_URL. The ping URL is a credential (whoever holds it
+      # can keep the check green), so it lives in the same sops dotenv as
+      # the VM heartbeat rather than in this file. The secret is declared
+      # in healthchecks.nix; re-read on every run, so no restartUnits.
+      EnvironmentFile = config.sops.secrets.healthchecks-env.path;
     };
   };
 
