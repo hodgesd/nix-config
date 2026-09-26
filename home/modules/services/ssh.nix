@@ -18,6 +18,14 @@
         HostName = "ssh.github.com";
         Port = 443;
       };
+      # The VM's agent workbench (hosts/nixos/nixos-infra/agent-workbench.nix).
+      # Tailscale SSH authenticates by tailnet identity, so no key here; the
+      # alias only supplies the user, so `herdr --remote workbench` and
+      # `ssh -t workbench herdr` need no user@ prefix.
+      workbench = {
+        HostName = "nixos-infra-1";
+        User = "agent";
+      };
       # Skip host-key prompts only on the LAN and the tailnet, where hosts
       # get reprovisioned; everything else keeps normal strict checking.
       "192.168.1.* *.ts.net" = {
@@ -30,7 +38,7 @@
       # The old implicit HM defaults, kept verbatim. Ordered after the
       # specific blocks: ssh takes the first value it finds, so `Host *`
       # must stay last or its UserKnownHostsFile would shadow the LAN one.
-      "*" = lib.hm.dag.entryAfter ["github.com" "192.168.1.* *.ts.net"] {
+      "*" = lib.hm.dag.entryAfter ["github.com" "workbench" "192.168.1.* *.ts.net"] {
         ForwardAgent = "no";
         AddKeysToAgent = "no";
         Compression = "no";
