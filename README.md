@@ -123,7 +123,8 @@ A Proxmox guest VM on the HP mini PC, fully managed by this flake
 - **Agent workbench** (`agent-workbench.nix`) — herdr multiplexer + OpenCode +
   pi for an unprivileged `agent` user, reached only over Tailscale SSH
   (`ssh -t agent@nixos-infra-1 herdr`); packages from numtide's `llm-agents`
-  flake input, one credit-limited OpenRouter key in sops
+  flake input, one credit-limited OpenRouter key in sops. Workstation Macs
+  carry a herdr client (`herdr --remote workbench`); pi stays VM-only
 - **Nightly NAS backups** (03:30 → UNAS Pro 8) and weekly aeronautical-data refresh
 
 ### Deploying (from the Mac)
