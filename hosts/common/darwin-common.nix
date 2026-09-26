@@ -12,6 +12,8 @@
     ./darwin/packages.nix
     ./darwin/laptop-defaults.nix
     ./darwin/tailscale.nix
+    # herdr client for the VM agent workbench; workstations only (gated inside)
+    ./darwin/agent-workbench-client.nix
     ./darwin/wallpaper.nix
     ./darwin/desktop
     # Inert until a host declares `majordouble.composeStacks.*`
