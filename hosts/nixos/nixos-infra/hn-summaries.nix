@@ -50,8 +50,24 @@
   llmTimeout = 30; # seconds per paid call
   threadCharBudget = 80000; # chars of thread text per story, ~20k input tokens
   missTtlHours = 6; # a story whose paid call failed is not retried sooner
+  warmEvery = "*:0/30"; # OnCalendar for the front-page warmer
+  warmTop = 15; # Algolia front_page hits per warm run (the plugin shows 15)
+
   pyEnv = pkgs.python3.withPackages (ps: [ps.aiohttp ps.beautifulsoup4]);
   app = ./hn-summaries/server.py;
+
+  # Warmer: fetch the front page from Algolia and ask the service — through
+  # its own loopback port, so the single-flight locks and the daily cap
+  # apply exactly as they do for the Macs. Prints id → source as its log.
+  warm = pkgs.writeShellScript "hn-summaries-warm" ''
+    set -eu
+    ids=$(${lib.getExe pkgs.curl} -fsS -m 15 \
+      "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=${toString warmTop}" \
+      | ${lib.getExe pkgs.jq} -r '[.hits[].objectID] | join(",")')
+    [ -n "$ids" ] || { echo "no front-page ids from Algolia" >&2; exit 1; }
+    ${lib.getExe pkgs.curl} -fsS -m 180 "http://127.0.0.1:${toString port}/hn?ids=$ids&llm=1" \
+      | ${lib.getExe pkgs.jq} -c 'to_entries | map({(.key): .value.source}) | add'
+  '';
 
   # Same set easy-afd.nix uses, plus no socket families beyond IP: the
   # process only ever talks HTTP(S) to Algolia, Companion and OpenRouter.
@@ -112,5 +128,28 @@ in {
         Restart = "always";
         RestartSec = "5s";
       };
+  };
+
+  systemd.services.hn-summaries-warm = {
+    description = "Summarise the current HN front page into the hn-summaries cache";
+    after = ["network-online.target" "hn-summaries.service"];
+    wants = ["network-online.target"];
+    requires = ["hn-summaries.service"];
+    serviceConfig =
+      hardening
+      // {
+        Type = "oneshot";
+        DynamicUser = true;
+        ExecStart = warm;
+      };
+  };
+
+  systemd.timers.hn-summaries-warm = {
+    wantedBy = ["timers.target"];
+    timerConfig = {
+      OnCalendar = warmEvery;
+      Persistent = true;
+      RandomizedDelaySec = "3m";
+    };
   };
 }
