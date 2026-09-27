@@ -130,6 +130,10 @@ in {
         (http "nixos-infra" "changedetection" "https://changes.jaguar-duckbill.ts.net" [])
         (http "nixos-infra" "stirling-pdf" "https://pdf.jaguar-duckbill.ts.net" [])
         (http "nixos-infra" "drawio" "https://drawio.jaguar-duckbill.ts.net" [])
+        # hn-summaries is native with no sidecar, so its tailnet name goes
+        # straight to the port (8090, set in hn-summaries.nix). [BODY].ok
+        # proves the app answered, not just that the socket is open.
+        (http "nixos-infra" "hn-summaries" "http://nixos-infra-1.jaguar-duckbill.ts.net:8090/healthz" ["[BODY].ok == true"])
         # Public name: DNS + nginx + the LE cert + the app in one poll.
         (http "nixos-infra" "easy-afd" "https://afd.hdgs.me/healthz" [])
       ];
