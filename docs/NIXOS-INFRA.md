@@ -26,6 +26,8 @@ with `just deploy` (see [Deploying](#deploying)).
 | `hermes-agent` | `hermes.nix` | NousResearch Hermes agent (Claude via Anthropic API): Telegram bot + host `hermes` CLI, container mode on the host docker daemon | always |
 | `hermes-watchdog` | `hermes.nix` | Checks hermes unit + container, alerts via ntfy (`hermes-alerts` topic) | every 5 min |
 | `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls all nine compose apps + Easy A/FD, heartbeat for the weekly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
+| `hn-summaries` | `hn-summaries.nix` | Shared Hacker News discussion summaries for the Macs' daily_news plugin (:8090, tailnet-only): SQLite cache → HN Companion → one OpenRouter call per story, daily cap, cost ledger in the journal. See [docs/HN-SUMMARIES.md](HN-SUMMARIES.md) | always |
+| `hn-summaries-warm` | `hn-summaries.nix` | Summarises the current HN front page into that cache so Mac refreshes are cache hits | every 30 min |
 | `hc-heartbeat` | `healthchecks.nix` | Checks in with healthchecks.io (off-site dead-man for this VM) | every 5 min |
 | `hc-ntfy` | `healthchecks.nix` | Checks in with a second healthchecks.io check only while ntfy's `/v1/health` is healthy (alerts when the alerter is down) | every 5 min |
 | `samsclub-popcorn` | `samsclub-popcorn.nix` | **Temporary, expires 2026-12-12.** Curls a Sam's Club product page, alerts via ntfy (`changes` topic) when delivery from the O'Fallon club comes back in stock; after expiry it only reminds you to remove it. Manual test: `samsclub-popcorn-check --test` | every 2 h, 06–22 |
