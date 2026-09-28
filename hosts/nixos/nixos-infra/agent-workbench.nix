@@ -96,6 +96,18 @@
   # /model picker on first run; Ctrl+S there rewrites the seeded file.
   model = "anthropic/claude-sonnet-5";
 
+  # OpenCode model roles, mirroring the mbp's ~/.config/opencode/opencode.json
+  # (2026-09-26): think with Sonnet, execute with GLM-5.3, read with
+  # DeepSeek V4.1 Flash. Per-agent keys win over `model`; `small_model`
+  # covers housekeeping calls (session titles, summaries). Prices at the
+  # time: Sonnet $2/$10, GLM-5.3 $0.24-1.40/$0.75-4.40 depending on the
+  # OpenRouter host, DeepSeek Flash $0.035/$0.29 per M tokens.
+  models = {
+    think = "openrouter/${model}";
+    execute = "openrouter/z-ai/glm-5.3";
+    read = "openrouter/deepseek/deepseek-v4.1-flash";
+  };
+
   piSettingsText = builtins.toJSON {
     defaultProvider = "openrouter";
     defaultModel = model;
@@ -108,7 +120,8 @@
   # them yourself in a shell pane; loosen in the user's copy when earned.
   opencodeText = builtins.toJSON {
     "$schema" = "https://opencode.ai/config.json";
-    model = "openrouter/${model}";
+    model = models.think;
+    small_model = models.read;
     provider.openrouter.options.apiKey = "{env:OPENROUTER_API_KEY}";
     share = "disabled";
     autoupdate = false;
@@ -126,9 +139,21 @@
         "sudo *" = "deny";
       };
     };
-    agent.plan.permission = {
-      edit = "deny";
-      bash = "deny";
+    # plan = read-only thinking on the expensive model; build/general do
+    # the edits on the mid-priced one; explore/scout are read-only subagents
+    # on the cheapest.
+    agent = {
+      plan = {
+        model = models.think;
+        permission = {
+          edit = "deny";
+          bash = "deny";
+        };
+      };
+      build.model = models.execute;
+      general.model = models.execute;
+      explore.model = models.read;
+      scout.model = models.read;
     };
   };
   opencodeConfig = pkgs.writeText "opencode.json" opencodeText;

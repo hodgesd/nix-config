@@ -107,7 +107,10 @@ prompt-free agent acceptable on this shared box). Packages come from the
   Unix socket only; nothing listens on the network.
 - **OpenCode** — daily driver. Permission rails seeded on (`edit` and
   unknown commands ask; `rm`, `git push`, `sudo` denied; the plan agent is
-  read-only), `share` disabled, autoupdate off.
+  read-only), `share` disabled, autoupdate off. Model roles (same mapping
+  as the mbp's user config): `plan` thinks on Sonnet 5, `build`/`general`
+  edit on GLM-5.3, `explore`/`scout` and `small_model` read on DeepSeek
+  V4.1 Flash — Tab flips plan/build, `/models` overrides one session.
 - **pi** — minimal harness with no permission prompts by design: for
   cheap short tasks, scripted runs (`pi -p`), weak or local models, and
   read-only exploration (`pi --tools read,grep,find,ls`).
@@ -117,8 +120,10 @@ or `pi` in a pane, `ctrl+b q` to detach; the same command reattaches and
 `herdr server stop` ends the desk. Both agents use one workbench-only
 OpenRouter key (sops `workbench-env`, credit-limited at OpenRouter) that
 wrapper scripts load into the agent's process only. The three config
-files are seeded once and then belong to the user (delete one and run
-`systemd-tmpfiles --create` to re-seed). `/home/agent` is not backed up.
+files are seeded once and then belong to the user — a redeploy does not
+touch an existing copy. Re-seed as `agent` with
+`cp /etc/agent-workbench/opencode.json ~/.config/opencode/` (the /etc
+copies are what nix would write). `/home/agent` is not backed up.
 Update path: `nix flake update llm-agents` → `just deploy-check` →
 `just deploy`.
 
