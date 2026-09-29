@@ -44,7 +44,7 @@ nix-config/
 │   └── modules/           # Tool configs (core, cli, services)
 ├── modules/               # Custom modules
 │   ├── swiftbar.nix       # HM module (macOS)
-│   ├── wallpaper.nix      # HM module (macOS)
+│   ├── wallpaper.nix      # darwin module: desktoppr wallpaper, on by default
 │   └── nixos/             # compose-stack.nix (systemd), mcp-server.nix (hardened units)
 ├── stacks/                # Docker compose files (homelab)
 ├── scripts/               # bootstrap.sh + audit helpers

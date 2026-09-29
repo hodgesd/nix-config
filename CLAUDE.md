@@ -65,7 +65,8 @@ realise → activate in a systemd-run unit).
 **Darwin:** `flake.nix` → `libx.mkDarwin {hostname}` (`lib/helpers.nix`) →
 machine metadata from `lib/machines.nix` + `hosts/common/common-packages.nix` +
 `hosts/common/darwin-common.nix` (which imports the modular
-`hosts/common/darwin/*` set) + optional `hosts/darwin/<hostname>/default.nix` +
+`hosts/common/darwin/*` set, plus `modules/wallpaper.nix`) + optional
+`hosts/darwin/<hostname>/default.nix` +
 Home Manager (`home/default.nix`).
 
 **NixOS:** `flake.nix` → `libx.mkNixos {hostname}` → same metadata/specialArgs +
@@ -187,7 +188,10 @@ hyper - o : open -a "Obsidian"
 ### Homelab services
 
 Edit `hosts/nixos/nixos-infra/*.nix` (easy-afd, proxy, backup, storage,
-homelab-stack, hermes, gatus, healthchecks, agent-workbench), then
+homelab-stack, sidecars, hermes, gatus, healthchecks, agent-workbench).
+A compose app behind a tailscale sidecar is compose services plus one
+`homelab.sidecars.<name>` entry (renders serve.json and the Gatus check;
+see `sidecars.nix`). Then
 `just deploy-check` before
 `just deploy`.
 
@@ -279,7 +283,7 @@ hosts/
 home/
   default.nix                   # User config entry point (portable)
   modules/                      # Tool-specific configs (core, cli, services)
-modules/                        # Custom modules (swiftbar, wallpaper, nixos/{compose-stack,mcp-server})
+modules/                        # Custom modules (swiftbar, wallpaper [darwin, on by default], nixos/{compose-stack,mcp-server})
 stacks/                         # Docker compose files (homelab)
 scripts/                        # bootstrap.sh + audit helpers
 docs/                           # STRUCTURE, ADDING_MACHINE, CUSTOMIZATION,

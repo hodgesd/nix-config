@@ -14,8 +14,10 @@
     ./darwin/tailscale.nix
     # herdr client for the VM agent workbench; workstations only (gated inside)
     ./darwin/agent-workbench-client.nix
-    ./darwin/wallpaper.nix
     ./darwin/desktop
+    # Wallpaper from ~/Documents/Wallpapers on every Mac (opt out per host
+    # with majordouble.wallpaper.enable = false).
+    ../../modules/wallpaper.nix
   ];
 
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-darwin";
