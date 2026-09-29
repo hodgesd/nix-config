@@ -27,8 +27,8 @@ in {
       specialArgs = {inherit system inputs username unstablePkgs machine;};
       modules =
         [
-          # majordouble.* options (user, wallpaper). Machine metadata is NOT
-          # mirrored here: modules read the `machine` specialArg directly.
+          # majordouble.user. Machine metadata is NOT mirrored into options:
+          # modules read the `machine` specialArg directly.
           ./options.nix
           {config.majordouble.user = username;}
           ../hosts/common/common-packages.nix

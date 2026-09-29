@@ -205,11 +205,11 @@ services:
       - /mnt/data/Videos/MeTube:/downloads
       - ./metube/state:/state
 
-  # changedetection.io — web-page change monitor (hosts/nixos/nixos-infra/
-  # changedetection.nix has the why, the serve.json and the disable steps).
-  # Same shape as actual-budget: the app shares this sidecar's network
-  # namespace; serve.json is nix-generated and bind-mounted from /etc like
-  # ts-status, so nothing about this service is hand-made on the VM.
+  # changedetection.io — web-page change monitor (docs/NIXOS-INFRA.md has
+  # the why and the state notes). Same shape as actual-budget: the app
+  # shares this sidecar's network namespace; serve.json is nix-generated
+  # (hosts/nixos/nixos-infra/sidecars.nix) and bind-mounted from /etc, so
+  # nothing about this service is hand-made on the VM.
   ts-changes:
     image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-changes
@@ -273,10 +273,10 @@ services:
     cap_add:
       - SYS_ADMIN
 
-  # Stirling PDF — PDF toolbox (hosts/nixos/nixos-infra/stirling-pdf.nix
-  # has the why, the serve.json and the disable steps). Same shape as
-  # changedetection: the app shares this sidecar's network namespace and
-  # serve.json is nix-generated and bind-mounted from /etc.
+  # Stirling PDF — PDF toolbox (docs/NIXOS-INFRA.md has the why and the
+  # state notes). Same shape as changedetection: the app shares this
+  # sidecar's network namespace and serve.json is nix-generated
+  # (sidecars.nix) and bind-mounted from /etc.
   ts-pdf:
     image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-pdf
@@ -325,10 +325,10 @@ services:
       - ./stirling-pdf/logs:/logs
       - ./stirling-pdf/pipeline:/pipeline
 
-  # draw.io — diagram editor (hosts/nixos/nixos-infra/drawio.nix has the
-  # why, the serve.json and the disable steps). Same shape as stirling-pdf:
-  # the app shares this sidecar's network namespace and serve.json is
-  # nix-generated and bind-mounted from /etc. Stateless: no app volume.
+  # draw.io — diagram editor (docs/NIXOS-INFRA.md). Same shape as
+  # stirling-pdf: the app shares this sidecar's network namespace and
+  # serve.json is nix-generated (sidecars.nix) and bind-mounted from /etc.
+  # Stateless: no app volume.
   ts-drawio:
     image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-drawio
@@ -370,8 +370,9 @@ services:
   # Tailscale front for Gatus, which runs natively on the host (see
   # hosts/nixos/nixos-infra/gatus.nix) rather than as a container sharing
   # this network namespace. Two consequences vs the other sidecars:
-  # serve.json is nix-generated and bind-mounted from /etc, and the proxy
-  # target is host.docker.internal (the VM) instead of 127.0.0.1.
+  # serve.json is nix-generated (sidecars.nix, declared in gatus.nix) and
+  # bind-mounted from /etc, and the proxy target is host.docker.internal
+  # (the VM) instead of 127.0.0.1.
   ts-status:
     image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-status

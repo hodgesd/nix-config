@@ -49,6 +49,33 @@ compose network), stirling-pdf (`pdf`), drawio. All reachable at
 `repo:tag@sha256:…` — the digest decides what runs, the tag is there so
 Renovate can read the version.
 
+Sidecars whose serve.json is nix-rendered (`changes`, `pdf`, `drawio`,
+`status`) are declared in `homelab.sidecars` (`sidecars.nix`, entries in
+`homelab-stack.nix` and `gatus.nix`); each declaration also yields the
+Gatus check. Adding an app is: compose services + one `homelab.sidecars`
+entry + deploy. Removing is the reverse plus deleting `/srv/homelab/<app>`
+and `/srv/homelab/ts-<name>` and the node in the Tailscale admin console.
+The six older sidecars still carry hand-made serve.json under
+`/srv/homelab/ts-<name>/config`.
+
+Per-app notes:
+
+- **changedetection** (added 2026-09-06): deliberately NOT the nixpkgs
+  `services.changedetection-io` module — it shipped 0.51.3, predating the
+  0.55.6 SSRF fix, and its playwright support pulled an unpinned,
+  deprecated browserless/chrome image. Compose gets the current release
+  and lands the datastore under /srv/homelab for the nightly backup.
+  Chrome (`sockpuppetbrowser`) is reachable only over the compose network.
+- **stirling-pdf** (added 2026-09-09): standard variant (OCR + office
+  conversion). Login is switched OFF in compose because the tailnet is
+  the boundary — the 2.x image ships with login ON and a default
+  admin/stirling password. Files are processed in memory and not kept;
+  /srv/homelab/stirling-pdf holds only tessdata/configs/logs, nothing
+  precious, but it is under /srv/homelab so the backup mirrors it anyway.
+- **drawio** (added 2026-09-09): static web app, no login, no state on
+  the VM beyond the sidecar identity; diagrams live wherever the browser
+  saves them. Tomcat's own self-signed 8443 is never reached.
+
 **Image updates (Renovate):** self-hosted in `.github/workflows/renovate.yaml`,
 rules in `renovate.json` at the repo root. Every Monday it opens ONE grouped PR ("homelab images") with all
 minor/patch/digest bumps and their release notes; major versions only get
@@ -283,11 +310,11 @@ New since the flake migration (2026-07-26):
   `Web` handler *and* `TCP: {"443": {"HTTPS": true}}`. Without the TCP
   section, 443 is refused (this is how adguard's HTTPS URL was silently
   broken pre-migration).
-- **Two sidecars have nix-generated serve.json** (`ts-status` from
-  `gatus.nix`, `ts-changes` from `changedetection.nix`), bind-mounted
-  from `/etc`; the rest are hand-made under `/srv/homelab/ts-<name>/config`.
-  After changing a generated one, `docker restart ts-<name>` — compose
-  does not recreate a container for a bind mount's contents.
+- **Four sidecars have nix-generated serve.json** (`homelab.sidecars` in
+  `sidecars.nix`: status, changes, pdf, drawio), bind-mounted from `/etc`;
+  the rest are hand-made under `/srv/homelab/ts-<name>/config`. After
+  changing a generated one, `docker restart ts-<name>` — compose does not
+  recreate a container for a bind mount's contents.
 - **`mnt-data.automount` can't be "reloaded"** — switch-to-configuration
   exits 4 when it tries; `systemctl restart mnt-data.automount` is the
   fix and the mount itself is unaffected.

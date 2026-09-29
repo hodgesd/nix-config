@@ -1,7 +1,7 @@
 # nixos-infra: Proxmox guest VM on the HP mini PC.
 # Runs the easy-afd app (easy-afd.nix, proxy.nix), the docker compose
-# estate under /srv/homelab, nightly NAS backups (backup.nix), and the
-# UNAS "Data" share mount (storage.nix). Shared server baseline
+# estate under /srv/homelab (homelab-stack.nix + sidecars.nix), nightly NAS
+# backups (backup.nix), and the UNAS "Data" share mount (storage.nix). Shared server baseline
 # (tailscale, docker, ssh, firewall, user) comes from
 # hosts/common/nixos-common.nix.
 {
@@ -16,6 +16,7 @@
     ./backup.nix
     ./storage.nix
     ./homelab-stack.nix
+    ./sidecars.nix
     ./hermes.nix
     ./hermes-egress.nix
     ./hermes-sentinel.nix
@@ -25,9 +26,6 @@
     ./apple.nix
     ./healthchecks.nix
     ./gatus.nix
-    ./changedetection.nix
-    ./stirling-pdf.nix
-    ./drawio.nix
     ./samsclub-popcorn.nix # TEMPORARY, expires 2026-12-12
     ./hn-summaries.nix
     ./agent-workbench.nix
