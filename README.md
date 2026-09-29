@@ -69,7 +69,14 @@ After verifying everything works, find stragglers with
 
 ### Post-Install Configuration
 
-**Wallpaper Rotation (mini)** — manual via System Settings:
+**Wallpaper** — on hosts with `majordouble.wallpaper.enable = true` (mbp),
+the switch selects `~/Documents/Wallpapers/` (iCloud-synced) as the wallpaper
+source via desktoppr (`modules/wallpaper.nix`), once per path. macOS 14+ has
+no scriptable way to turn on "Change picture", so rotation is a one-time
+toggle **after the first switch**: **System Settings** → **Wallpaper** →
+**Change picture** (pick the interval; enable **Show on all Spaces** if shown).
+Later switches leave that alone. Toggled before the first switch? It gets
+reset once — toggle again. The mini is not enabled and stays fully manual:
 
 1. Ensure folder exists (iCloud synced): `mkdir -p ~/Documents/Wallpapers`
 2. **System Settings** → **Wallpaper** → add folder `~/Documents/Wallpapers/`,

@@ -66,19 +66,23 @@
       enable = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Enable automatic wallpaper rotation setup via AppleScript (may not work on all macOS versions)";
+        description = ''
+          Select the macOS wallpaper with desktoppr at home-manager activation
+          (modules/wallpaper.nix), once per `path`. A directory selects that
+          folder as the wallpaper source; a file sets a static picture. macOS
+          14+ offers no scriptable way to turn on "Change picture", so the
+          rotation toggle and its interval are a one-time step in System
+          Settings → Wallpaper after the first switch.
+        '';
       };
 
       path = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Path to wallpaper directory. Defaults to /Users/{username}/Documents/Wallpapers";
-      };
-
-      changeInterval = lib.mkOption {
-        type = lib.types.int;
-        default = 1800;
-        description = "Wallpaper change interval in seconds (default: 1800 = 30 minutes)";
+        description = ''
+          Image file or directory of images. Defaults to
+          /Users/{username}/Documents/Wallpapers (iCloud-synced).
+        '';
       };
     };
   };

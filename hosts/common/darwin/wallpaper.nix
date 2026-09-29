@@ -1,20 +1,16 @@
 # hosts/common/darwin/wallpaper.nix
-# macOS wallpaper rotation configuration
-{
-  config,
-  lib,
-  ...
-}: let
-  # Determine wallpaper path: use configured path or default to /Users/{username}/Documents/Wallpapers
+# Wires modules/wallpaper.nix (Home Manager) to the majordouble.wallpaper
+# options. A folder path means macOS-native rotation; see the module header.
+{config, ...}: let
+  # Default to the user's iCloud-synced Wallpapers folder.
   wallpaperPath =
     if config.majordouble.wallpaper.path != null
     then config.majordouble.wallpaper.path
     else "/Users/${config.majordouble.user}/Documents/Wallpapers";
-  
+
   wallpaperConfig = {
     enable = config.majordouble.wallpaper.enable;
     path = wallpaperPath;
-    changeInterval = config.majordouble.wallpaper.changeInterval;
   };
 in {
   # Add wallpaper module to home-manager sharedModules
@@ -28,4 +24,3 @@ in {
     _module.args.wallpaper = wallpaperConfig;
   };
 }
-
