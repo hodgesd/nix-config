@@ -1,11 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Weekly update PR for the homelab compose images, run by .github/workflows/renovate.yaml (its cron is the schedule — no `schedule` here, so a manual dispatch also opens PRs). The nix manager bumps flake.lock inputs in a second grouped PR (each input tracks the branch named in its `ref`, so release branches are never crossed). Merging does not deploy — run `just deploy` afterwards.",
+  "description": "Weekly update PR for the homelab compose images, run by .github/workflows/renovate.yaml (its cron is the schedule — no `schedule` here, so a manual dispatch also opens PRs). flake.lock is bumped by lockFileMaintenance (`nix flake update`, the same thing the retired update-flake-lock workflow did) in its own PR; each input follows the branch named in its `ref`, so release branches are never crossed. Merging does not deploy — run `just deploy` afterwards.",
   "extends": ["config:recommended"],
   "enabledManagers": ["docker-compose", "nix"],
   "nix": {
     "description": "The nix manager is beta and ships enabled: false; listing it in enabledManagers is not enough (first run on 2026-09-28 extracted only docker-compose).",
     "enabled": true
+  },
+  "lockFileMaintenance": {
+    "description": "Every flake input here tracks a branch, not a pinned rev, and Renovate only opens per-input PRs for rev-pinned inputs (second run on 2026-09-28: 'no results that look like a version', no PR). Branch-tracking inputs are refreshed by running `nix flake update` under lockFileMaintenance. 'at any time' so a manual dispatch also runs it; the workflow cron is the real schedule.",
+    "enabled": true,
+    "schedule": ["at any time"],
+    "commitMessageAction": "update flake.lock"
   },
   "timezone": "America/Chicago",
   "labels": ["dependencies"],
@@ -15,11 +21,6 @@
       "description": "One PR per week for everything non-major, so there is a single item to review.",
       "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
       "groupName": "homelab images"
-    },
-    {
-      "description": "flake.lock bumps go in their own weekly PR (replaces the old update-flake-lock workflow); Eval/Build gate it.",
-      "matchManagers": ["nix"],
-      "groupName": "flake inputs"
     },
     {
       "description": "Major versions can carry migrations for stateful services; wait until ticked on the Dependency Dashboard.",
