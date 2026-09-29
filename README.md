@@ -23,12 +23,16 @@ for conditional config.
 
 ## 💻 Machines
 
-| Hostname      | OS | Model                    | User            | Storage (Ram/HD) | Cores (CPU/GPU) |
-|---------------|----|--------------------------|-----------------|------------------|-----------------|
-| `mbp`         | 🍏 | MacBook Pro M3 Pro 14"   | `hodgesd`       | 18GB / 1TB       | 12 / 18         |
-| `mini`        | 🍏 | Mac Mini M2 Pro          | `derrickhodges` | —                |                 |
-| `air`         | 🍏 | MacBook Air M1 13"       | `hodgesd`       | 16GB / 500GB     | 8 / 7           |
-| `nixos-infra` | 🐧 | Proxmox VM (HP mini PC)  | `hodgesd`       | 39GB disk        |                 |
+This table is the record of each machine's hardware (the flake registry in
+`lib/machines.nix` only carries what modules branch on: type, form factor,
+role, chip, user).
+
+| Hostname      | OS | Model                    | Role                    | User            | RAM / Storage | Cores (CPU/GPU) |
+|---------------|----|--------------------------|-------------------------|-----------------|---------------|-----------------|
+| `mbp`         | 🍏 | MacBook Pro M3 Pro 14"   | laptop, development     | `hodgesd`       | 18GB / 1TB    | 12 / 18         |
+| `mini`        | 🍏 | Mac Mini M2 Pro          | desktop, always-on server (Hermes bridges) | `derrickhodges` | — | —     |
+| `air`         | 🍏 | MacBook Air M1 13"       | laptop, development     | `hodgesd`       | 16GB / 500GB  | 8 / 7           |
+| `nixos-infra` | 🐧 | Proxmox VM (QEMU guest on the HP mini PC) | vm, homelab | `hodgesd`  | — / 39GB disk | 2 vCPU          |
 
 ## 🍎 Mac Installation
 
@@ -69,18 +73,15 @@ After verifying everything works, find stragglers with
 
 ### Post-Install Configuration
 
-**Wallpaper** — on hosts with `majordouble.wallpaper.enable = true` (mbp),
-the switch selects `~/Documents/Wallpapers/` (iCloud-synced) as the wallpaper
+**Wallpaper** — on every Mac (opt out per host with
+`majordouble.wallpaper.enable = false`), the switch selects `~/Documents/Wallpapers/` (iCloud-synced) as the wallpaper
 source via desktoppr (`modules/wallpaper.nix`), once per path. macOS 14+ has
 no scriptable way to turn on "Change picture", so rotation is a one-time
 toggle **after the first switch**: **System Settings** → **Wallpaper** →
 **Change picture** (pick the interval; enable **Show on all Spaces** if shown).
 Later switches leave that alone. Toggled before the first switch? It gets
-reset once — toggle again. The mini is not enabled and stays fully manual:
-
-1. Ensure folder exists (iCloud synced): `mkdir -p ~/Documents/Wallpapers`
-2. **System Settings** → **Wallpaper** → add folder `~/Documents/Wallpapers/`,
-   enable **"Change picture"** with desired interval.
+reset once — toggle again. A Mac without `~/Documents/Wallpapers` (or
+without the desktoppr cask) logs a warning at activation and is left alone.
 
 **Hotkeys (skhd + Karabiner Elements)**
 
