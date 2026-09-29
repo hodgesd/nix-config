@@ -1,5 +1,6 @@
 # Self-hosted Renovate: opens the weekly "homelab images" PR for the compose
-# stack (rules in renovate.json at the repo root). Running it here instead of
+# stack and the "flake inputs" PR for flake.lock (rules in renovate.json at
+# the repo root). Running it here instead of
 # installing the hosted Renovate GitHub app keeps the whole thing in git —
 # disable by deleting this file. It only reads registries and opens PRs;
 # nothing touches the VM until `just deploy`.
@@ -12,8 +13,7 @@ name: Renovate 🔁
 
 on:
   schedule:
-    # Mondays 05:30 UTC, before the flake.lock bump at 06:00 UTC. This cron
-    # IS the schedule: renovate.json has none, so a manual dispatch opens
+    # Mondays 05:30 UTC. This cron IS the schedule: renovate.json has none, so a manual dispatch opens
     # PRs immediately instead of deferring to Monday.
     - cron: '30 5 * * 1'
   workflow_dispatch:

@@ -6,9 +6,7 @@ These workflows verify this config so breakage shows up before `darwin-rebuild s
 |---|---|---|---|
 | `eval.yaml` | every push / PR | Linux (free, fast) | Evaluates all 3 hosts. Catches syntax errors, bad options, module conflicts, per-host metadata branches. No build. |
 | `build.yaml` | `flake.lock` change, nightly, manual | macOS | Full `nix build` of all 3 hosts; pushes results to Cachix. |
-| `update-flake-lock.yaml` | weekly, manual | Linux | Opens a PR bumping `flake.lock`, gated by the above. |
-| `flake-checker.yaml` | every push, nightly | Linux | Audits `flake.lock` health (stale nixpkgs). |
-| `renovate.yaml` | weekly, manual | Linux | Self-hosted Renovate: opens one grouped PR bumping the homelab compose images (rules in `/renovate.json`). |
+| `renovate.yaml` | weekly, manual | Linux | Self-hosted Renovate: one grouped PR for the homelab compose images and one for `flake.lock` inputs (rules in `/renovate.json`), both gated by Eval/Build. |
 
 ## One-time setup
 
@@ -40,17 +38,7 @@ nix.settings = {
 };
 ```
 
-### 4. (Optional) Let the flake-lock PR trigger CI
-
-PRs opened by the default `GITHUB_TOKEN` don't trigger other workflows. To run
-Eval/Build automatically on the weekly bump PR, create a PAT with `repo` +
-`workflow` scope and save it:
-
-```bash
-gh secret set FLAKE_LOCK_PAT
-```
-
-### 5. Renovate token
+### 4. Renovate token
 
 `renovate.yaml` runs Renovate itself (no hosted app to install), so it needs a
 token that can open PRs and the Dependency Dashboard issue. Create a
