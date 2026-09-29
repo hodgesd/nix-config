@@ -1,9 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Weekly update PR for the homelab compose images, run by .github/workflows/renovate.yaml (its cron is the schedule — no `schedule` here, so a manual dispatch also opens PRs). Nix inputs are handled by update-flake-lock, so only docker-compose is enabled. Merging does not deploy — run `just deploy` afterwards.",
+  "description": "Weekly update PR for the homelab compose images, run by .github/workflows/renovate.yaml (its cron is the schedule — no `schedule` here, so a manual dispatch also opens PRs). The nix manager bumps flake.lock inputs in a second grouped PR (each input tracks the branch named in its `ref`, so release branches are never crossed). Merging does not deploy — run `just deploy` afterwards.",
   "extends": ["config:recommended"],
-  "enabledManagers": ["docker-compose"],
-  "ignorePaths": ["stacks/arr-stack/**"],
+  "enabledManagers": ["docker-compose", "nix"],
   "timezone": "America/Chicago",
   "labels": ["dependencies"],
   "dependencyDashboard": true,
@@ -12,6 +11,11 @@
       "description": "One PR per week for everything non-major, so there is a single item to review.",
       "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
       "groupName": "homelab images"
+    },
+    {
+      "description": "flake.lock bumps go in their own weekly PR (replaces the old update-flake-lock workflow); Eval/Build gate it.",
+      "matchManagers": ["nix"],
+      "groupName": "flake inputs"
     },
     {
       "description": "Major versions can carry migrations for stateful services; wait until ticked on the Dependency Dashboard.",

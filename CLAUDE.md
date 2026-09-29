@@ -83,14 +83,14 @@ argument.
 
 Machines are defined in `lib/machines.nix`. The hostname comes from the
 attribute name (injected by the helpers — do not add a `hostname` field).
-Schema (enforced by `lib/options.nix`):
+Fields (by convention — there is no option schema; add a field only when a
+module reads it):
 
 - `type`: "darwin" | "nixos"
 - `formFactor`: "laptop" | "desktop" | "server" | "vm"
 - `primaryUse`: free-form string ("development", "server", "homelab", …)
 - `chip`: string or omitted (null for VMs)
 - `username`: optional, defaults to "hodgesd"
-- `specs`: ram/storage (str|null), cpu/gpu (int|null)
 
 Available as the `machine` arg in all modules (including home-manager):
 
@@ -115,21 +115,19 @@ before `nix eval`/`build` can see them — flakes only see tracked files.
 
 ### Docker compose stacks
 
-`majordouble.composeStacks.<name>` exists on both platforms with the same
-option surface: `modules/nixos/compose-stack.nix` (systemd oneshot) and
-`modules/darwin/compose-stack.nix` (launchd user agent, because macOS
-container runtimes expose a user-owned socket). Nix installs the repo's
-compose file into the stack dir and runs
-`docker compose up -d --remove-orphans` on change. The repo copy is
+`majordouble.composeStacks.<name>` (`modules/nixos/compose-stack.nix`, a
+systemd oneshot) installs the repo's compose file into the stack dir and
+runs `docker compose up -d --remove-orphans` on change. The repo copy is
 authoritative and images are pinned as `repo:tag@sha256:…` (Renovate
-opens one grouped update PR weekly — see NIXOS-INFRA.md). Changing an image string
-recreates that container (config-hash change) even if it resolves to the
-same image.
+opens one grouped update PR weekly — see NIXOS-INFRA.md; it also opens a
+separate weekly PR for `flake.lock`). Changing an image string recreates
+that container (config-hash change) even if it resolves to the same image.
 
-Stacks: `stacks/homelab/docker-compose.yml` → `/srv/homelab` on
-nixos-infra (the only deployed stack; `stacks/arr-stack` is parked). The
-darwin module is currently unused — the mini's uptime stack was retired
-when Gatus replaced Uptime Kuma on 2026-09-06.
+The only stack is `stacks/homelab/docker-compose.yml` → `/srv/homelab` on
+nixos-infra. A darwin (launchd/OrbStack) variant of the module ran the
+mini's Uptime Kuma stack until Gatus replaced it on 2026-09-06; it was
+removed in 2026-09 and lives in git history if a Mac ever needs compose
+again.
 
 Monitoring is Gatus (`hosts/nixos/nixos-infra/gatus.nix`, native
 `services.gatus`, https://status.jaguar-duckbill.ts.net via the `ts-status`
@@ -137,11 +135,7 @@ sidecar, alerts to ntfy topic `gatus`) plus an off-site dead-man for the VM
 itself (`healthchecks.nix` → healthchecks.io). Monitors are Nix, not UI
 state; see `docs/GATUS-EVAL.md`.
 
-On darwin the runtime is OrbStack, addressed only through the module's
-`dockerHost` option. Two macOS-specific traps are handled there and
-documented inline: the agent must wait for the runtime's VM at login, and
-`~/.docker/config.json` names an out-of-store credential helper that must
-be on PATH or image pulls fail.
+On darwin the container runtime is OrbStack (a cask), not driven by nix.
 
 ## Common Modifications
 
@@ -285,8 +279,8 @@ hosts/
 home/
   default.nix                   # User config entry point (portable)
   modules/                      # Tool-specific configs (core, cli, services)
-modules/                        # Custom modules (swiftbar, wallpaper, {nixos,darwin}/compose-stack)
-stacks/                         # Docker compose files (homelab deployed, arr-stack parked)
+modules/                        # Custom modules (swiftbar, wallpaper, nixos/{compose-stack,mcp-server})
+stacks/                         # Docker compose files (homelab)
 scripts/                        # bootstrap.sh + audit helpers
 docs/                           # STRUCTURE, ADDING_MACHINE, CUSTOMIZATION,
                                 # HOMEBREW, NIXOS-INFRA (homelab runbook)

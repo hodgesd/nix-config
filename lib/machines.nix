@@ -1,5 +1,12 @@
 # lib/machines.nix
-# Machine metadata registry for all systems
+# Machine metadata registry for all systems. Reaches every module as the
+# `machine` specialArg (hostname injected by lib/helpers.nix). Fields:
+#   type       "darwin" | "nixos"
+#   formFactor "laptop" | "desktop" | "server" | "vm"
+#   primaryUse free-form ("development", "server", "homelab", ...)
+#   chip       optional (omit for VMs)
+#   username   optional, defaults to "hodgesd"
+# Only add a field once a module reads it.
 {
   # Darwin machines
   mbp = {
@@ -7,12 +14,6 @@
     chip = "m3-pro";
     formFactor = "laptop";
     primaryUse = "development";
-    specs = {
-      ram = "18GB";
-      storage = "1TB";
-      cpu = 12;
-      gpu = 18;
-    };
     screen = "14\"";
   };
 
@@ -22,12 +23,6 @@
     chip = "m2-pro";
     formFactor = "desktop";
     primaryUse = "server";
-    specs = {
-      ram = null;
-      storage = null;
-      cpu = null;
-      gpu = null;
-    };
   };
 
   # NixOS machines
@@ -36,13 +31,6 @@
     formFactor = "vm";
     primaryUse = "homelab";
     # No chip: QEMU guest on the HP mini PC's Proxmox host.
-    virtualization = {host = "proxmox";};
-    specs = {
-      ram = null;
-      storage = null;
-      cpu = null;
-      gpu = null;
-    };
   };
 
   air = {
@@ -50,12 +38,6 @@
     chip = "m1";
     formFactor = "laptop";
     primaryUse = "development";
-    specs = {
-      ram = "16GB";
-      storage = "500GB";
-      cpu = 8;
-      gpu = 7;
-    };
     screen = "13\"";
   };
 }

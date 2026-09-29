@@ -27,20 +27,10 @@ in {
       specialArgs = {inherit system inputs username unstablePkgs machine;};
       modules =
         [
-          # Import custom options module
+          # majordouble.* options (user, wallpaper). Machine metadata is NOT
+          # mirrored here: modules read the `machine` specialArg directly.
           ./options.nix
-          # Set majordouble config values
-          {
-            config.majordouble = {
-              user = username;
-              machine = {
-                inherit hostname;
-                inherit (machine) type formFactor primaryUse;
-                chip = machine.chip or null;
-                specs = machine.specs or {};
-              };
-            };
-          }
+          {config.majordouble.user = username;}
           ../hosts/common/common-packages.nix
           ../hosts/common/darwin-common.nix
           # Configure Nix settings
@@ -105,17 +95,7 @@ in {
       modules =
         [
           ./options.nix
-          {
-            config.majordouble = {
-              user = username;
-              machine = {
-                inherit hostname;
-                inherit (machine) type formFactor primaryUse;
-                chip = machine.chip or null;
-                specs = machine.specs or {};
-              };
-            };
-          }
+          {config.majordouble.user = username;}
           ../hosts/common/common-packages.nix
           ../hosts/common/nixos-common.nix
           # Unlike darwin, a NixOS host dir is required: it carries

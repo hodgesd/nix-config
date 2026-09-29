@@ -215,7 +215,7 @@ nix-config/
 │   └── nixos/<host>/      # Per-NixOS-host config (hardware, services…)
 ├── home/                  # Home Manager configurations (portable)
 ├── modules/               # Custom modules (swiftbar, wallpaper…)
-├── stacks/                # Docker compose stacks (homelab, arr-stack)
+├── stacks/                # Docker compose stacks (homelab)
 ├── scripts/               # bootstrap + audit helper scripts
 └── docs/                  # Documentation
 ```

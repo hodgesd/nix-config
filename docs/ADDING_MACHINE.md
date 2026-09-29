@@ -21,13 +21,6 @@ derived from the attribute name — don't repeat it inside the entry:
     formFactor = "laptop";  # "laptop", "desktop", "server", or "vm"
     primaryUse = "development";  # "development", "server", etc.
     # username = "someotheruser";  # Optional — defaults to "hodgesd"
-    specs = {
-      ram = "32GB";
-      storage = "2TB";
-      cpu = 14;
-      gpu = 20;
-    };
-    screen = "16\"";  # Optional, for laptops
   };
 }
 ```
@@ -212,7 +205,6 @@ If packages are missing, check:
      formFactor = "vm";  # or "server" for bare metal
      primaryUse = "homelab";
      # no chip needed for VMs
-     specs = { ram = null; storage = null; cpu = null; gpu = null; };
    };
    ```
 2. **Host directory** `hosts/nixos/newvm/` — unlike darwin hosts this is
