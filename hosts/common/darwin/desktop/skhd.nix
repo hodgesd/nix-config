@@ -39,11 +39,11 @@
       shift + ctrl + alt - c : open -a "Claude"
       shift + ctrl + alt - f : open -a "Finder"
       shift + ctrl + alt - h : open -a "Telegram"
-      shift + ctrl + alt - m : open -a "Mail"
+      shift + ctrl + alt - m : open -b com.apple.MobileSMS
       shift + ctrl + alt - i : open -b com.apple.systempreferences
       shift + ctrl + alt - g : open "https://status.jaguar-duckbill.ts.net"
       shift + ctrl + alt - n : open -a "Notes"
-      shift + ctrl + alt - e : open -a "Fastmail"
+      shift + ctrl + alt - e : open -a "Mail"
 
       # Open Vivaldi in a private window
       shift + ctrl + alt - x : open -a "Vivaldi" --args --incognito
