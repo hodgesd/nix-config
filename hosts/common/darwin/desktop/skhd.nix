@@ -36,13 +36,13 @@
       shift + ctrl + alt - d : open -a "Drafts"
       shift + ctrl + alt - t : open -a "Ghostty"
       shift + ctrl + alt - o : open -a "Obsidian"
-      shift + ctrl + alt - p : open -a "PyCharm"
+      shift + ctrl + alt - c : open -a "Claude"
       shift + ctrl + alt - f : open -a "Finder"
       shift + ctrl + alt - h : open -a "Telegram"
-      shift + ctrl + alt - m : open -b com.apple.MobileSMS
+      shift + ctrl + alt - m : open -a "Mail"
       shift + ctrl + alt - i : open -b com.apple.systempreferences
-      shift + ctrl + alt - y : echo "Meh key works!" | tee ~/skhd-test.log
-
+      shift + ctrl + alt - g : open "https://status.jaguar-duckbill.ts.net"
+      shift + ctrl + alt - n : open -a "Notes"
       shift + ctrl + alt - e : open -a "Fastmail"
 
       # Open Vivaldi in a private window
