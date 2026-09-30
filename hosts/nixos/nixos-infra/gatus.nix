@@ -47,10 +47,14 @@
     conditions = http2xx ++ extraConditions;
   };
 
+  # Same 45 s timeout as http: ping's default is 10 s, which a tailnet
+  # path relayed through DERP instead of direct can intermittently exceed
+  # and page on a healthy box.
   icmp = group: name: host: {
     inherit group name alerts;
     url = "icmp://${host}";
     interval = "60s";
+    client.timeout = "45s";
     conditions = ["[CONNECTED] == true"];
   };
 in {
@@ -110,7 +114,18 @@ in {
         [
           # The always-on Mac (Hermes bridges). Reachability only; its
           # services are checked by the sentinel in hermes-sentinel.nix.
-          (icmp "mini" "ping" "100.122.244.86")
+          # failure-threshold 5 (vs the default 3) because this is a
+          # reachability-only ping over the tailnet; a real outage is still
+          # paged, just after ~5 min instead of ~3.
+          ((icmp "mini" "ping" "100.122.244.86")
+            // {
+              alerts = [
+                {
+                  type = "ntfy";
+                  failure-threshold = 5;
+                }
+              ];
+            })
           # UNAS Pro 8 on the LAN — backup and Data share target.
           (icmp "nas" "ping" "192.168.1.142")
           # Home Assistant Yellow — the house. A separate box, so unlike the
