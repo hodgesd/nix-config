@@ -44,8 +44,27 @@ deploy target_host="nixos-infra" action="switch" ssh_dest="root@100.98.163.36":
   echo "==> {{action}} $out"
   if [ "{{action}}" = "switch" ] || [ "{{action}}" = "boot" ]; then
     ssh {{ssh_dest}} "nix-env -p /nix/var/nix/profiles/system --set '$out'"
+    # A closure that restarts tailscaled (or sshd) drops this session under
+    # systemd-run --wait even though the detached transient unit keeps
+    # running. ssh exit 255 is "connection lost", not "activation failed":
+    # wait out the tailnet reconnect and let the unit's journal decide.
+    rc=0
     ssh {{ssh_dest}} "systemd-run --wait --collect --quiet --unit=nixos-deploy \
-      '$out/bin/switch-to-configuration' {{action}}" \
+      '$out/bin/switch-to-configuration' {{action}}" || rc=$?
+    if [ "$rc" -eq 255 ]; then
+      echo '==> session dropped mid-activation (expected when the closure restarts tailscaled); verifying'
+      for i in $(seq 1 10); do
+        if ssh -o ConnectTimeout=10 {{ssh_dest}} \
+          "journalctl -u nixos-deploy --no-pager | grep -qF 'finished switching to system configuration $out'"
+        then
+          echo '==> activation completed; the drop was cosmetic'
+          rc=0
+          break
+        fi
+        sleep 5
+      done
+    fi
+    [ "$rc" -eq 0 ] \
       || { echo 'activation unit failed; check: journalctl -u nixos-deploy'; exit 1; }
     ssh {{ssh_dest}} "readlink /run/current-system"
   else
