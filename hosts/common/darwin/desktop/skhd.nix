@@ -23,9 +23,13 @@
       fi
     '';
 
-    # Reload skhd after configuration changes
+    # Reload skhd after configuration changes. `skhd -r` looks up the running
+    # instance via /tmp/skhd_$USER.pid, which macOS's periodic /tmp cleanup
+    # deletes after a few days, so it silently fails on long-running sessions
+    # and the new skhdrc never takes effect (bit us 2026-09-29). Send the same
+    # reload signal (SIGUSR1) straight to the process instead.
     home.activation.reloadSkhd = ''
-      run /opt/homebrew/bin/skhd -r || echo "skhd reload failed (this is normal if skhd isn't running yet)"
+      run /usr/bin/pkill -USR1 -x skhd || echo "skhd not running; nothing to reload (launchd starts it with the current config)"
     '';
 
     # skhd reads ~/.config/skhd/skhdrc before ~/.skhdrc
