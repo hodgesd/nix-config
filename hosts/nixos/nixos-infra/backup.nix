@@ -91,7 +91,15 @@
     # read-only dirs, and preserving that mode sets the DOS read-only
     # attribute on the share, which blocks every later --delete update
     # (the mount's dir_mode/file_mode already yield sane modes).
-    ${pkgs.rsync}/bin/rsync -rlt --delete /var/lib/hermes/.hermes/ "$dest/hermes/"
+    # Exit 24 ("some files vanished") is tolerated: hermes is live and its
+    # SQLite -wal/-shm files come and go mid-copy. Under set -e that warning
+    # used to abort the run before the secrets mirror and last-backup.txt
+    # (seen 2026-10-03, kanban.db-wal). Every other rsync error still fails.
+    ${pkgs.rsync}/bin/rsync -rlt --delete /var/lib/hermes/.hermes/ "$dest/hermes/" || {
+      rs=$?
+      [ "$rs" -eq 24 ] || exit "$rs"
+      echo "hermes rsync: files vanished mid-copy (exit 24), continuing" >&2
+    }
     for f in easy-afd-env cloudflare-acme-env nas-backup-credentials homelab-env hermes-env; do
       ${pkgs.coreutils}/bin/install -m 600 "/run/secrets/$f" "$dest/secrets/"
     done
