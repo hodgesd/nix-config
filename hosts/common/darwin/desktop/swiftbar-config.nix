@@ -29,7 +29,7 @@
         "daily_news_uv.2h.py"
         "market_indices_uv.30m.py"
         "microcenter_deals_uv.6h.py"
-        "bball.1d.py"
+        "bball.6h.py"
         "lottery_value_uv.12h.py"
         "software_versions.2h.py"
       ];
