@@ -22,7 +22,7 @@ services:
       - SYS_MODULE
 
   actual-budget:
-    image: actualbudget/actual-server:26.9.0@sha256:552beab3dec8c93d46b8b9245612d63c3f123b8a45063a474f53e229b17621d3
+    image: actualbudget/actual-server:26.10.0@sha256:24645e971da6bb1a1f953d6859e307a0b29be1e8b4130a35b3220c209b5b860c
     container_name: actual-budget
     restart: unless-stopped
     network_mode: service:ts-budget
@@ -158,7 +158,7 @@ services:
       - SYS_MODULE
 
   librespeed:
-    image: linuxserver/librespeed:v6.3.0-ls292@sha256:6fb1550f7eb948db17559f14a6837112f580de734f3684ac30bd819443826050
+    image: linuxserver/librespeed:v6.3.0-ls293@sha256:cebf3af16a406cbdaa49a27266371fa21228901c3d5e5efad54bbd56350335f6
     container_name: librespeed
     restart: unless-stopped
     network_mode: service:ts-librespeed
@@ -189,7 +189,7 @@ services:
       - SYS_MODULE
 
   metube:
-    image: ghcr.io/alexta69/metube:2026.09.28@sha256:04608d1df751c523db1d3d15c05301cdb6f3cbcaab7c04d3967f1627dffa80be
+    image: ghcr.io/alexta69/metube:2026.09.29@sha256:8e2fe9beeefc55a02f6e1d04cad0fc3c22e8f067d309188f016551dc99ec27b3
     container_name: metube
     restart: unless-stopped
     network_mode: service:ts-metube
@@ -347,7 +347,7 @@ services:
       - SYS_MODULE
 
   drawio:
-    image: jgraph/drawio:31.4.6@sha256:139b43305b77c46575d5af5dcc7b6c38dc7ea22f430fdfe954fb8f96926643e5
+    image: jgraph/drawio:31.7.0@sha256:43f5a9142fb9963cb64eca332b722a0b109975dc84c0880765911e3c0e0ba0fa
     container_name: drawio
     restart: unless-stopped
     network_mode: service:ts-drawio
