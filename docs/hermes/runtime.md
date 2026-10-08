@@ -1,7 +1,7 @@
 # Hermes runtime — containment audit & operating reference (Phase 0)
 
 Deployment: `hosts/nixos/nixos-infra/hermes.nix`, upstream module from the
-`hermes-agent` flake input, pinned at rev `3f497e2` (v0.19.x). Container
+`hermes-agent` flake input, pinned at rev `3cf2eb1` (2026-09-29; `flake.lock`). Container
 mode on the host's docker_29 daemon (`nixpkgs.overlays` maps `pkgs.docker`
 → `docker_29` because the upstream module hardcodes `pkgs.docker`).
 
@@ -48,17 +48,50 @@ Operational hazard, learned the hard way: the host file
 removing it host-side while the container runs silently detaches the ro
 shadow. Never remove it; see `phase-0.5.md`.
 
-## Provider data flow (v1.1, corrected v1.1.1)
+## Provider data flow (v1.1, corrected v1.1.1, **rewritten 2026-09-17**)
 
-Primary inference: Anthropic (`claude-sonnet-5`), and since Phase 0.5
-that is the ONLY provider: `fallback_providers = []` (fail closed — an
-Anthropic outage silences the bot rather than shipping session context
-to whichever provider OpenRouter routes to; OpenRouter guarantees
-neither US-only nor fixed-provider inference without explicit pinning).
-`OPENROUTER_API_KEY` remains in the secret, unused. If a fallback ever
-returns it comes with verified provider pinning. **Voice transcription:
-no provider configured** — one must be chosen and documented here before
-Phase 1's voice-capture use case is enabled.
+Inference goes through **OpenRouter** (`anthropic/claude-sonnet-5.5` since
+2026-10-07; `anthropic/claude-sonnet-5` before), by decision rather than by
+default.
+
+What this section used to say — Anthropic only, fail-closed since Phase
+0.5 — was not true of the running system. Pulled from
+`/var/lib/hermes/.hermes/state.db` on 2026-09-17: **every** session from
+2026-08-30 through 2026-09-17, including each 05:30 cron run, recorded
+`billing_base_url = https://openrouter.ai/api/v1`, while the live
+`config.yaml` on the VM declared `https://api.anthropic.com/v1` and
+`fallback_providers: []`. hermes-agent resolves its provider from the
+credentials present in `.env` and ignores a `model.base_url` that
+disagrees, so `OPENROUTER_API_KEY` — annotated "unused (cleanup
+optional)" — was in fact selecting the route. Nothing detected this for
+three weeks, because every sentinel check asked whether work happened,
+never where it went.
+
+Two things changed in response:
+
+- **The config now states what happens.** `model.base_url` is OpenRouter
+  and `model.default` is the namespaced `anthropic/claude-sonnet-5.5`. An
+  aggregator is genuinely the right tool for the current phase — it makes
+  the model a one-line swap, which is what allows pricing alternatives
+  against real traffic instead of published benchmarks.
+- **Drift is now monitored.** `hermes-sentinel.nix` compares the endpoint
+  and model recorded on the last call against what `hermes.nix` declares,
+  and alerts on divergence in either direction.
+
+The cost is jurisdictional and is accepted knowingly: OpenRouter
+guarantees neither US-only nor fixed-provider inference without explicit
+pinning, and it receives full session context — vault reads, Fastmail
+metadata, Reminders, terminal output. `fallback_providers = []` still
+holds but now means only "no second *configured* provider", not "pinned
+to one vendor". Pinning (`provider.only` + `allow_fallbacks: false`) is
+the follow-up once a long-term model is settled; the upstream plumbing
+exists (the OpenRouter profile's `build_extra_body` maps a
+`provider_preferences` context key onto OpenRouter's `provider` routing
+object) but the config key that populates it has not yet been located.
+
+**Voice transcription** stays local (faster-whisper in the container) —
+now the one leg of the pipeline with a hard boundary, which is a better
+reason to keep it than it was before.
 
 ## Surfaces (since Phase 0.5)
 

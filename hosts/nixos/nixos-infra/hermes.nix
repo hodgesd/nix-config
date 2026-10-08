@@ -44,10 +44,21 @@ in {
   # the same thing so the module's CLI matches the running daemon.
   nixpkgs.overlays = [(final: prev: {docker = prev.docker_29;})];
 
-  # Dotenv format: ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, and the Telegram
-  # user-ID allowlist. The allowlist stays in ciphertext deliberately — this
-  # repo is public. Root-read is fine: systemd resolves EnvironmentFiles as
-  # root (same pattern as easy-afd-env).
+  # Dotenv format: ANTHROPIC_API_KEY, OPENROUTER_API_KEY, TELEGRAM_BOT_TOKEN,
+  # and the Telegram user-ID allowlist. The allowlist stays in ciphertext
+  # deliberately — this repo is public. Root-read is fine: systemd resolves
+  # EnvironmentFiles as root (same pattern as easy-afd-env).
+  #
+  # OPENROUTER_API_KEY is LOAD-BEARING (corrected 2026-09-17 — it was
+  # previously annotated "unused (cleanup optional)", which was wrong).
+  # hermes-agent picks its provider from the credentials present in .env,
+  # so this key is what actually selects the OpenRouter path now declared
+  # in `model.base_url` below. Removing it does not fall back gracefully to
+  # Anthropic — it changes provider resolution, so treat it as config, not
+  # as leftovers. Note the .env write is a truncating rewrite
+  # (`cat > "$ENV_FILE"` in the upstream activation script), NOT the
+  # key-preserving merge that config.yaml gets — so a key deleted here does
+  # leave the host file on the next activation.
   #
   # restartUnits for the same reason as easy-afd-env (see default.nix):
   # systemd restarts a service when its unit changes, not when the contents
@@ -92,12 +103,62 @@ in {
     # "voice" carries faster-whisper for LOCAL speech-to-text.
     extraDependencyGroups = ["anthropic" "messaging" "voice"];
     settings = {
-      # sonnet-5: better than sonnet-4-5 on agentic work at the same list
-      # price ($3/$15/MTok, intro $2/$10 through 2026-08-31). Note it 400s on
-      # non-default temperature/top_p — if hermes ever grows sampling knobs,
-      # leave them unset for this model.
-      model.default = "claude-sonnet-5";
-      model.base_url = "https://api.anthropic.com/v1";
+      # Provider: OpenRouter, DELIBERATELY (2026-09-17). This used to
+      # declare api.anthropic.com and was simply not true — every session
+      # from 2026-08-30 to 2026-09-17 recorded
+      # billing_base_url = https://openrouter.ai/api/v1 in state.db,
+      # including each 05:30 cron run, while config.yaml said Anthropic.
+      # hermes-agent resolves the provider itself from the credentials in
+      # .env and ignores a model.base_url that disagrees; the declared
+      # value bought nothing but a false sense of a gate. Rather than
+      # fight the resolver, the config now states what actually happens.
+      #
+      # This is the right shape for the current exploration phase: the
+      # aggregator makes `model.default` a one-line model swap, which is
+      # what lets us price DeepSeek et al. against real traffic instead of
+      # against published benchmarks. The cost is jurisdictional —
+      # OpenRouter guarantees neither US-only nor fixed-provider routing
+      # without explicit pinning, and it receives FULL session context
+      # (vault reads, Fastmail metadata, Reminders, terminal output).
+      # Accepted knowingly, not by accident. Pinning (provider.only +
+      # allow_fallbacks: false) is the follow-up once a long-term model is
+      # chosen — the plumbing exists upstream (the OpenRouter profile's
+      # build_extra_body maps a `provider_preferences` context key onto
+      # OpenRouter's `provider` routing object), but the config key that
+      # populates it is not yet identified. hermes-sentinel.nix watches
+      # for drift from the pair declared here in the meantime.
+      #
+      # Namespaced model id: both "claude-sonnet-5" and
+      # "anthropic/claude-sonnet-5" appear in state.db history. The
+      # namespaced form is what OpenRouter actually addresses, so it is
+      # unambiguous and matches what the sentinel compares against.
+      # NOTE the dot: OpenRouter spells it claude-sonnet-5.5, the native
+      # Anthropic id is claude-sonnet-5-5 — swapping providers means
+      # re-spelling the model.
+      #
+      # sonnet-5.5 (2026-10-07, from sonnet-5): same $2/$10 list price
+      # (the $2/$10 "intro through 2026-08-31" became permanent), cache
+      # reads halved to $0.10/MTok, same tokenizer, and — per Anthropic —
+      # more reliable tool use in fewer requests per task. hermes-agent
+      # needs no change: unknown Claude ids get adaptive thinking and no
+      # sampling params (both of which 5.5 requires). Hermes sets no
+      # effort for the main agent, so this runs at the API default
+      # (`high`); if briefs get slower or wordier, `agent.reasoning_effort
+      # = "medium"` is Anthropic's starting point for multistep tool use.
+      model.default = "anthropic/claude-sonnet-5.5";
+      model.base_url = "https://openrouter.ai/api/v1";
+
+      # Prompt-cache TTL. Upstream default is "5m"; the only other
+      # Anthropic-supported tier is "1h" (hermes_cli/config_defaults.py,
+      # `prompt_caching.cache_ttl` — and it applies on the OpenRouter path
+      # too, not just the native Anthropic one). This is the money knob:
+      # measured 2026-09-17, ~69% of spend was cache WRITES, because
+      # Telegram turns land minutes apart and the 5m window expires
+      # between them, so each turn repays the full prefix write at
+      # 12.5x the read price. Read:write was 2.2:1; target ~10:1.
+      # Does nothing for the daily cron — a 24h gap outruns any TTL —
+      # so prefix size stays the only lever there.
+      prompt_caching.cache_ttl = "1h";
 
       # Phase 0.5 gate 1: the Telegram surface is minimal by design. The
       # default hermes-telegram preset ships terminal+web+browser+file in
@@ -110,8 +171,10 @@ in {
       platform_toolsets.telegram = ["messaging" "todo" "vision"];
 
       # Voice notes → text, LOCALLY (faster-whisper in the container).
-      # No cloud provider, no API key: audio never leaves the homelab,
-      # matching the fail-closed provider posture. First use downloads
+      # No cloud provider, no API key: audio never leaves the homelab.
+      # Worth keeping that way now more than before — text prompts go to
+      # an aggregator, so local STT is the one part of the pipeline that
+      # still has a hard boundary. First use downloads
       # the model from HuggingFace (public 443 — allowed by the egress
       # jail) into /data. "small" trades a few seconds of CPU for
       # noticeably better accuracy than "base" on an 8GB VM.
@@ -125,18 +188,15 @@ in {
         backend = "local";
         timeout = 180;
       };
-      # Phase 0.5 task 4: fail closed to Anthropic. The OpenRouter →
-      # DeepSeek fallback was dropped because OpenRouter guarantees
-      # neither US-only nor fixed-provider routing without an explicit
-      # provider allowlist + provider-fallbacks disabled — and the
-      # fallback receives full session context. Trade-off accepted: an
-      # Anthropic outage silences the bot until it passes (the watchdog
-      # below only alerts on process death, not API failure). MUST be an
-      # explicit [] rather than deleted: the activation merge preserves
-      # existing config keys, so deleting the nix key would leave the old
-      # fallback live in the host file. OPENROUTER_API_KEY remains in the
-      # hermes-env secret, unused (cleanup optional). If a fallback ever
-      # returns, it comes with verified provider pinning.
+      # No *declared* fallback chain. Note this is a narrower claim than
+      # it was before 2026-09-17: it means hermes won't hop to a second
+      # configured provider, NOT that inference is pinned to one vendor.
+      # Routing inside OpenRouter is the aggregator's to make until the
+      # provider-pinning follow-up above lands.
+      #
+      # MUST stay an explicit [] rather than being deleted: the activation
+      # merge preserves existing config keys, so dropping the nix key
+      # would leave whatever is already in the host file live.
       fallback_providers = [];
 
       # Audit trail: log every tool call (terminal, file, and future MCP —
@@ -218,7 +278,20 @@ in {
 
   # `hermes-audit` = live tail of the audit stream; any extra args are
   # passed straight to journalctl (e.g. `hermes-audit --since -1h`).
+  #
+  # sqlite: /var/lib/hermes/.hermes/state.db is the ONLY place hermes keeps
+  # per-session token and cost accounting (tables `sessions` and
+  # `session_model_usage`: input/output/cache_read/cache_write/reasoning +
+  # estimated_cost_usd). The logs carry none of it. This VM shipped without
+  # sqlite3 *and* without python3, so the 2026-09-17 provider/cost
+  # investigation had to scp the db to a Mac to read it. Query it in place:
+  #   sqlite3 -readonly /var/lib/hermes/.hermes/state.db \
+  #     "select model, billing_base_url, output_tokens, cache_write_tokens
+  #      from session_model_usage order by last_seen desc limit 5;"
+  # No sudo needed — hodgesd is in the `hermes` group (sudo here wants a
+  # password; group access does not).
   environment.systemPackages = [
+    pkgs.sqlite
     (pkgs.writeShellScriptBin "hermes-audit" ''
       if [ $# -eq 0 ]; then
         exec journalctl -t hermes-audit -n 50 -f
