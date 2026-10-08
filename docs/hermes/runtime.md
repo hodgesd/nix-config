@@ -1,7 +1,7 @@
 # Hermes runtime — containment audit & operating reference (Phase 0)
 
 Deployment: `hosts/nixos/nixos-infra/hermes.nix`, upstream module from the
-`hermes-agent` flake input, pinned at rev `3f497e2` (v0.19.x). Container
+`hermes-agent` flake input, pinned at rev `3cf2eb1` (2026-09-29; `flake.lock`). Container
 mode on the host's docker_29 daemon (`nixpkgs.overlays` maps `pkgs.docker`
 → `docker_29` because the upstream module hardcodes `pkgs.docker`).
 
@@ -50,8 +50,9 @@ shadow. Never remove it; see `phase-0.5.md`.
 
 ## Provider data flow (v1.1, corrected v1.1.1, **rewritten 2026-09-17**)
 
-Inference goes through **OpenRouter** (`anthropic/claude-sonnet-5`), by
-decision rather than by default.
+Inference goes through **OpenRouter** (`anthropic/claude-sonnet-5.5` since
+2026-10-07; `anthropic/claude-sonnet-5` before), by decision rather than by
+default.
 
 What this section used to say — Anthropic only, fail-closed since Phase
 0.5 — was not true of the running system. Pulled from
@@ -69,7 +70,7 @@ never where it went.
 Two things changed in response:
 
 - **The config now states what happens.** `model.base_url` is OpenRouter
-  and `model.default` is the namespaced `anthropic/claude-sonnet-5`. An
+  and `model.default` is the namespaced `anthropic/claude-sonnet-5.5`. An
   aggregator is genuinely the right tool for the current phase — it makes
   the model a one-line swap, which is what allows pricing alternatives
   against real traffic instead of published benchmarks.

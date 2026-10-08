@@ -92,7 +92,8 @@
     export OPENCODE_DISABLE_AUTOUPDATE=1
   '';
 
-  # Same OpenRouter-namespaced model id hermes.nix uses. Verify in pi's
+  # Same OpenRouter namespacing as hermes.nix (which moved to sonnet-5.5
+  # on 2026-10-07; the workbench stays on sonnet-5 until it is re-priced). Verify in pi's
   # /model picker on first run; Ctrl+S there rewrites the seeded file.
   model = "anthropic/claude-sonnet-5";
 

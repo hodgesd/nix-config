@@ -132,7 +132,20 @@ in {
       # "anthropic/claude-sonnet-5" appear in state.db history. The
       # namespaced form is what OpenRouter actually addresses, so it is
       # unambiguous and matches what the sentinel compares against.
-      model.default = "anthropic/claude-sonnet-5";
+      # NOTE the dot: OpenRouter spells it claude-sonnet-5.5, the native
+      # Anthropic id is claude-sonnet-5-5 — swapping providers means
+      # re-spelling the model.
+      #
+      # sonnet-5.5 (2026-10-07, from sonnet-5): same $2/$10 list price
+      # (the $2/$10 "intro through 2026-08-31" became permanent), cache
+      # reads halved to $0.10/MTok, same tokenizer, and — per Anthropic —
+      # more reliable tool use in fewer requests per task. hermes-agent
+      # needs no change: unknown Claude ids get adaptive thinking and no
+      # sampling params (both of which 5.5 requires). Hermes sets no
+      # effort for the main agent, so this runs at the API default
+      # (`high`); if briefs get slower or wordier, `agent.reasoning_effort
+      # = "medium"` is Anthropic's starting point for multistep tool use.
+      model.default = "anthropic/claude-sonnet-5.5";
       model.base_url = "https://openrouter.ai/api/v1";
 
       # Prompt-cache TTL. Upstream default is "5m"; the only other
