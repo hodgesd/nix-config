@@ -18,16 +18,17 @@ with `just deploy` (see [Deploying](#deploying)).
 |---|---|---|---|
 | `easy-afd` | `easy-afd.nix` | Easy A/FD (gunicorn :8000, tailnet-only via firewall) | always |
 | `nginx` | `proxy.nix` | TLS front for **https://afd.hdgs.me** (LE cert, DNS-01 via Cloudflare) | always |
-| `easy-afd-refresh` | `easy-afd.nix` | Rebuilds NASR/OurAirports/openAIP data, restarts app, Gatus heartbeat | weekly (Mon ~00:45) |
+| `easy-afd-refresh` | `easy-afd.nix` | Rebuilds NASR, the d-TPP chart index, OurAirports and openAIP data; reloads the app; Gatus heartbeat on success; retries twice, then pages via `notify-failure@` | nightly (00:00–01:00) |
 | `homelab-backup` | `backup.nix` | Mirror /srv/homelab + secrets → NAS `backups` share | nightly 03:30 |
 | `mnt-data.automount` | `storage.nix` | `//192.168.1.142/Data` at /mnt/data (MeTube downloads) | on access |
 | `compose-homelab` | `homelab-stack.nix` | Deploys `stacks/homelab/docker-compose.yml` → `docker compose up -d` | on change |
 | `acme-afd.hdgs.me` timers | `proxy.nix` | Cert renewal | automatic |
 | `hermes-agent` | `hermes.nix` | NousResearch Hermes agent (Claude via Anthropic API): Telegram bot + host `hermes` CLI, container mode on the host docker daemon | always |
 | `hermes-watchdog` | `hermes.nix` | Checks hermes unit + container, alerts via ntfy (`hermes-alerts` topic) | every 5 min |
-| `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls all nine compose apps + Easy A/FD, heartbeat for the weekly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
+| `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls all nine compose apps + Easy A/FD (liveness and data currency), heartbeat for the nightly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
 | `hn-summaries` | `hn-summaries.nix` | Shared Hacker News discussion summaries for the Macs' daily_news plugin (:8090, tailnet-only): SQLite cache → HN Companion → one OpenRouter call per story, daily cap, cost ledger in the journal. See [docs/HN-SUMMARIES.md](HN-SUMMARIES.md) | always |
 | `hn-summaries-warm` | `hn-summaries.nix` | Summarises the current HN front page into that cache so Mac refreshes are cache hits | every 30 min |
+| `notify-failure@<unit>` | `gatus.nix` | `OnFailure=` target: pages ntfy (`gatus` topic) with the failed unit's last error lines. Used by `easy-afd-refresh` | when a unit that opts in fails |
 | `hc-heartbeat` | `healthchecks.nix` | Checks in with healthchecks.io (off-site dead-man for this VM) | every 5 min |
 | `hc-ntfy` | `healthchecks.nix` | Checks in with a second healthchecks.io check only while ntfy's `/v1/health` is healthy (alerts when the alerter is down) | every 5 min |
 | `samsclub-popcorn` | `samsclub-popcorn.nix` | **Temporary, expires 2026-12-12.** Curls a Sam's Club product page, alerts via ntfy (`changes` topic) when delivery from the O'Fallon club comes back in stock; after expiry it only reminds you to remove it. Manual test: `samsclub-popcorn-check --test` | every 2 h, 06–22 |
@@ -89,13 +90,34 @@ stateful service (actual, adguard, changedetection, ntfy). Disable: delete
 **Monitoring (Gatus, on this host):** `gatus.nix` — native `services.gatus`,
 monitors declared in Nix, SQLite history under `/var/lib/gatus`, dashboard
 at **https://status.jaguar-duckbill.ts.net** through the `ts-status`
-sidecar. Pings the mini and the NAS, polls all nine compose apps and Easy A/FD by their
-tailnet/public names, and holds a 192 h heartbeat for the weekly Easy A/FD
-refresh (the refresh script POSTs to it; URL + token in `easy-afd-env`).
+sidecar. Pings the mini and the NAS and polls all nine compose apps and Easy A/FD by their
+tailnet/public names.
 Alerts go to ntfy topic `gatus` after 3 consecutive failures, resolved after
 2 successes. Uptime Kuma (2026-08 → 2026-09-06, on the mini) was replaced
 after a side-by-side trial; `docs/GATUS-EVAL.md` has the mapping and the
 reasons.
+
+**Easy A/FD data freshness** is watched three ways, because in September
+2026 it was watched one way and that way failed: the FAA changed a file
+layout, every weekly refresh failed from 09-07, and nothing said so until
+someone looked at the site on 10-09. The liveness poll saw HTTP 200; the
+192 h heartbeat needed three missed windows to page and restarted its
+clock whenever Gatus restarted.
+
+| Signal | Catches | Pages after |
+|---|---|---|
+| `notify-failure@easy-afd-refresh` (`OnFailure=`) | A refresh that ran and failed, with the error text | 3 attempts, ~45 min |
+| `easy-afd-data` (Gatus, `/healthz` body: `nasr_cycle_current`, `dtpp_cycle_current`) | Data that is stale whatever the refresh claims | 3 h |
+| `easy-afd-refresh` heartbeat (Gatus, 36 h) | A refresh that never ran at all | 36 h (a Gatus restart restarts the window) |
+
+The refresh runs nightly rather than weekly so the middle row means
+something: on changeover day the flags are false from local midnight until
+the run lands, about an hour. When a failure pages: `journalctl -u
+easy-afd-refresh`, fix, then `systemctl reset-failed easy-afd-refresh &&
+systemctl start easy-afd-refresh` — the reset is needed because the retry
+limit that delays the page also refuses a manual start. The app repo adds a
+fourth signal off this box: a daily GitHub Actions canary that parses the
+live FAA files, including the next cycle's, and opens an issue.
 
 Things Gatus here cannot do, handled separately:
 
