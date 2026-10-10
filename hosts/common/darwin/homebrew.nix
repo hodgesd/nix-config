@@ -138,6 +138,10 @@
       "swiftbar" # configured by darwin/desktop/swiftbar-config.nix
       "balenaetcher"
       "brave-browser"
+      # Menu bar calendar, picked over itsycal in the 2026-09 trial. It reads
+      # Reminders as well as Calendars, so a wedged remindd blanks its whole
+      # event list (macOS 27 bug, 2026-09-16: `killall syncdefaultsd`).
+      "calendr"
       "chatgpt"
       "citrix-workspace"
       "claude"
