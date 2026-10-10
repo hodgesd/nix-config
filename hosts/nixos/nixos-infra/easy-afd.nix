@@ -1,7 +1,9 @@
 # Easy A/FD (github.com/hodgesd/gvii_afd-backup) as a systemd service:
-# the app itself and the weekly data refresh. Gatus (gatus.nix) polls
-# https://afd.hdgs.me/healthz directly and the refresh reports to it.
-# The nginx/ACME front is proxy.nix; NAS backup is backup.nix.
+# the app itself and the daily data refresh. Gatus (gatus.nix) polls
+# https://afd.hdgs.me/healthz — for liveness and, separately, for whether
+# the data is current — and the refresh reports to it on success and
+# pages through it on failure. The nginx/ACME front is proxy.nix; NAS
+# backup is backup.nix.
 #
 # KNOWN GAP (out of scope): source lives in /srv/easy-afd, rsynced from
 # the dev Mac over Tailscale (the repo is private so it is not fetched
@@ -9,8 +11,11 @@
 # until that rsync runs — see docs/NIXOS-INFRA.md.
 #
 # Mutable data lives in /var/lib/easy-afd: the app opens
-# best_apprs.pickle, dtpp_charts.pickle and data/*.sqlite relative to
-# its working directory, and writes *_cache_v2.json weather caches there.
+# best_apprs.pickle, dtpp_charts.pickle and data/* relative to its
+# working directory, and writes *_cache_v2.json weather caches there.
+# The two chart pickles exist twice — the repo's committed copies
+# (symlinked in by preStart) and the refresh's own copies under data/ —
+# and the app loads whichever pair is from the newer d-TPP cycle.
 #
 # IMPORTANT: never copy data/ from another machine — data/alternates.pickle
 # is pandas-version-coupled (dev Mac runs pandas 3.x, nixpkgs ships 2.x).
@@ -68,20 +73,52 @@
     ln -sfn ${appDir}/dtpp_charts.pickle ${stateDir}/dtpp_charts.pickle
   '';
 
-  # Rebuild the bulk aeronautical data (NASR 28-day cycle, OurAirports,
-  # openAIP PCN overlay) into ${stateDir}/data.
+  # Rebuild the bulk aeronautical data into ${stateDir}/data: NASR and
+  # the d-TPP chart index (both on the FAA's 28-day cycle), OurAirports,
+  # and the openAIP PCN overlay.
+  #
+  # Every source is attempted even when an earlier one fails. This was a
+  # `set -e` chain, so when the FAA changed the NASR file layout in
+  # September 2026 the failing NASR step also skipped OurAirports and
+  # openAIP — for the five weeks it took anyone to notice. A failed
+  # source still fails the unit (which is what pages, see onFailure
+  # below); it just no longer takes the others down with it.
   refresh = pkgs.writeShellScript "easy-afd-refresh" ''
-    set -eu
+    set -u
     cd ${stateDir}
-    ${pyEnv}/bin/python ${appDir}/scripts/refresh_faa_data.py --nasr --data-dir ${stateDir}/data
-    ${pyEnv}/bin/python ${appDir}/scripts/refresh_ourairports_data.py --data-dir ${stateDir}/data
+    py=${pyEnv}/bin/python
+    scripts=${appDir}/scripts
+    data=${stateDir}/data
+    failed=""
+    step() { # name command...
+      name=$1
+      shift
+      if "$@"; then
+        echo "refresh ok: $name"
+      else
+        # Worded for notify-failure@ (gatus.nix), which pages with the
+        # lines of this run that look like errors.
+        echo "REFRESH FAILED: $name (exit $?)" >&2
+        failed="$failed $name"
+      fi
+    }
+    step nasr "$py" "$scripts/refresh_faa_data.py" --nasr --data-dir "$data"
+    # The chart index and best-approach table. Until 2026-10 these came
+    # only from the repo's committed pickles, so they were as old as the
+    # last commit that refreshed them (four cycles, when it was found).
+    step charts "$py" "$scripts/refresh_faa_data.py" --dtpp --dtpp-out "$data"
+    step ourairports "$py" "$scripts/refresh_ourairports_data.py" --data-dir "$data"
     # Non-fatal: needs OPENAIP_API_KEY (in the easy-afd-env secret) since
     # openAIP's bulk exports went requester-pays (2026-07-22); on any
     # failure the PCN overlay just goes stale and the app degrades
     # gracefully without it.
-    ${pyEnv}/bin/python ${appDir}/scripts/refresh_openaip_data.py --data-dir ${stateDir}/data \
+    "$py" "$scripts/refresh_openaip_data.py" --data-dir "$data" \
       || echo "openaip refresh failed (non-fatal)" >&2
-    # Success heartbeat to the Gatus external endpoint (192 h window;
+    if [ -n "$failed" ]; then
+      echo "REFRESH FAILED:$failed" >&2
+      exit 1
+    fi
+    # Success heartbeat to the Gatus external endpoint (36 h window;
     # hosts/nixos/nixos-infra/gatus.nix): a POST with a bearer token. Both
     # GATUS_* values live in the easy-afd-env secret; skipped when unset.
     if [ -n "''${GATUS_REFRESH_PUSH_URL:-}" ]; then
@@ -170,6 +207,24 @@ in {
     wants = ["network-online.target"];
     environment.PYTHONPATH = appDir;
 
+    # A failed refresh pages, with the error, the night it happens
+    # (notify-failure@ lives in gatus.nix with the rest of the alerting).
+    # Before this the only signal was the absence of a success heartbeat,
+    # and that took weeks to add up to an alert.
+    onFailure = ["notify-failure@%n.service"];
+
+    # ...but only after three tries. With Restart= set (below), systemd
+    # retries a failed run and the unit does not enter "failed" — the
+    # state onFailure reacts to — until this start limit refuses a fourth
+    # attempt, about 45 minutes in. The FAA's servers answer 503 for
+    # minutes at a time; a page should mean a person is needed.
+    #
+    # Unit-level for the reason given on easy-afd above. Side effect to
+    # know about: once the limit is hit, a manual `systemctl start` is
+    # refused too until `systemctl reset-failed easy-afd-refresh`.
+    startLimitBurst = 3;
+    startLimitIntervalSec = 2 * 60 * 60;
+
     serviceConfig =
       hardening
       // {
@@ -179,18 +234,33 @@ in {
         StateDirectory = "easy-afd";
         WorkingDirectory = stateDir;
         ExecStart = refresh;
-        # "+" = run as root: pick up the fresh data (the app loads the
-        # sqlite stores and alternates pickle at import time).
-        ExecStartPost = "+${lib.getExe' pkgs.systemd "systemctl"} try-restart easy-afd.service";
+        Restart = "on-failure";
+        RestartSec = "15min";
+        # "+" = run as root: have the app pick up the fresh data (it
+        # opens the stores and loads the pickles when a worker starts).
+        # ExecStopPost rather than ExecStartPost because it also runs
+        # when ExecStart failed: the sources are independent, so a run
+        # that failed on one has usually still replaced the others.
+        # Reload, not restart — gunicorn re-execs its workers without
+        # dropping requests, which matters now that this is nightly.
+        ExecStopPost = "+${lib.getExe' pkgs.systemd "systemctl"} try-reload-or-restart easy-afd.service";
         EnvironmentFile = config.sops.secrets.easy-afd-env.path;
       };
   };
 
-  # NASR data runs a 28-day cycle; weekly keeps it comfortably fresh.
+  # Daily, within the hour after local midnight.
+  #
+  # The app decides which 28-day cycle is "current" by the date, so at
+  # midnight on changeover day it starts describing the data it holds as
+  # expired; refreshing then keeps that to about an hour. The new files
+  # are already there — the FAA posts each cycle some three weeks ahead.
+  # This was weekly, which left the data stale for up to seven days every
+  # fourth week and made "is it current?" useless as an alert condition
+  # (see easy-afd-data in gatus.nix). A run costs ~30 MB and ~3 minutes.
   systemd.timers.easy-afd-refresh = {
     wantedBy = ["timers.target"];
     timerConfig = {
-      OnCalendar = "weekly";
+      OnCalendar = "daily";
       Persistent = true;
       RandomizedDelaySec = "1h";
     };
