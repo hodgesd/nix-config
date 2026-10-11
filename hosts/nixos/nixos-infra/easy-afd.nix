@@ -63,6 +63,7 @@
       python-dotenv
       requests
       scikit-learn
+      timezonefinder
     ]));
 
   # Link the repo's committed pickles into the working directory.
