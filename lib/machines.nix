@@ -33,6 +33,13 @@
     # No chip: QEMU guest on the HP mini PC's Proxmox host.
   };
 
+  t3-code = {
+    type = "nixos";
+    formFactor = "vm";
+    primaryUse = "development";
+    # No chip: QEMU guest on the HP mini PC's Proxmox host.
+  };
+
   air = {
     type = "darwin";
     chip = "m1";
