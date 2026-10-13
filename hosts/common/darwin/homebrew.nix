@@ -132,70 +132,81 @@
     # a mini switch on 2026-08-09), and onActivation.cleanup is
     # "uninstall", so removing an entry (or leaving an installed app
     # undeclared) removes the app on that host's next activation.
-    casks = [
-      "orbstack" # container runtime on every Mac
-      "karabiner-elements" # configured by darwin/desktop/karabiner.nix
-      "swiftbar" # configured by darwin/desktop/swiftbar-config.nix
-      "balenaetcher"
-      "brave-browser"
-      "chatgpt"
-      "citrix-workspace"
-      "claude"
-      "codexbar"
-      "cursor"
-      "default-folder-x"
-      "desktoppr" # Command-line wallpaper manager
-      "discord"
-      # 2026-08-30 mini-converge keepers: previously installed, now declared
-      # so cleanup keeps them. Deliberately dropped in the same pass (will
-      # uninstall wherever present): boring-notch, iterm2, utm, warp,
-      # grammarly-desktop, zoom, raycast.
-      # 2026-09-02: two of those keepers dropped again after they broke the
-      # mbp switch. docker-desktop: its cask links
-      # /usr/local/bin/docker-credential-osxkeychain, which OrbStack already owns
-      # on every host, so the install can never succeed. dockutil: no longer
-      # a cask upstream (formula only) and nothing here uses it. Both get
-      # uninstalled from the mini by cleanup on its next activation.
+    casks =
+      [
+        "orbstack" # container runtime on every Mac
+        "karabiner-elements" # configured by darwin/desktop/karabiner.nix
+        "swiftbar" # configured by darwin/desktop/swiftbar-config.nix
+        "balenaetcher"
+        "brave-browser"
+        # Menu bar calendar, picked over itsycal in the 2026-09 trial. It reads
+        # Reminders as well as Calendars, so a wedged remindd blanks its whole
+        # event list (macOS 27 bug, 2026-09-16: `killall syncdefaultsd`).
+        "calendr"
+        "chatgpt"
+        "citrix-workspace"
+        "claude"
+        "codexbar"
+        "cursor"
+        "default-folder-x"
+        "desktoppr" # Command-line wallpaper manager
+        "discord"
+        # 2026-08-30 mini-converge keepers: previously installed, now declared
+        # so cleanup keeps them. Deliberately dropped in the same pass (will
+        # uninstall wherever present): boring-notch, iterm2, utm, warp,
+        # grammarly-desktop, zoom, raycast.
+        # 2026-09-02: two of those keepers dropped again after they broke the
+        # mbp switch. docker-desktop: its cask links
+        # /usr/local/bin/docker-credential-osxkeychain, which OrbStack already owns
+        # on every host, so the install can never succeed. dockutil: no longer
+        # a cask upstream (formula only) and nothing here uses it. Both get
+        # uninstalled from the mini by cleanup on its next activation.
 
-      # draw.io Desktop. Deliberately NOT a client for the self-hosted
-      # instance at drawio.jaguar-duckbill.ts.net — it bundles its own
-      # copy of the editor and talks to nothing but itself (upstream
-      # disables all external connections; DRAWIO_DISABLE_UPDATE=true
-      # kills even the version check). Worth having alongside the
-      # container because reaching the VM hairpins out through the ISP
-      # and back, so loading the 9.6 MB web editor takes ~14 s from here.
-      "drawio"
-      "fastmail"
-      "fluidvoice" # voice-to-text dictation; installed by hand on mbp 2026-09-13
-      "ghostty"
-      "git-credential-manager"
-      "google-chrome"
-      "google-gemini"
-      "istat-menus"
-      "launchbar"
-      "libreoffice"
-      "licecap"
-      "lm-studio"
-      "macwhisper"
-      "microsoft-auto-update"
-      "microsoft-teams"
-      "netnewswire"
-      "obsidian"
-      "opencode-desktop"
-      "popclip"
-      "rectangle"
-      "reminders-menubar"
-      "remoteviewer"
-      "sf-symbols"
-      "steam"
-      "syntax-highlight"
-      "telegram" # native macOS client — desktop surface for the Hermes bot
-      "thaw" # menu bar manager, maintained fork of the abandoned jordanbaird-ice
-      "unifi-identity-endpoint"
-      "vivaldi"
-      "whatcable"
-      "xnapper"
-    ];
+        # draw.io Desktop. Deliberately NOT a client for the self-hosted
+        # instance at drawio.jaguar-duckbill.ts.net — it bundles its own
+        # copy of the editor and talks to nothing but itself (upstream
+        # disables all external connections; DRAWIO_DISABLE_UPDATE=true
+        # kills even the version check). Worth having alongside the
+        # container because reaching the VM hairpins out through the ISP
+        # and back, so loading the 9.6 MB web editor takes ~14 s from here.
+        "drawio"
+        "fastmail"
+        "fluidvoice" # voice-to-text dictation; installed by hand on mbp 2026-09-13
+        "ghostty"
+        "git-credential-manager"
+        "google-chrome"
+        "google-gemini"
+        "istat-menus"
+        "launchbar"
+        "libreoffice"
+        "licecap"
+        "lm-studio"
+        "macwhisper"
+        "microsoft-auto-update"
+        "microsoft-teams"
+        "netnewswire"
+        "obsidian"
+        "opencode-desktop"
+        "popclip"
+        "rectangle"
+        "reminders-menubar"
+        "remoteviewer"
+        "sf-symbols"
+        "steam"
+        "syntax-highlight"
+        "telegram" # native macOS client — desktop surface for the Hermes bot
+        "thaw" # menu bar manager, maintained fork of the abandoned jordanbaird-ice
+        "unifi-identity-endpoint"
+        "vivaldi"
+        "whatcable"
+        "xnapper"
+      ]
+      # Workstations only: GUI for coding agents (Codex / Claude Code), no use
+      # on the headless mini. Alpha and self-updating, hence the cask rather
+      # than nixpkgs' t3code (store-pinned, so its updater can't apply).
+      ++ lib.optionals (machine.primaryUse != "server") [
+        "t3-code"
+      ];
 
     # Skipped on the server (mini): mas-cli installs trip over Spotlight
     # indexing on that host, and a headless monitoring box has no use for
