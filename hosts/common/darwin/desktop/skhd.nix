@@ -23,9 +23,14 @@
       fi
     '';
 
-    # Reload skhd after configuration changes
+    # Reload skhd after configuration changes. `skhd -r` signals the pid in
+    # /tmp/skhd_$USER.pid, which macOS's periodic /tmp cleanup deletes after a
+    # few days of uptime — the reload then fails and skhd silently keeps the
+    # old bindings. Fall back to a full service restart in that case.
     home.activation.reloadSkhd = ''
-      run /opt/homebrew/bin/skhd -r || echo "skhd reload failed (this is normal if skhd isn't running yet)"
+      run /opt/homebrew/bin/skhd -r 2>/dev/null \
+        || run /opt/homebrew/bin/skhd --restart-service \
+        || echo "skhd reload/restart failed (this is normal if skhd isn't running yet)"
     '';
 
     # skhd reads ~/.config/skhd/skhdrc before ~/.skhdrc
