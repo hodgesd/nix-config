@@ -162,13 +162,14 @@
         # a cask upstream (formula only) and nothing here uses it. Both get
         # uninstalled from the mini by cleanup on its next activation.
 
-        # draw.io Desktop. Deliberately NOT a client for the self-hosted
-        # instance at drawio.jaguar-duckbill.ts.net — it bundles its own
-        # copy of the editor and talks to nothing but itself (upstream
-        # disables all external connections; DRAWIO_DISABLE_UPDATE=true
-        # kills even the version check). Worth having alongside the
-        # container because reaching the VM hairpins out through the ISP
-        # and back, so loading the 9.6 MB web editor takes ~14 s from here.
+        # draw.io Desktop — the only draw.io now. It bundles its own copy
+        # of the editor and talks to nothing but itself (upstream disables
+        # all external connections; DRAWIO_DISABLE_UPDATE=true kills even
+        # the version check). The self-hosted container on nixos-infra was
+        # retired 2026-10-14: the editor runs entirely client-side, so the
+        # VM was spending a JVM + tailnet sidecar to serve static files that
+        # loaded slower (~14 s, hairpin via the ISP) than this app. iPad,
+        # if ever needed: app.diagrams.net has the same client-side model.
         "drawio"
         "fastmail"
         "fluidvoice" # voice-to-text dictation; installed by hand on mbp 2026-09-13

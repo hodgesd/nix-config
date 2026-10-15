@@ -177,7 +177,7 @@ in {
           (http "nixos-infra" "metube" "https://metube.jaguar-duckbill.ts.net" [])
         ]
         # Every sidecar declared in sidecars.nix with a gatus name
-        # (changedetection, stirling-pdf, drawio, ...).
+        # (changedetection, stirling-pdf, ...).
         ++ lib.mapAttrsToList
         (name: s: http "nixos-infra" s.gatus "https://${name}.jaguar-duckbill.ts.net" s.conditions)
         (lib.filterAttrs (_: s: s.gatus != null) config.homelab.sidecars)

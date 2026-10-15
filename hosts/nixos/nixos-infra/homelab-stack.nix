@@ -30,6 +30,5 @@
       upstream = "http://127.0.0.1:8080";
       gatus = "stirling-pdf";
     };
-    drawio.upstream = "http://127.0.0.1:8080";
   };
 }

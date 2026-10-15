@@ -25,7 +25,7 @@ with `just deploy` (see [Deploying](#deploying)).
 | `acme-afd.hdgs.me` timers | `proxy.nix` | Cert renewal | automatic |
 | `hermes-agent` | `hermes.nix` | NousResearch Hermes agent (Claude via Anthropic API): Telegram bot + host `hermes` CLI, container mode on the host docker daemon | always |
 | `hermes-watchdog` | `hermes.nix` | Checks hermes unit + container, alerts via ntfy (`hermes-alerts` topic) | every 5 min |
-| `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls all nine compose apps + Easy A/FD (liveness and data currency), heartbeat for the nightly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
+| `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls all eight compose apps + Easy A/FD (liveness and data currency), heartbeat for the nightly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
 | `hn-summaries` | `hn-summaries.nix` | Shared Hacker News discussion summaries for the Macs' daily_news plugin (:8090, tailnet-only): SQLite cache → HN Companion → one OpenRouter call per story, daily cap, cost ledger in the journal. See [docs/HN-SUMMARIES.md](HN-SUMMARIES.md) | always |
 | `hn-summaries-warm` | `hn-summaries.nix` | Summarises the current HN front page into that cache so Mac refreshes are cache hits | every 30 min |
 | `notify-failure@<unit>` | `gatus.nix` | `OnFailure=` target: pages ntfy (`gatus` topic) with the failed unit's last error lines. Used by `easy-afd-refresh` | when a unit that opts in fails |
@@ -45,12 +45,12 @@ deployed to /srv/homelab on every switch):** each app pairs with a
 (`budget`), ntfy, adguardhome (`adguard`),
 homepage, librespeed, metube, changedetection (`changes`; plus a
 ports-less `sockpuppetbrowser` Chrome container it talks to over the
-compose network), stirling-pdf (`pdf`), drawio. All reachable at
+compose network), stirling-pdf (`pdf`). All reachable at
 `https://<name>.jaguar-duckbill.ts.net`. Images are pinned as
 `repo:tag@sha256:…` — the digest decides what runs, the tag is there so
 Renovate can read the version.
 
-Sidecars whose serve.json is nix-rendered (`changes`, `pdf`, `drawio`,
+Sidecars whose serve.json is nix-rendered (`changes`, `pdf`,
 `status`) are declared in `homelab.sidecars` (`sidecars.nix`, entries in
 `homelab-stack.nix` and `gatus.nix`); each declaration also yields the
 Gatus check. Adding an app is: compose services + one `homelab.sidecars`
@@ -73,9 +73,10 @@ Per-app notes:
   admin/stirling password. Files are processed in memory and not kept;
   /srv/homelab/stirling-pdf holds only tessdata/configs/logs, nothing
   precious, but it is under /srv/homelab so the backup mirrors it anyway.
-- **drawio** (added 2026-09-09): static web app, no login, no state on
-  the VM beyond the sidecar identity; diagrams live wherever the browser
-  saves them. Tomcat's own self-signed 8443 is never reached.
+- **drawio** (2026-09-09 → retired 2026-10-14): replaced by the
+  draw.io Desktop cask on the workstation Macs. The editor runs entirely
+  client-side, so the container was a JVM + sidecar serving static files,
+  and it loaded slower than the local app. Lives in git history.
 
 **Image updates (Renovate):** self-hosted in `.github/workflows/renovate.yaml`,
 rules in `renovate.json` at the repo root. Every Monday it opens ONE grouped PR ("homelab images") with all
@@ -90,7 +91,7 @@ stateful service (actual, adguard, changedetection, ntfy). Disable: delete
 **Monitoring (Gatus, on this host):** `gatus.nix` — native `services.gatus`,
 monitors declared in Nix, SQLite history under `/var/lib/gatus`, dashboard
 at **https://status.jaguar-duckbill.ts.net** through the `ts-status`
-sidecar. Pings the mini and the NAS and polls all nine compose apps and Easy A/FD by their
+sidecar. Pings the mini and the NAS and polls all eight compose apps and Easy A/FD by their
 tailnet/public names.
 Alerts go to ntfy topic `gatus` after 3 consecutive failures, resolved after
 2 successes. Uptime Kuma (2026-08 → 2026-09-06, on the mini) was replaced
@@ -341,7 +342,7 @@ New since the flake migration (2026-07-26):
   section, 443 is refused (this is how adguard's HTTPS URL was silently
   broken pre-migration).
 - **Four sidecars have nix-generated serve.json** (`homelab.sidecars` in
-  `sidecars.nix`: status, changes, pdf, drawio), bind-mounted from `/etc`;
+  `sidecars.nix`: status, changes, pdf), bind-mounted from `/etc`;
   the rest are hand-made under `/srv/homelab/ts-<name>/config`. After
   changing a generated one, `docker restart ts-<name>` — compose does not
   recreate a container for a bind mount's contents.
