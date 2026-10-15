@@ -36,7 +36,7 @@
     # skhd reads ~/.config/skhd/skhdrc before ~/.skhdrc
     home.file.".config/skhd/skhdrc".text = ''
       # Meh key (shift + ctrl + alt) shortcuts
-      shift + ctrl + alt - a : open -a "ChatGPT"
+      shift + ctrl + alt - a : open -a "T3 Code (Alpha)"
       shift + ctrl + alt - s : open -a "Safari"
       shift + ctrl + alt - d : open -a "Drafts"
       shift + ctrl + alt - t : open -a "Ghostty"
