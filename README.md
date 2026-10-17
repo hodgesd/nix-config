@@ -110,6 +110,15 @@ without the desktoppr cask) logs a warning at activation and is left alone.
   llm models default m7b
   ```
 
+**mbp → NAS backup** (`hosts/darwin/mbp/backup.nix`)
+
+A launchd user agent mirrors `~/.config/swiftbar-plugins` and `~/Documents/Maps`
+to the UNAS `backups` share (`backups/mbp/`). It wakes hourly but only runs when
+the NAS answers on SMB (home LAN) and the last success is >20 h old; versions come
+from NAS snapshots. Credentials: `secrets/mbp.yaml`, decrypted with the mbp's SSH
+host key (`host_mbp` in `.sops.yaml`). Log: `~/Library/Logs/mbp-backup.log`.
+Force a run: `rm ~/.local/state/mbp-backup/last-success && launchctl kickstart -k gui/$(id -u)/org.nixos.mbp-backup`.
+
 ## 🐧 NixOS Homelab (`nixos-infra`)
 
 A Proxmox guest VM on the HP mini PC, fully managed by this flake

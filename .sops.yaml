@@ -11,12 +11,16 @@
 #   the Hermes bridges (vault-mcp, apple-mcp) and decrypts their bearer
 #   tokens. Reinstalling macOS regenerates the host key — same re-key
 #   dance as above.
+# - host_mbp: same derivation from the MacBook Pro's host key
+#   (ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub). It decrypts the NAS
+#   credentials for its backup job (hosts/darwin/mbp/backup.nix).
 #
 # Edit secrets with: sops secrets/<host>.yaml
 keys:
   - &admin_hodgesd age1t6n5zv8apvjcknhd9cuph2d84xkvgh0nn8ktsj09c6gffcquk39sny20lu
   - &host_nixos_infra age1xnhke44jxdfa209c3939993xznhm8fftmp5d6m5g22cm39jrqpjq5k9wch
   - &host_mini age1gfvq4fr25ajxspn6hansyse4trxe4vw8jrr6nv3xxl8vga7qw47sypwucs
+  - &host_mbp age1nd8u6fxhv4dlyyt58uxda3hgafnlx7dqugj9vz6hzn7yvx72cy5qc8wr0g
 creation_rules:
   - path_regex: secrets/nixos-infra\.yaml$
     key_groups:
@@ -28,3 +32,8 @@ creation_rules:
       - age:
           - *admin_hodgesd
           - *host_mini
+  - path_regex: secrets/mbp\.yaml$
+    key_groups:
+      - age:
+          - *admin_hodgesd
+          - *host_mbp
