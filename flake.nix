@@ -39,6 +39,7 @@
 
       nixosConfigurations = {
         nixos-infra = libx.mkNixos {hostname = "nixos-infra";};
+        t3-code = libx.mkNixos {hostname = "t3-code";};
       };
 
       formatter = {
