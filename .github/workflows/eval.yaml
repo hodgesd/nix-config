@@ -27,6 +27,8 @@ jobs:
             attr: darwinConfigurations.air.system
           - host: nixos-infra
             attr: nixosConfigurations.nixos-infra.config.system.build.toplevel
+          - host: t3-code
+            attr: nixosConfigurations.t3-code.config.system.build.toplevel
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v16

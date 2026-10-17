@@ -44,11 +44,15 @@ jobs:
       - name: Build ${{ matrix.host }}
         run: nix build -L ".#darwinConfigurations.${{ matrix.host }}.system"
 
-  # ubuntu-latest is x86_64, matching the VM. Pushing the closure to Cachix
-  # means the VM's flake switches are mostly downloads.
+  # ubuntu-latest is x86_64, matching the VMs. Pushing the closure to Cachix
+  # means the VMs' flake switches are mostly downloads.
   build-linux:
-    name: Build nixos-infra
+    name: Build ${{ matrix.host }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [nixos-infra, t3-code]
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v16
@@ -63,5 +67,5 @@ jobs:
         with:
           name: hodgesd-nix-config
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      - name: Build nixos-infra
-        run: nix build -L ".#nixosConfigurations.nixos-infra.config.system.build.toplevel"
+      - name: Build ${{ matrix.host }}
+        run: nix build -L ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel"
