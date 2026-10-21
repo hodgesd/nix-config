@@ -2,6 +2,10 @@
 {username, ...}: {
   imports = [./backup.nix];
 
+  # The CPRT plugin needs the two forum feed secrets below, which only this
+  # host has; repoFiles is a list, so this appends to the shared plugin set.
+  home-manager.users.${username}.programs.swiftbar.repoFiles = ["cprt.1h.py"];
+
   # sops on this host: the NAS credentials for backup.nix. Decrypted at
   # activation using the mbp's SSH host key (the .sops.yaml host_mbp
   # recipient). Reinstalling macOS regenerates that key — re-derive it with
@@ -18,10 +22,18 @@
       mode = "0400";
     };
     # Chief Pilots Forum RSS URL (member id + feed key) for the swiftbar
-    # cprt.1d.py / news.6hr.py plugins, which read /run/secrets/cprt-feed-url.
+    # cprt.1h.py / news.6hr.py plugins, which read /run/secrets/cprt-feed-url.
     # Moved out of the public swiftbar_plugins repo 2026-10-17; the old key is
     # still in that repo's history until it's regenerated on the forum.
     secrets.cprt-feed-url = {
+      owner = username;
+      mode = "0400";
+    };
+    # Second forum feed for the cprt plugin: the member's "My CPRT Replies"
+    # activity stream (ownership "Content I have posted in", forum 5), whose
+    # topic ids are subtracted from the latest-topics feed to list topics
+    # still owed a reply. Same member id + key scheme as above.
+    secrets.cprt-posted-feed-url = {
       owner = username;
       mode = "0400";
     };
