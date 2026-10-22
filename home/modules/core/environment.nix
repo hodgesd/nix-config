@@ -16,4 +16,8 @@
     // lib.optionalAttrs pkgs.stdenv.isDarwin {
       NIX_SSL_CERT_FILE = "/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt";
     };
+
+  # RemCTL (trial, 2026-10-21) installs its CLI into ~/bin via its own
+  # installer, not nix. Drop this line if the app goes.
+  home.sessionPath = ["${config.home.homeDirectory}/bin"];
 }
