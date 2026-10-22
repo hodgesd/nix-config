@@ -23,7 +23,7 @@
     # (hosts/nixos/nixos-infra/bj-drill.nix). Release with:
     #   nix flake update bj-drill && just deploy
     bj-drill = {
-      url = "github:hodgesd/bj-drill";
+      url = "github:hodgesd/21";
       flake = false; # plain static files, no flake.nix
     };
     swiftbar_plugins = {
