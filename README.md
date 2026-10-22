@@ -83,6 +83,12 @@ Later switches leave that alone. Toggled before the first switch? It gets
 reset once — toggle again. A Mac without `~/Documents/Wallpapers` (or
 without the desktoppr cask) logs a warning at activation and is left alone.
 
+**Reduce transparency** — one-time toggle: **System Settings** →
+**Accessibility** → **Display** → **Reduce transparency**. Glass menus let
+windows behind SwiftBar menus show through as light and dark patches. Not set
+in nix: writing `com.apple.universalaccess` needs Full Disk Access for the
+terminal, and without it the switch aborts at "user defaults".
+
 **Hotkeys (skhd + Karabiner Elements)**
 
 1. Launch Karabiner Elements: `open -a Karabiner-Elements`
