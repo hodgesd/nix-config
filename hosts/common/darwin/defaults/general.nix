@@ -14,5 +14,8 @@
     NSGlobalDomain.NSAutomaticSpellingCorrectionEnabled = false;
     LaunchServices.LSQuarantine = false;
     loginwindow.GuestEnabled = false;
+    # Solid menus and Dock: the glass let windows behind SwiftBar menus show
+    # through as light and dark patches.
+    universalaccess.reduceTransparency = true;
   };
 }
