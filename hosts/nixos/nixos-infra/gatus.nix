@@ -188,6 +188,9 @@ in {
           (http "nixos-infra" "hn-summaries" "http://nixos-infra-1.jaguar-duckbill.ts.net:8090/healthz" ["[BODY].ok == true"])
           # Public name: DNS + nginx + the LE cert + the app in one poll.
           (http "nixos-infra" "easy-afd" "https://afd.hdgs.me/healthz" [])
+          # Static site (bj-drill.nix): the title proves nginx is serving
+          # the app, not a default page.
+          (http "nixos-infra" "bj-drill" "https://21.hdgs.me/" ["[BODY] == pat(*Basic Strategy Drill*)"])
           # Is Easy A/FD's data current? Same URL as the check above, which
           # only asks whether the app answers — and it answers 200 with
           # five-week-old data, as it did through September 2026. The app

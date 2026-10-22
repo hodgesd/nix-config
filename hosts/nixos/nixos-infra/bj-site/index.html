@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Basic Strategy Drill</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BJ Drill">
+<meta name="theme-color" content="#143427">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800;900&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one-screen felt table. Header strip → fixed card area → action deck / feedback panel that takes the remaining height.
+   Single committed dark look (a lit table in a dim room), so no light theme. */
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box;
+  --felt: #1d4a38; --felt-deep: #143427; --rail: #2b1d14; --rail-hi: #4a3322;
+  --ink: #f4ecda; --ink-muted: #a7c2b3; --ink-dim: #6f8f7f;
+  --gold: #d9b45c; --good: #76d58f; --bad: #ec6f63; --warn: #e8b454; --flame: #ff9a3c;
+  --card: #fbf7ee; --card-red: #c6302a; --card-black: #1a1b20; --card-back: #27483c;
+  --font-ui: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-num: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0; background: radial-gradient(120% 90% at 50% 30%, var(--felt) 0%, var(--felt-deep) 100%);
+  color: var(--ink); font-family: var(--font-ui); -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px; display: flex; flex-direction: column; box-sizing: border-box; overflow-x: hidden; overscroll-behavior: none;
+}
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.app { display: flex; flex-direction: column; flex: 1; min-height: 0; max-width: 560px; width: 100%; margin: 0 auto; gap: 10px; }
+
+/* Header */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.brand { font-weight: 900; letter-spacing: .08em; text-transform: uppercase; font-size: 11px; color: var(--gold); min-width: 0; }
+.brand small { display: block; font-weight: 400; letter-spacing: .04em; color: var(--ink-dim); font-size: 10px; margin-top: 2px; text-transform: none; white-space: nowrap; }
+.nav { display: flex; gap: 5px; }
+.nav button { padding: 7px 9px; border-radius: 999px; background: rgba(0,0,0,.25); font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+.meters { display: flex; gap: 8px; align-items: center; }
+.score { text-align: right; line-height: 1.1; }
+.score .big { font-size: 20px; font-weight: 800; }
+.score .pct { font-size: 11px; color: var(--ink-muted); }
+.streak { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; padding: 4px 8px; border-radius: 10px; background: rgba(0,0,0,.25); line-height: 1.1; }
+.streak .v { font-size: 18px; font-weight: 800; color: var(--flame); }
+.streak .k { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); }
+.streak.hot { background: rgba(255,154,60,.18); box-shadow: 0 0 0 1px rgba(255,154,60,.4); }
+
+/* Table */
+.table { flex: none; display: flex; flex-direction: column; gap: 14px; padding-block: 10px 4px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.row { display: flex; justify-content: center; align-items: center; gap: 12px; perspective: 600px; }
+.lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); text-align: center; margin-bottom: 6px; }
+.card { width: 76px; height: 108px; border-radius: 8px; background: var(--card); color: var(--card-black); position: relative; box-shadow: 0 6px 14px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.4) inset; font-weight: 800; transform-style: preserve-3d; backface-visibility: hidden; }
+.card.red { color: var(--card-red); }
+.card .c { position: absolute; left: 7px; top: 5px; font-size: 18px; line-height: 1; text-align: center; }
+.card .c small { display: block; font-size: 14px; }
+.card .c.b { left: auto; right: 7px; top: auto; bottom: 5px; transform: rotate(180deg); }
+.card .pip { position: absolute; inset: 0; display: grid; place-items: center; font-size: 44px; }
+.card.back { background: repeating-linear-gradient(45deg, var(--card-back) 0 6px, #1e3a30 6px 12px); border: 4px solid var(--card); box-sizing: border-box; }
+.card.anim { animation: dealflip .42s cubic-bezier(.2,.7,.2,1) both; }
+.card.anim.back { animation-name: dealslide; }
+@keyframes dealflip { 0% { transform: translate(140px,-160px) rotateY(180deg) scale(.7); opacity: 0; } 55% { transform: translate(0,0) rotateY(180deg) scale(1); opacity: 1; } 100% { transform: translate(0,0) rotateY(0deg); } }
+@keyframes dealslide { 0% { transform: translate(140px,-160px) scale(.7); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.hand-total { text-align: center; font-size: 12px; color: var(--ink-muted); margin-top: 6px; min-height: 16px; }
+.hand-total b { color: var(--ink); }
+
+/* Action deck */
+.deck { flex: 1; min-height: 0; overflow-y: auto; background: var(--rail); border-radius: 16px; padding: 12px; box-shadow: 0 -2px 0 var(--rail-hi) inset, 0 10px 24px rgba(0,0,0,.35); }
+.actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.actions button { padding: 16px 4px; border-radius: 12px; background: var(--rail-hi); font-weight: 800; font-size: 15px; letter-spacing: .02em; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: transform .08s; }
+.actions button:active { transform: scale(.96); }
+.actions button span { font-size: 10px; font-weight: 400; color: var(--ink-dim); letter-spacing: .1em; }
+.actions button:disabled { opacity: .35; cursor: default; }
+.hint { text-align: center; font-size: 11px; color: var(--ink-dim); margin-top: 10px; line-height: 1.5; }
+
+/* Feedback */
+.fb { display: flex; flex-direction: column; gap: 10px; }
+.verdict { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.verdict .word { font-size: 24px; font-weight: 900; letter-spacing: .06em; }
+.verdict.ok .word { color: var(--good); } .verdict.no .word { color: var(--bad); }
+.verdict .play { font-size: 13px; color: var(--ink-muted); text-align: right; }
+.verdict .play b { color: var(--ink); }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.08); color: var(--ink-muted); }
+.badge.cc { background: rgba(232,180,84,.2); color: var(--warn); }
+.badge.streak { background: rgba(255,154,60,.18); color: var(--flame); }
+.badge.due { background: rgba(118,213,143,.15); color: var(--good); }
+.why { font-size: 13px; line-height: 1.5; color: var(--ink); background: rgba(0,0,0,.25); border-radius: 10px; padding: 10px 12px; border-left: 3px solid var(--bad); }
+.why.ok { border-left-color: var(--good); }
+.why b { color: var(--gold); }
+.evs { display: flex; flex-direction: column; gap: 4px; }
+.ev { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; gap: 8px; font-size: 13px; }
+.ev .n { font-weight: 600; color: var(--ink-muted); }
+.ev.best .n { color: var(--ink); }
+.ev.chosen .n::after { content: " ◂ you"; font-size: 10px; color: var(--ink-dim); font-weight: 400; }
+.ev .bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.08); position: relative; overflow: hidden; }
+.ev .bar i { position: absolute; top: 0; bottom: 0; background: var(--ink-dim); }
+.ev.best .bar i { background: var(--gold); }
+.ev .v { text-align: right; font-size: 13px; }
+.ev.best .v { color: var(--gold); font-weight: 600; }
+.odds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.odd { background: rgba(0,0,0,.25); border-radius: 10px; padding: 8px 10px; }
+.odd .k { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); }
+.odd .v { font-size: 20px; font-weight: 600; margin-top: 2px; }
+.odd .s { font-size: 11px; color: var(--ink-muted); }
+.deal { position: sticky; bottom: 0; width: 100%; padding: 14px; border-radius: 12px; background: var(--gold); color: var(--rail); font-weight: 900; font-size: 16px; letter-spacing: .06em; text-transform: uppercase; }
+.margin { font-size: 11px; color: var(--ink-dim); text-align: center; }
+.linkbtn { font-size: 12px; color: var(--ink-muted); text-decoration: underline; text-underline-offset: 3px; align-self: center; }
+
+/* Panels (chart / stats / settings) */
+.panel { position: fixed; inset: 0; background: var(--felt-deep); z-index: 20; overflow: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: calc(10px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)); }
+.panel .inner { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.ph { display: flex; justify-content: space-between; align-items: center; }
+.ph h2 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: .02em; }
+.ph button { padding: 8px 14px; border-radius: 999px; background: var(--gold); color: var(--rail); font-weight: 800; font-size: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--ink-muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
+.grid-wrap { overflow-x: auto; }
+table.chart { border-collapse: separate; border-spacing: 2px; font-size: 12px; min-width: 100%; }
+table.chart th { font-size: 10px; color: var(--ink-dim); font-weight: 600; padding: 2px; letter-spacing: .04em; }
+table.chart th.r { text-align: left; white-space: nowrap; padding-right: 6px; }
+table.chart td { width: 26px; height: 26px; text-align: center; border-radius: 4px; font-weight: 800; cursor: pointer; color: var(--rail); font-size: 11px; position: relative; }
+table.chart td.unseen { background: rgba(255,255,255,.12); color: var(--ink-muted); }
+table.chart td.good { background: var(--good); } table.chart td.mid { background: var(--warn); } table.chart td.poor { background: var(--bad); }
+table.chart td.cc::after { content: ""; position: absolute; right: 2px; top: 2px; width: 5px; height: 5px; border-radius: 50%; background: var(--rail); opacity: .7; }
+table.chart td.unseen.cc::after { background: var(--warn); opacity: 1; }
+table.chart tr.sep td, table.chart tr.sep th { padding-top: 8px; }
+.dstrip { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; align-items: end; height: 110px; }
+.dstrip div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 3px; font-size: 10px; }
+.dstrip .col { width: 100%; border-radius: 4px 4px 0 0; background: var(--good); }
+.dstrip .col.strong { background: var(--bad); }
+.dstrip .u { font-weight: 800; font-size: 12px; color: var(--ink); }
+.dstrip .p { color: var(--ink-muted); }
+.cellinfo { background: var(--rail); border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.5; }
+.cellinfo h3 { margin: 0 0 6px; font-size: 14px; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat { background: rgba(0,0,0,.25); border-radius: 10px; padding: 10px 12px; }
+.stat .k { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); }
+.stat .v { font-size: 24px; font-weight: 600; }
+.stat .s { font-size: 11px; color: var(--ink-muted); }
+.list { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.list div { display: flex; justify-content: space-between; gap: 10px; padding: 6px 8px; background: rgba(0,0,0,.2); border-radius: 6px; }
+.list .bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.08); align-self: center; overflow: hidden; }
+.list .bar i { display: block; height: 100%; background: var(--bad); }
+.list .bar i.ok { background: var(--good); }
+.list .lab { min-width: 28px; font-weight: 700; }
+.seg { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: rgba(0,0,0,.25); padding: 4px; border-radius: 10px; }
+.seg button { padding: 10px 2px; border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+.seg button[aria-pressed="true"] { background: var(--gold); color: var(--rail); }
+.setrow { display: flex; flex-direction: column; gap: 6px; }
+.setrow label, .setrow .k { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); }
+.setrow p { margin: 0; font-size: 12px; color: var(--ink-muted); line-height: 1.5; }
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: rgba(0,0,0,.25); border-radius: 10px; font-size: 13px; }
+.toggle small { display: block; font-size: 11px; color: var(--ink-dim); margin-top: 2px; }
+.sw { width: 44px; height: 26px; border-radius: 13px; background: rgba(255,255,255,.15); position: relative; flex: none; transition: background .15s; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); transition: transform .15s; }
+.sw[aria-checked="true"] { background: var(--good); } .sw[aria-checked="true"]::after { transform: translateX(18px); }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.btns button { padding: 10px 14px; border-radius: 10px; background: var(--rail-hi); font-size: 13px; font-weight: 600; }
+.btns button.danger { background: rgba(236,111,99,.2); color: var(--bad); }
+textarea { width: 100%; box-sizing: border-box; min-height: 90px; border-radius: 10px; border: 1px solid var(--rail-hi); background: rgba(0,0,0,.3); color: var(--ink); font-family: var(--font-num); font-size: 11px; padding: 8px; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--gold); color: var(--rail); padding: 10px 16px; border-radius: 999px; font-weight: 700; font-size: 13px; z-index: 30; box-shadow: 0 8px 20px rgba(0,0,0,.4); }
+.rules { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); text-align: center; line-height: 1.6; }
+@media (max-height: 700px) { .card { width: 64px; height: 92px; } .card .pip { font-size: 36px; } .rules { display: none; } .actions button { padding: 12px 4px; } }
+@media (prefers-reduced-motion: reduce) { .actions button, .sw, .sw::after { transition: none; } .card.anim { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="top">
+    <div class="brand">BJ Drill<small id="modeLabel">Spaced · 6D · H17 · DAS</small></div>
+    <div class="nav">
+      <button id="btnChart" aria-label="Strategy chart">Chart</button>
+      <button id="btnStats" aria-label="Stats">Stats</button>
+      <button id="btnSettings" aria-label="Settings">⚙</button>
+    </div>
+    <div class="meters">
+      <div class="streak" id="streakBox"><div class="v num" id="streakV">0</div><div class="k">streak</div></div>
+      <div class="score"><div class="big num" id="sessScore">0 / 0</div><div class="pct num" id="sessPct">—</div></div>
+    </div>
+  </div>
+
+  <div class="table" id="tableArea">
+    <div>
+      <div class="lbl">Dealer shows</div>
+      <div class="row" id="dealerRow"></div>
+    </div>
+    <div class="rules">Blackjack pays 3 to 2 · Dealer hits soft 17<br>Double after split · No surrender</div>
+    <div>
+      <div class="lbl">Your hand</div>
+      <div class="row" id="playerRow"></div>
+      <div class="hand-total" id="handTotal"></div>
+    </div>
+  </div>
+
+  <div class="deck" id="deck">
+    <div id="actionView">
+      <div class="actions">
+        <button id="aHit" data-a="hit">Hit<span>H · swipe ↑</span></button>
+        <button id="aStand" data-a="stand">Stand<span>S · swipe ↓</span></button>
+        <button id="aDouble" data-a="double">Double<span>D · swipe →</span></button>
+        <button id="aSplit" data-a="split">Split<span>P · swipe ←</span></button>
+      </div>
+      <div class="hint">Swipe on the cards or tap a button. Keys H · S · D · P<br>After the verdict, tap anywhere to deal the next hand.</div>
+    </div>
+    <div id="fbView" class="fb" hidden></div>
+  </div>
+</div>
+
+<div class="panel" id="chartPanel" hidden><div class="inner">
+  <div class="ph"><h2>Your chart</h2><button data-close>Back to drill</button></div>
+  <div class="legend"><span><i style="background:var(--good)"></i>80%+ recent</span><span><i style="background:var(--warn)"></i>50–79%</span><span><i style="background:var(--bad)"></i>under 50%</span><span><i style="background:rgba(255,255,255,.12)"></i>not seen yet</span><span><i style="background:var(--rail);border:1px solid var(--warn)"></i>dot = close call</span></div>
+  <div class="grid-wrap" id="chartGrid"></div>
+  <div class="cellinfo" id="cellInfo">Tap any cell to see the EV of every option and why the play is what it is.</div>
+  <div class="setrow"><div class="k">Dealer bust odds by up card</div><div class="dstrip" id="dealerStrip"></div><p>6 decks, dealer hits soft 17. For a 10 or Ace the odds assume no dealer blackjack. Stand on stiffs against 2–6; keep hitting against 7–A.</p></div>
+</div></div>
+
+<div class="panel" id="statsPanel" hidden><div class="inner">
+  <div class="ph"><h2>Stats</h2><button data-close>Back to drill</button></div>
+  <div class="stats" id="statGrid"></div>
+  <div class="setrow"><div class="k">Error patterns</div><p>What you chose versus what the chart says, across every miss. The top line is your systematic bias.</p><div class="list" id="errList"></div></div>
+  <div class="setrow"><div class="k">Accuracy by category</div><div class="list" id="catList"></div></div>
+  <div class="setrow"><div class="k">Weakest spots (recent accuracy)</div><div class="list" id="weakList"></div></div>
+  <div class="setrow"><div class="k">Recent sessions</div><div class="list" id="sessList"></div></div>
+</div></div>
+
+<div class="panel" id="settingsPanel" hidden><div class="inner">
+  <div class="ph"><h2>Settings</h2><button data-close>Back to drill</button></div>
+  <div class="setrow"><label>Drill mode</label>
+    <div class="seg" id="modeSeg">
+      <button data-mode="spaced">Spaced</button><button data-mode="random">Random</button><button data-mode="hard">Hard</button><button data-mode="soft">Soft</button><button data-mode="pair">Pairs</button>
+    </div>
+    <p>Spaced repetition: each spot comes back after 3 hands, then 8, 20, 50, 120, 300 as you keep getting it right. A miss sends it back to 3. Hard, Soft and Pairs use the same scheduler inside that group. Random ignores it.</p>
+  </div>
+  <div class="setrow"><label>Feel</label>
+    <div class="toggle"><div>Sound<small>Chip clink on correct, thud on a miss</small></div><button class="sw" id="swSound" role="switch" aria-checked="false" aria-label="Sound"></button></div>
+    <div class="toggle"><div>Haptic buzz on a miss<small>Android and desktop browsers. iPhone Safari does not allow web pages to vibrate.</small></div><button class="sw" id="swHaptic" role="switch" aria-checked="true" aria-label="Haptics"></button></div>
+    <div class="toggle"><div>Card animation<small>Cards fly in from the shoe and flip</small></div><button class="sw" id="swAnim" role="switch" aria-checked="true" aria-label="Card animation"></button></div>
+    <div class="toggle"><div>Explain correct answers too<small>Otherwise the Why box only appears on a miss</small></div><button class="sw" id="swWhyAll" role="switch" aria-checked="false" aria-label="Explain correct answers"></button></div>
+  </div>
+  <div class="setrow"><label>Home screen</label><p>iPhone: open this page in Safari, tap Share, then Add to Home Screen. Android Chrome: menu, then Add to Home screen. When hosted on your own server it opens full-screen like an app; from claude.ai it opens as a bookmark.</p></div>
+  <div class="setrow"><label>Rules</label><p>6 decks · dealer hits soft 17 · double on any two cards · double after split · split up to 4 hands · no resplitting aces · no surrender · dealer peeks for blackjack. EVs are per unit bet, computed from the exact shoe composition after the three visible cards are removed.</p></div>
+  <div class="setrow"><label>Backup</label>
+    <div class="btns"><button id="btnExport">Copy backup to clipboard</button><button id="btnImport">Restore from text below</button><button id="btnReset" class="danger">Reset all progress</button></div>
+    <textarea id="ioText" placeholder="Paste a backup here, then tap Restore."></textarea>
+    <p>Progress is stored in this browser only. Copy a backup now and then if you switch phones.</p>
+  </div>
+</div></div>
+
+<script>
+const CHART = {"rules":{"decks":6,"h17":true,"das":true,"surrender":false,"resplitTo":4,"resplitAces":false},"rows":[{"key":"H5","label":"Hard 5","type":"hard","comps":[[1,2]]},{"key":"H6","label":"Hard 6","type":"hard","comps":[[1,3]]},{"key":"H7","label":"Hard 7","type":"hard","comps":[[1,4],[2,3]]},{"key":"H8","label":"Hard 8","type":"hard","comps":[[1,5],[2,4]]},{"key":"H9","label":"Hard 9","type":"hard","comps":[[1,6],[2,5],[3,4]]},{"key":"H10","label":"Hard 10","type":"hard","comps":[[1,7],[2,6],[3,5]]},{"key":"H11","label":"Hard 11","type":"hard","comps":[[1,8],[2,7],[3,6],[4,5]]},{"key":"H12","label":"Hard 12","type":"hard","comps":[[1,9],[2,8],[3,7],[4,6]]},{"key":"H13","label":"Hard 13","type":"hard","comps":[[2,9],[3,8],[4,7],[5,6]]},{"key":"H14","label":"Hard 14","type":"hard","comps":[[3,9],[4,8],[5,7]]},{"key":"H15","label":"Hard 15","type":"hard","comps":[[4,9],[5,8],[6,7]]},{"key":"H16","label":"Hard 16","type":"hard","comps":[[5,9],[6,8]]},{"key":"H17","label":"Hard 17","type":"hard","comps":[[6,9],[7,8]]},{"key":"H18","label":"Hard 18","type":"hard","comps":[[7,9]]},{"key":"H19","label":"Hard 19","type":"hard","comps":[[8,9]]},{"key":"S13","label":"Soft 13 (A,2)","type":"soft","comps":[[0,1]]},{"key":"S14","label":"Soft 14 (A,3)","type":"soft","comps":[[0,2]]},{"key":"S15","label":"Soft 15 (A,4)","type":"soft","comps":[[0,3]]},{"key":"S16","label":"Soft 16 (A,5)","type":"soft","comps":[[0,4]]},{"key":"S17","label":"Soft 17 (A,6)","type":"soft","comps":[[0,5]]},{"key":"S18","label":"Soft 18 (A,7)","type":"soft","comps":[[0,6]]},{"key":"S19","label":"Soft 19 (A,8)","type":"soft","comps":[[0,7]]},{"key":"S20","label":"Soft 20 (A,9)","type":"soft","comps":[[0,8]]},{"key":"P0","label":"Pair A,A","type":"pair","comps":[[0,0]]},{"key":"P1","label":"Pair 2,2","type":"pair","comps":[[1,1]]},{"key":"P2","label":"Pair 3,3","type":"pair","comps":[[2,2]]},{"key":"P3","label":"Pair 4,4","type":"pair","comps":[[3,3]]},{"key":"P4","label":"Pair 5,5","type":"pair","comps":[[4,4]]},{"key":"P5","label":"Pair 6,6","type":"pair","comps":[[5,5]]},{"key":"P6","label":"Pair 7,7","type":"pair","comps":[[6,6]]},{"key":"P7","label":"Pair 8,8","type":"pair","comps":[[7,7]]},{"key":"P8","label":"Pair 9,9","type":"pair","comps":[[8,8]]},{"key":"P9","label":"Pair 10,10","type":"pair","comps":[[9,9]]}],"cells":{"H5":{"2":{"stand":-0.2861,"hit":-0.12603,"double":-0.5722,"bust":0,"best":"hit"},"3":{"stand":-0.24557,"hit":-0.0932,"double":-0.49115,"bust":0,"best":"hit"},"4":{"stand":-0.2001,"hit":-0.05537,"double":-0.40021,"bust":0,"best":"hit"},"5":{"stand":-0.15503,"hit":-0.01569,"double":-0.31005,"bust":0,"best":"hit"},"6":{"stand":-0.11522,"hit":0.01926,"double":-0.23044,"bust":0,"best":"hit"},"7":{"stand":-0.47429,"hit":-0.11948,"double":-0.94857,"bust":0,"best":"hit"},"8":{"stand":-0.51091,"hit":-0.18717,"double":-1.02181,"bust":0,"best":"hit"},"9":{"stand":-0.54157,"hit":-0.26599,"double":-1.08315,"bust":0,"best":"hit"},"10":{"stand":-0.5415,"hit":-0.31278,"double":-1.08299,"bust":0,"best":"hit"},"A":{"stand":-0.59654,"hit":-0.31701,"double":-1.19308,"bust":0,"best":"hit"}},"H6":{"2":{"stand":-0.28599,"hit":-0.13923,"double":-0.55182,"bust":0,"best":"hit"},"3":{"stand":-0.24301,"hit":-0.10422,"double":-0.46676,"bust":0,"best":"hit"},"4":{"stand":-0.19965,"hit":-0.06702,"double":-0.38034,"bust":0,"best":"hit"},"5":{"stand":-0.15463,"hit":-0.02676,"double":-0.29122,"bust":0,"best":"hit"},"6":{"stand":-0.11484,"hit":0.00988,"double":-0.21212,"bust":0,"best":"hit"},"7":{"stand":-0.47395,"hit":-0.15375,"double":-0.89022,"bust":0,"best":"hit"},"8":{"stand":-0.51234,"hit":-0.21972,"double":-1.00468,"bust":0,"best":"hit"},"9":{"stand":-0.54149,"hit":-0.29453,"double":-1.06433,"bust":0,"best":"hit"},"10":{"stand":-0.54141,"hit":-0.33916,"double":-1.06408,"bust":0,"best":"hit"},"A":{"stand":-0.59619,"hit":-0.34357,"double":-1.18009,"bust":0,"best":"hit"}},"H7":{"2":{"stand":-0.2847,"hit":-0.10945,"double":-0.42788,"bust":0,"best":"hit"},"3":{"stand":-0.24275,"hit":-0.07554,"double":-0.34861,"bust":0,"best":"hit"},"4":{"stand":-0.19822,"hit":-0.03791,"double":-0.26378,"bust":0,"best":"hit"},"5":{"stand":-0.15423,"hit":0.00212,"double":-0.18022,"bust":0,"best":"hit"},"6":{"stand":-0.1146,"hit":0.03647,"double":-0.10483,"bust":0,"best":"hit"},"7":{"stand":-0.47451,"hit":-0.06889,"double":-0.58362,"bust":0,"best":"hit"},"8":{"stand":-0.51214,"hit":-0.21247,"double":-0.84762,"bust":0,"best":"hit"},"9":{"stand":-0.54216,"hit":-0.28695,"double":-0.9538,"bust":0,"best":"hit"},"10":{"stand":-0.54134,"hit":-0.3206,"double":-0.95159,"bust":0,"best":"hit"},"A":{"stand":-0.59609,"hit":-0.35211,"double":-1.08559,"bust":0,"best":"hit"}},"H8":{"2":{"stand":-0.28365,"hit":-0.02303,"double":-0.19988,"bust":0,"best":"hit"},"3":{"stand":-0.2428,"hit":0.00822,"double":-0.1285,"bust":0,"best":"hit"},"4":{"stand":-0.19825,"hit":0.0442,"double":-0.05262,"bust":0,"best":"hit"},"5":{"stand":-0.15442,"hit":0.08004,"double":0.02405,"bust":0,"best":"hit"},"6":{"stand":-0.11648,"hit":0.10915,"double":0.08721,"bust":0,"best":"hit"},"7":{"stand":-0.47562,"hit":0.08389,"double":-0.17977,"bust":0,"best":"hit"},"8":{"stand":-0.51243,"hit":-0.05933,"double":-0.44899,"bust":0,"best":"hit"},"9":{"stand":-0.54244,"hit":-0.21063,"double":-0.71492,"bust":0,"best":"hit"},"10":{"stand":-0.54173,"hit":-0.2497,"double":-0.74612,"bust":0,"best":"hit"},"A":{"stand":-0.59584,"hit":-0.2657,"double":-0.83152,"bust":0,"best":"hit"}},"H9":{"2":{"stand":-0.28385,"hit":0.07503,"double":0.06776,"bust":0,"best":"hit"},"3":{"stand":-0.24214,"hit":0.10512,"double":0.13067,"bust":0,"best":"double"},"4":{"stand":-0.19801,"hit":0.13582,"double":0.19641,"bust":0,"best":"double"},"5":{"stand":-0.15567,"hit":0.16787,"double":0.26328,"bust":0,"best":"double"},"6":{"stand":-0.11726,"hit":0.19337,"double":0.31687,"bust":0,"best":"double"},"7":{"stand":-0.4758,"hit":0.17557,"double":0.11593,"bust":0,"best":"hit"},"8":{"stand":-0.51318,"hit":0.10029,"double":-0.02116,"bust":0,"best":"hit"},"9":{"stand":-0.54303,"hit":-0.05213,"double":-0.29776,"bust":0,"best":"hit"},"10":{"stand":-0.54062,"hit":-0.15181,"double":-0.46285,"bust":0,"best":"hit"},"A":{"stand":-0.59525,"hit":-0.12538,"double":-0.45419,"bust":0,"best":"hit"}},"H10":{"2":{"stand":-0.28432,"hit":0.18617,"double":0.36793,"bust":0,"best":"double"},"3":{"stand":-0.24269,"hit":0.21115,"double":0.42084,"bust":0,"best":"double"},"4":{"stand":-0.19973,"hit":0.237,"double":0.474,"bust":0,"best":"double"},"5":{"stand":-0.15746,"hit":0.26496,"double":0.52992,"bust":0,"best":"double"},"6":{"stand":-0.11912,"hit":0.28749,"double":0.57498,"bust":0,"best":"double"},"7":{"stand":-0.4765,"hit":0.26016,"double":0.40126,"bust":0,"best":"double"},"8":{"stand":-0.51387,"hit":0.19986,"double":0.29063,"bust":0,"best":"double"},"9":{"stand":-0.5424,"hit":0.11677,"double":0.14741,"bust":0,"best":"double"},"10":{"stand":-0.53992,"hit":0.0261,"double":-0.0062,"bust":0,"best":"hit"},"A":{"stand":-0.59509,"hit":0.03364,"double":-0.02969,"bust":0,"best":"hit"}},"H11":{"2":{"stand":-0.28395,"hit":0.24298,"double":0.48145,"bust":0,"best":"double"},"3":{"stand":-0.2433,"hit":0.26536,"double":0.52933,"bust":0,"best":"double"},"4":{"stand":-0.20026,"hit":0.28968,"double":0.57937,"bust":0,"best":"double"},"5":{"stand":-0.15796,"hit":0.31559,"double":0.63117,"bust":0,"best":"double"},"6":{"stand":-0.11938,"hit":0.33705,"double":0.67411,"bust":0,"best":"double"},"7":{"stand":-0.47715,"hit":0.29254,"double":0.46593,"bust":0,"best":"double"},"8":{"stand":-0.51342,"hit":0.22879,"double":0.34925,"bust":0,"best":"double"},"9":{"stand":-0.54216,"hit":0.15637,"double":0.22712,"bust":0,"best":"double"},"10":{"stand":-0.53982,"hit":0.11798,"double":0.17726,"bust":0,"best":"double"},"A":{"stand":-0.59538,"hit":0.10695,"double":0.1177,"bust":0,"best":"double"}},"H12":{"2":{"stand":-0.28704,"hit":-0.25332,"double":-0.50664,"bust":0.30886,"best":"hit"},"3":{"stand":-0.24654,"hit":-0.23276,"double":-0.46552,"bust":0.30882,"best":"hit"},"4":{"stand":-0.20355,"hit":-0.21183,"double":-0.42365,"bust":0.30882,"best":"stand"},"5":{"stand":-0.1602,"hit":-0.19035,"double":-0.38069,"bust":0.30882,"best":"stand"},"6":{"stand":-0.12067,"hit":-0.17224,"double":-0.34447,"bust":0.30883,"best":"stand"},"7":{"stand":-0.47601,"hit":-0.21516,"double":-0.51013,"bust":0.30882,"best":"hit"},"8":{"stand":-0.51245,"hit":-0.27496,"double":-0.62301,"bust":0.30882,"best":"hit"},"9":{"stand":-0.5413,"hit":-0.34391,"double":-0.74469,"bust":0.30882,"best":"hit"},"10":{"stand":-0.53976,"hit":-0.37836,"double":-0.79229,"bust":0.3056,"best":"hit"},"A":{"stand":-0.5975,"hit":-0.38395,"double":-0.83458,"bust":0.30883,"best":"hit"}},"H13":{"2":{"stand":-0.28675,"hit":-0.30898,"double":-0.61796,"bust":0.38604,"best":"stand"},"3":{"stand":-0.24607,"hit":-0.29152,"double":-0.58304,"bust":0.38606,"best":"stand"},"4":{"stand":-0.20206,"hit":-0.27343,"double":-0.54686,"bust":0.38604,"best":"stand"},"5":{"stand":-0.15994,"hit":-0.25567,"double":-0.51135,"bust":0.38602,"best":"stand"},"6":{"stand":-0.12093,"hit":-0.24086,"double":-0.48172,"bust":0.38602,"best":"stand"},"7":{"stand":-0.47609,"hit":-0.27188,"double":-0.59253,"bust":0.38602,"best":"hit"},"8":{"stand":-0.51255,"hit":-0.32738,"double":-0.69947,"bust":0.38602,"best":"hit"},"9":{"stand":-0.54216,"hit":-0.38543,"double":-0.804,"bust":0.38281,"best":"hit"},"10":{"stand":-0.53981,"hit":-0.42285,"double":-0.86326,"bust":0.38281,"best":"hit"},"A":{"stand":-0.59719,"hit":-0.42767,"double":-0.89632,"bust":0.38604,"best":"hit"}},"H14":{"2":{"stand":-0.28709,"hit":-0.364,"double":-0.72801,"bust":0.46278,"best":"stand"},"3":{"stand":-0.24533,"hit":-0.35063,"double":-0.70126,"bust":0.46278,"best":"stand"},"4":{"stand":-0.20251,"hit":-0.33627,"double":-0.67254,"bust":0.46278,"best":"stand"},"5":{"stand":-0.15997,"hit":-0.32094,"double":-0.64189,"bust":0.46278,"best":"stand"},"6":{"stand":-0.12104,"hit":-0.30907,"double":-0.61815,"bust":0.46278,"best":"stand"},"7":{"stand":-0.47586,"hit":-0.32486,"double":-0.67542,"bust":0.46278,"best":"hit"},"8":{"stand":-0.51314,"hit":-0.37023,"double":-0.76346,"bust":0.45955,"best":"hit"},"9":{"stand":-0.54177,"hit":-0.42914,"double":-0.87385,"bust":0.45955,"best":"hit"},"10":{"stand":-0.54,"hit":-0.46377,"double":-0.93331,"bust":0.45955,"best":"hit"},"A":{"stand":-0.59747,"hit":-0.46816,"double":-0.95793,"bust":0.46278,"best":"hit"}},"H15":{"2":{"stand":-0.2856,"hit":-0.42012,"double":-0.84025,"bust":0.53991,"best":"stand"},"3":{"stand":-0.24522,"hit":-0.41024,"double":-0.82047,"bust":0.53991,"best":"stand"},"4":{"stand":-0.20248,"hit":-0.39977,"double":-0.79953,"bust":0.53991,"best":"stand"},"5":{"stand":-0.16053,"hit":-0.38784,"double":-0.77568,"bust":0.5399,"best":"stand"},"6":{"stand":-0.12177,"hit":-0.3785,"double":-0.757,"bust":0.53991,"best":"stand"},"7":{"stand":-0.47703,"hit":-0.36787,"double":-0.74528,"bust":0.5367,"best":"hit"},"8":{"stand":-0.5133,"hit":-0.41603,"double":-0.84051,"bust":0.5367,"best":"hit"},"9":{"stand":-0.54195,"hit":-0.47142,"double":-0.94779,"bust":0.53667,"best":"hit"},"10":{"stand":-0.53947,"hit":-0.50344,"double":-1.00701,"bust":0.53667,"best":"hit"},"A":{"stand":-0.5973,"hit":-0.50756,"double":-1.02319,"bust":0.53991,"best":"hit"}},"H16":{"2":{"stand":-0.28657,"hit":-0.47204,"double":-0.94409,"bust":0.61489,"best":"stand"},"3":{"stand":-0.24632,"hit":-0.46525,"double":-0.93051,"bust":0.61489,"best":"stand"},"4":{"stand":-0.20305,"hit":-0.4579,"double":-0.91579,"bust":0.61489,"best":"stand"},"5":{"stand":-0.16132,"hit":-0.44993,"double":-0.89987,"bust":0.61489,"best":"stand"},"6":{"stand":-0.1246,"hit":-0.43752,"double":-0.87503,"bust":0.61165,"best":"stand"},"7":{"stand":-0.47725,"hit":-0.40859,"double":-0.81717,"bust":0.61165,"best":"hit"},"8":{"stand":-0.51331,"hit":-0.45323,"double":-0.90646,"bust":0.61165,"best":"hit"},"9":{"stand":-0.54256,"hit":-0.50463,"double":-1.00927,"bust":0.61165,"best":"hit"},"10":{"stand":-0.54012,"hit":-0.53485,"double":-1.0697,"bust":0.61165,"best":"hit"},"A":{"stand":-0.59736,"hit":-0.53908,"double":-1.07815,"bust":0.61489,"best":"hit"}},"H17":{"2":{"stand":-0.15651,"hit":-0.53824,"double":-1.07647,"bust":0.69256,"best":"stand"},"3":{"stand":-0.12044,"hit":-0.53416,"double":-1.06831,"bust":0.69256,"best":"stand"},"4":{"stand":-0.08146,"hit":-0.53014,"double":-1.06029,"bust":0.69256,"best":"stand"},"5":{"stand":-0.04602,"hit":-0.51896,"double":-1.03792,"bust":0.68932,"best":"stand"},"6":{"stand":-0.00984,"hit":-0.51524,"double":-1.03049,"bust":0.68932,"best":"stand"},"7":{"stand":-0.10906,"hit":-0.47832,"double":-0.95663,"bust":0.68932,"best":"stand"},"8":{"stand":-0.38486,"hit":-0.50101,"double":-1.00202,"bust":0.68932,"best":"stand"},"9":{"stand":-0.42199,"hit":-0.54955,"double":-1.0991,"bust":0.68932,"best":"stand"},"10":{"stand":-0.41777,"hit":-0.58022,"double":-1.16044,"bust":0.68932,"best":"stand"},"A":{"stand":-0.51335,"hit":-0.57797,"double":-1.15593,"bust":0.69256,"best":"stand"}},"H18":{"2":{"stand":0.10969,"hit":-0.62518,"double":-1.25037,"bust":0.77023,"best":"stand"},"3":{"stand":0.13785,"hit":-0.62318,"double":-1.24637,"bust":0.77023,"best":"stand"},"4":{"stand":0.16436,"hit":-0.61516,"double":-1.23031,"bust":0.76699,"best":"stand"},"5":{"stand":0.19553,"hit":-0.61181,"double":-1.22362,"bust":0.76699,"best":"stand"},"6":{"stand":0.22026,"hit":-0.61005,"double":-1.22011,"bust":0.76699,"best":"stand"},"7":{"stand":0.39774,"hit":-0.58734,"double":-1.17468,"bust":0.76699,"best":"stand"},"8":{"stand":0.10406,"hit":-0.58699,"double":-1.17398,"bust":0.76699,"best":"stand"},"9":{"stand":-0.18519,"hit":-0.61283,"double":-1.22567,"bust":0.76699,"best":"stand"},"10":{"stand":-0.17455,"hit":-0.64394,"double":-1.28788,"bust":0.76699,"best":"stand"},"A":{"stand":-0.22338,"hit":-0.63939,"double":-1.27878,"bust":0.77023,"best":"stand"}},"H19":{"2":{"stand":0.37792,"hit":-0.73284,"double":-1.46569,"bust":0.8479,"best":"stand"},"3":{"stand":0.39404,"hit":-0.726,"double":-1.45201,"bust":0.84466,"best":"stand"},"4":{"stand":0.41307,"hit":-0.72494,"double":-1.44987,"bust":0.84466,"best":"stand"},"5":{"stand":0.4375,"hit":-0.72346,"double":-1.44692,"bust":0.84466,"best":"stand"},"6":{"stand":0.45052,"hit":-0.7227,"double":-1.44539,"bust":0.84466,"best":"stand"},"7":{"stand":0.61505,"hit":-0.71276,"double":-1.42551,"bust":0.84466,"best":"stand"},"8":{"stand":0.59109,"hit":-0.71106,"double":-1.42213,"bust":0.84466,"best":"stand"},"9":{"stand":0.2839,"hit":-0.71276,"double":-1.42553,"bust":0.84466,"best":"stand"},"10":{"stand":0.06944,"hit":-0.72674,"double":-1.45348,"bust":0.84466,"best":"stand"},"A":{"stand":0.19197,"hit":-0.73265,"double":-1.46531,"bust":0.8479,"best":"stand"}},"S13":{"2":{"stand":-0.28509,"hit":0.04561,"double":-0.06345,"bust":0,"best":"hit"},"3":{"stand":-0.24467,"hit":0.07377,"double":0.00196,"bust":0,"best":"hit"},"4":{"stand":-0.20177,"hit":0.10435,"double":0.07063,"bust":0,"best":"hit"},"5":{"stand":-0.15711,"hit":0.13762,"double":0.14103,"bust":0,"best":"double"},"6":{"stand":-0.11539,"hit":0.16649,"double":0.20422,"bust":0,"best":"double"},"7":{"stand":-0.47318,"hit":0.12017,"double":-0.17948,"bust":0,"best":"hit"},"8":{"stand":-0.51001,"hit":0.05184,"double":-0.3141,"bust":0,"best":"hit"},"9":{"stand":-0.53911,"hit":-0.03409,"double":-0.44319,"bust":0,"best":"hit"},"10":{"stand":-0.54019,"hit":-0.1023,"double":-0.50842,"bust":0,"best":"hit"},"A":{"stand":-0.59722,"hit":-0.0992,"double":-0.58336,"bust":0,"best":"hit"}},"S14":{"2":{"stand":-0.28501,"hit":0.0221,"double":-0.06391,"bust":0,"best":"hit"},"3":{"stand":-0.24458,"hit":0.05036,"double":-0.00057,"bust":0,"best":"hit"},"4":{"stand":-0.19922,"hit":0.08278,"double":0.06972,"bust":0,"best":"hit"},"5":{"stand":-0.15669,"hit":0.11616,"double":0.13963,"bust":0,"best":"double"},"6":{"stand":-0.115,"hit":0.14611,"double":0.20297,"bust":0,"best":"double"},"7":{"stand":-0.47286,"hit":0.07654,"double":-0.18224,"bust":0,"best":"hit"},"8":{"stand":-0.50966,"hit":0.01648,"double":-0.30506,"bust":0,"best":"hit"},"9":{"stand":-0.54055,"hit":-0.07275,"double":-0.44636,"bust":0,"best":"hit"},"10":{"stand":-0.5401,"hit":-0.13709,"double":-0.50857,"bust":0,"best":"hit"},"A":{"stand":-0.59688,"hit":-0.13398,"double":-0.5828,"bust":0,"best":"hit"}},"S15":{"2":{"stand":-0.28491,"hit":-0.00092,"double":-0.06758,"bust":0,"best":"hit"},"3":{"stand":-0.24202,"hit":0.02908,"double":-0.00223,"bust":0,"best":"hit"},"4":{"stand":-0.19877,"hit":0.06076,"double":0.06528,"bust":0,"best":"double"},"5":{"stand":-0.15629,"hit":0.09493,"double":0.13492,"bust":0,"best":"double"},"6":{"stand":-0.11464,"hit":0.12627,"double":0.19969,"bust":0,"best":"double"},"7":{"stand":-0.47251,"hit":0.03641,"double":-0.17716,"bust":0,"best":"hit"},"8":{"stand":-0.5111,"hit":-0.0284,"double":-0.3143,"bust":0,"best":"hit"},"9":{"stand":-0.54046,"hit":-0.11242,"double":-0.45096,"bust":0,"best":"hit"},"10":{"stand":-0.54002,"hit":-0.1732,"double":-0.51104,"bust":0,"best":"hit"},"A":{"stand":-0.59651,"hit":-0.17089,"double":-0.5861,"bust":0,"best":"hit"}},"S16":{"2":{"stand":-0.28239,"hit":-0.02145,"double":-0.06997,"bust":0,"best":"hit"},"3":{"stand":-0.24162,"hit":0.00834,"double":-0.00608,"bust":0,"best":"hit"},"4":{"stand":-0.19841,"hit":0.04098,"double":0.06154,"bust":0,"best":"double"},"5":{"stand":-0.15595,"hit":0.07529,"double":0.13027,"bust":0,"best":"double"},"6":{"stand":-0.11452,"hit":0.11074,"double":0.20202,"bust":0,"best":"double"},"7":{"stand":-0.47397,"hit":-0.00788,"double":-0.18434,"bust":0,"best":"hit"},"8":{"stand":-0.51103,"hit":-0.06939,"double":-0.31715,"bust":0,"best":"hit"},"9":{"stand":-0.54036,"hit":-0.15142,"double":-0.45577,"bust":0,"best":"hit"},"10":{"stand":-0.5399,"hit":-0.21009,"double":-0.51755,"bust":0,"best":"hit"},"A":{"stand":-0.59665,"hit":-0.20808,"double":-0.59201,"bust":0,"best":"hit"}},"S17":{"2":{"stand":-0.15274,"hit":-0.00027,"double":-0.00488,"bust":0,"best":"hit"},"3":{"stand":-0.11613,"hit":0.02921,"double":0.05718,"bust":0,"best":"double"},"4":{"stand":-0.07636,"hit":0.06165,"double":0.1233,"bust":0,"best":"double"},"5":{"stand":-0.03847,"hit":0.09869,"double":0.19738,"bust":0,"best":"double"},"6":{"stand":-0.00499,"hit":0.12607,"double":0.25215,"bust":0,"best":"double"},"7":{"stand":-0.10383,"hit":0.05471,"double":-0.00886,"bust":0,"best":"hit"},"8":{"stand":-0.38258,"hit":-0.07175,"double":-0.25134,"bust":0,"best":"hit"},"9":{"stand":-0.42058,"hit":-0.14727,"double":-0.39216,"bust":0,"best":"hit"},"10":{"stand":-0.41956,"hit":-0.19563,"double":-0.45461,"bust":0,"best":"hit"},"A":{"stand":-0.51425,"hit":-0.22059,"double":-0.54784,"bust":0,"best":"hit"}},"S18":{"2":{"stand":0.11311,"hit":0.06044,"double":0.11626,"bust":0,"best":"double"},"3":{"stand":0.14158,"hit":0.08823,"double":0.17522,"bust":0,"best":"double"},"4":{"stand":0.17103,"hit":0.1224,"double":0.24479,"bust":0,"best":"double"},"5":{"stand":0.199,"hit":0.15113,"double":0.30226,"bust":0,"best":"double"},"6":{"stand":0.2226,"hit":0.17845,"double":0.35691,"bust":0,"best":"double"},"7":{"stand":0.40186,"hit":0.17187,"double":0.22366,"bust":0,"best":"stand"},"8":{"stand":0.10806,"hit":0.04103,"double":-0.02819,"bust":0,"best":"stand"},"9":{"stand":-0.18264,"hit":-0.09847,"double":-0.28482,"bust":0,"best":"hit"},"10":{"stand":-0.17956,"hit":-0.14296,"double":-0.34287,"bust":0,"best":"hit"},"A":{"stand":-0.22537,"hit":-0.16001,"double":-0.41777,"bust":0,"best":"hit"}},"S19":{"2":{"stand":0.38075,"hit":0.12112,"double":0.23766,"bust":0,"best":"stand"},"3":{"stand":0.39979,"hit":0.15106,"double":0.3007,"bust":0,"best":"stand"},"4":{"stand":0.41557,"hit":0.176,"double":0.352,"bust":0,"best":"stand"},"5":{"stand":0.43991,"hit":0.20622,"double":0.41244,"bust":0,"best":"stand"},"6":{"stand":0.45222,"hit":0.23104,"double":0.46209,"bust":0,"best":"double"},"7":{"stand":0.61573,"hit":0.22096,"double":0.32056,"bust":0,"best":"stand"},"8":{"stand":0.5959,"hit":0.1529,"double":0.194,"bust":0,"best":"stand"},"9":{"stand":0.28762,"hit":0.00744,"double":-0.07116,"bust":0,"best":"stand"},"10":{"stand":0.06332,"hit":-0.08778,"double":-0.23394,"bust":0,"best":"stand"},"A":{"stand":0.18951,"hit":-0.06467,"double":-0.22913,"bust":0,"best":"stand"}},"S20":{"2":{"stand":0.63764,"hit":0.1822,"double":0.36005,"bust":0,"best":"stand"},"3":{"stand":0.64525,"hit":0.20344,"double":0.40527,"bust":0,"best":"stand"},"4":{"stand":0.65584,"hit":0.22944,"double":0.45887,"bust":0,"best":"stand"},"5":{"stand":0.67041,"hit":0.25772,"double":0.51543,"bust":0,"best":"stand"},"6":{"stand":0.67757,"hit":0.28149,"double":0.56297,"bust":0,"best":"stand"},"7":{"stand":0.77327,"hit":0.25465,"double":0.38594,"bust":0,"best":"stand"},"8":{"stand":0.79066,"hit":0.19371,"double":0.27747,"bust":0,"best":"stand"},"9":{"stand":0.75949,"hit":0.1132,"double":0.13852,"bust":0,"best":"stand"},"10":{"stand":0.55455,"hit":0.02244,"double":-0.01593,"bust":0,"best":"stand"},"A":{"stand":0.60549,"hit":0.03,"double":-0.04256,"bust":0,"best":"stand"}},"P0":{"2":{"stand":-0.28401,"hit":0.08203,"double":-0.06007,"bust":0,"split":0.48538,"best":"split"},"3":{"stand":-0.24367,"hit":0.10445,"double":0.00559,"bust":0,"split":0.53274,"best":"split"},"4":{"stand":-0.20084,"hit":0.12929,"double":0.07367,"bust":0,"split":0.5823,"best":"split"},"5":{"stand":-0.15875,"hit":0.16083,"double":0.14184,"bust":0,"split":0.63371,"best":"split"},"6":{"stand":-0.11516,"hit":0.18954,"double":0.20631,"bust":0,"split":0.67965,"best":"split"},"7":{"stand":-0.47174,"hit":0.16433,"double":-0.1764,"bust":0,"split":0.4756,"best":"split"},"8":{"stand":-0.50876,"hit":0.09459,"double":-0.3115,"bust":0,"split":0.35971,"best":"split"},"9":{"stand":-0.53809,"hit":-0.00033,"double":-0.45088,"bust":0,"split":0.23775,"best":"split"},"10":{"stand":-0.5388,"hit":-0.0663,"double":-0.50651,"bust":0,"split":0.1823,"best":"split"},"A":{"stand":-0.59756,"hit":-0.06348,"double":-0.58426,"bust":0,"split":0.11851,"best":"split"}},"P1":{"2":{"stand":-0.28616,"hit":-0.11254,"double":-0.57232,"bust":0,"split":-0.0782,"best":"split"},"3":{"stand":-0.24568,"hit":-0.08013,"double":-0.49137,"bust":0,"split":-0.00643,"best":"split"},"4":{"stand":-0.20266,"hit":-0.04439,"double":-0.40533,"bust":0,"split":0.07344,"best":"split"},"5":{"stand":-0.15545,"hit":-0.00378,"double":-0.3109,"bust":0,"split":0.17647,"best":"split"},"6":{"stand":-0.11561,"hit":0.03023,"double":-0.23122,"bust":0,"split":0.26786,"best":"split"},"7":{"stand":-0.47462,"hit":-0.08883,"double":-0.94924,"bust":0,"split":0.00867,"best":"split"},"8":{"stand":-0.51125,"hit":-0.15679,"double":-1.02249,"bust":0,"split":-0.17676,"best":"hit"},"9":{"stand":-0.54014,"hit":-0.23787,"double":-1.08027,"bust":0,"split":-0.38438,"best":"hit"},"10":{"stand":-0.54159,"hit":-0.28717,"double":-1.08318,"bust":0,"split":-0.50091,"best":"hit"},"A":{"stand":-0.59688,"hit":-0.29189,"double":-1.19376,"bust":0,"split":-0.52067,"best":"hit"}},"P2":{"2":{"stand":-0.28602,"hit":-0.13927,"double":-0.55188,"bust":0,"split":-0.12937,"best":"split"},"3":{"stand":-0.24546,"hit":-0.10589,"double":-0.47141,"bust":0,"split":-0.04607,"best":"split"},"4":{"stand":-0.19754,"hit":-0.06569,"double":-0.37661,"bust":0,"split":0.05451,"best":"split"},"5":{"stand":-0.1546,"hit":-0.02677,"double":-0.29092,"bust":0,"split":0.15665,"best":"split"},"6":{"stand":-0.11482,"hit":0.00988,"double":-0.21206,"bust":0,"split":0.24722,"best":"split"},"7":{"stand":-0.47396,"hit":-0.1538,"double":-0.89024,"bust":0,"split":-0.05098,"best":"split"},"8":{"stand":-0.51057,"hit":-0.21918,"double":-1.00114,"bust":0,"split":-0.23058,"best":"hit"},"9":{"stand":-0.54301,"hit":-0.29526,"double":-1.06737,"bust":0,"split":-0.43141,"best":"hit"},"10":{"stand":-0.5414,"hit":-0.33877,"double":-1.06406,"bust":0,"split":-0.54631,"best":"hit"},"A":{"stand":-0.59621,"hit":-0.34357,"double":-1.18013,"bust":0,"split":-0.56497,"best":"hit"}},"P3":{"2":{"stand":-0.28579,"hit":-0.02224,"double":-0.20199,"bust":0,"split":-0.18174,"best":"hit"},"3":{"stand":-0.24033,"hit":0.00934,"double":-0.12837,"bust":0,"split":-0.08873,"best":"hit"},"4":{"stand":-0.19663,"hit":0.04632,"double":-0.05093,"bust":0,"split":0.00968,"best":"hit"},"5":{"stand":-0.1538,"hit":0.08282,"double":0.02692,"bust":0,"split":0.1144,"best":"split"},"6":{"stand":-0.11408,"hit":0.11336,"double":0.09293,"bust":0,"split":0.20674,"best":"split"},"7":{"stand":-0.47328,"hit":0.08662,"double":-0.1751,"bust":0,"split":-0.16909,"best":"hit"},"8":{"stand":-0.51343,"hit":-0.05909,"double":-0.45104,"bust":0,"split":-0.32587,"best":"hit"},"9":{"stand":-0.54287,"hit":-0.20985,"double":-0.71569,"bust":0,"split":-0.50842,"best":"hit"},"10":{"stand":-0.54127,"hit":-0.24808,"double":-0.74535,"bust":0,"split":-0.61939,"best":"hit"},"A":{"stand":-0.59548,"hit":-0.2637,"double":-0.82991,"bust":0,"split":-0.63506,"best":"hit"}},"P4":{"2":{"stand":-0.28071,"hit":0.18768,"double":0.37111,"bust":0,"split":-0.27305,"best":"double"},"3":{"stand":-0.23951,"hit":0.2126,"double":0.42386,"bust":0,"split":-0.18824,"best":"double"},"4":{"stand":-0.19593,"hit":0.23969,"double":0.47939,"bust":0,"split":-0.09061,"best":"double"},"5":{"stand":-0.1531,"hit":0.26983,"double":0.53966,"bust":0,"split":0.01408,"best":"double"},"6":{"stand":-0.1139,"hit":0.29377,"double":0.58755,"bust":0,"split":0.10108,"best":"double"},"7":{"stand":-0.47622,"hit":0.26039,"double":0.40475,"bust":0,"split":-0.2984,"best":"double"},"8":{"stand":-0.51332,"hit":0.19954,"double":0.29303,"bust":0,"split":-0.46009,"best":"double"},"9":{"stand":-0.54266,"hit":0.11665,"double":0.14919,"bust":0,"split":-0.63903,"best":"double"},"10":{"stand":-0.54103,"hit":0.0269,"double":-0.0046,"bust":0,"split":-0.7303,"best":"hit"},"A":{"stand":-0.59573,"hit":0.03397,"double":-0.02739,"bust":0,"split":-0.751,"best":"hit"}},"P5":{"2":{"stand":-0.2817,"hit":-0.25361,"double":-0.50723,"bust":0.31068,"split":-0.19008,"best":"split"},"3":{"stand":-0.24049,"hit":-0.23222,"double":-0.46444,"bust":0.31068,"split":-0.09282,"best":"split"},"4":{"stand":-0.19688,"hit":-0.2103,"double":-0.4206,"bust":0.31068,"split":0.01062,"best":"split"},"5":{"stand":-0.15453,"hit":-0.18868,"double":-0.37735,"bust":0.31068,"split":0.11542,"best":"split"},"6":{"stand":-0.12183,"hit":-0.17521,"double":-0.35042,"bust":0.31068,"split":0.19214,"best":"split"},"7":{"stand":-0.47774,"hit":-0.22056,"double":-0.52012,"bust":0.31068,"split":-0.25275,"best":"hit"},"8":{"stand":-0.51464,"hit":-0.2793,"double":-0.63054,"bust":0.31068,"split":-0.41627,"best":"hit"},"9":{"stand":-0.5439,"hit":-0.34715,"double":-0.74994,"bust":0.31068,"split":-0.60189,"best":"hit"},"10":{"stand":-0.54278,"hit":-0.38194,"double":-0.79821,"bust":0.30744,"split":-0.70786,"best":"hit"},"A":{"stand":-0.59447,"hit":-0.38613,"double":-0.83497,"bust":0.31068,"split":-0.7248,"best":"hit"}},"P6":{"2":{"stand":-0.28272,"hit":-0.37056,"double":-0.74111,"bust":0.46602,"split":-0.12007,"best":"split"},"3":{"stand":-0.24152,"hit":-0.3563,"double":-0.71259,"bust":0.46602,"split":-0.02849,"best":"split"},"4":{"stand":-0.19832,"hit":-0.34158,"double":-0.68315,"bust":0.46602,"split":0.07297,"best":"split"},"5":{"stand":-0.16243,"hit":-0.32971,"double":-0.65941,"bust":0.46602,"split":0.161,"best":"split"},"6":{"stand":-0.12347,"hit":-0.318,"double":-0.63599,"bust":0.46602,"split":0.25027,"best":"split"},"7":{"stand":-0.47913,"hit":-0.33178,"double":-0.69192,"bust":0.46602,"split":-0.04805,"best":"split"},"8":{"stand":-0.51577,"hit":-0.37771,"double":-0.78091,"bust":0.46278,"split":-0.39052,"best":"hit"},"9":{"stand":-0.54553,"hit":-0.43791,"double":-0.89402,"bust":0.46278,"split":-0.57311,"best":"hit"},"10":{"stand":-0.53559,"hit":-0.47406,"double":-0.95358,"bust":0.46278,"split":-0.65183,"best":"hit"},"A":{"stand":-0.59267,"hit":-0.47672,"double":-0.97495,"bust":0.46602,"split":-0.72775,"best":"hit"}},"P7":{"2":{"stand":-0.28371,"hit":-0.47069,"double":-0.94138,"bust":0.61489,"split":0.07507,"best":"split"},"3":{"stand":-0.24288,"hit":-0.46361,"double":-0.92723,"bust":0.61489,"split":0.14869,"best":"split"},"4":{"stand":-0.20617,"hit":-0.45879,"double":-0.91758,"bust":0.61489,"split":0.21889,"best":"split"},"5":{"stand":-0.16407,"hit":-0.45083,"double":-0.90166,"bust":0.61489,"split":0.3021,"best":"split"},"6":{"stand":-0.12486,"hit":-0.43754,"double":-0.87508,"bust":0.61165,"split":0.37451,"best":"split"},"7":{"stand":-0.48018,"hit":-0.40842,"double":-0.81685,"bust":0.61165,"split":0.31988,"best":"split"},"8":{"stand":-0.51751,"hit":-0.4534,"double":-0.9068,"bust":0.61165,"split":-0.02848,"best":"split"},"9":{"stand":-0.53889,"hit":-0.50571,"double":-1.01141,"bust":0.61165,"split":-0.3892,"best":"split"},"10":{"stand":-0.53685,"hit":-0.53539,"double":-1.07079,"bust":0.61165,"split":-0.47496,"best":"split"},"A":{"stand":-0.59483,"hit":-0.53788,"double":-1.07577,"bust":0.61489,"split":-0.51394,"best":"split"}},"P8":{"2":{"stand":0.11277,"hit":-0.62438,"double":-1.24876,"bust":0.77023,"split":0.19492,"best":"split"},"3":{"stand":0.13475,"hit":-0.62378,"double":-1.24756,"bust":0.77023,"split":0.25003,"best":"split"},"4":{"stand":0.1644,"hit":-0.61515,"double":-1.23029,"bust":0.76699,"split":0.31914,"best":"split"},"5":{"stand":0.19552,"hit":-0.6118,"double":-1.22359,"bust":0.76699,"split":0.39339,"best":"split"},"6":{"stand":0.22017,"hit":-0.61006,"double":-1.22013,"bust":0.76699,"split":0.45324,"best":"split"},"7":{"stand":0.39958,"hit":-0.58718,"double":-1.17435,"bust":0.76699,"split":0.36378,"best":"stand"},"8":{"stand":0.09926,"hit":-0.58715,"double":-1.1743,"bust":0.76699,"split":0.23002,"best":"split"},"9":{"stand":-0.18523,"hit":-0.61305,"double":-1.2261,"bust":0.76699,"split":-0.08127,"best":"split"},"10":{"stand":-0.17108,"hit":-0.64418,"double":-1.28836,"bust":0.76699,"split":-0.31037,"best":"stand"},"A":{"stand":-0.2195,"hit":-0.63796,"double":-1.27591,"bust":0.77023,"split":-0.24174,"best":"stand"}},"P9":{"2":{"stand":0.63291,"hit":-0.854,"double":-1.70799,"bust":0.92233,"split":0.0733,"best":"stand"},"3":{"stand":0.64363,"hit":-0.85372,"double":-1.70743,"bust":0.92233,"split":0.15875,"best":"stand"},"4":{"stand":0.65427,"hit":-0.85347,"double":-1.70695,"bust":0.92233,"split":0.24816,"best":"stand"},"5":{"stand":0.66893,"hit":-0.85312,"double":-1.70623,"bust":0.92233,"split":0.34562,"best":"stand"},"6":{"stand":0.67659,"hit":-0.85292,"double":-1.70584,"bust":0.92233,"split":0.43048,"best":"stand"},"7":{"stand":0.77201,"hit":-0.85045,"double":-1.70089,"bust":0.92233,"split":0.24868,"best":"stand"},"8":{"stand":0.79042,"hit":-0.8501,"double":-1.7002,"bust":0.92233,"split":-0.0057,"best":"stand"},"9":{"stand":0.75607,"hit":-0.84944,"double":-1.69888,"bust":0.92233,"split":-0.29566,"best":"stand"},"10":{"stand":0.55915,"hit":-0.84764,"double":-1.69527,"bust":0.92233,"split":-0.43798,"best":"stand"},"A":{"stand":0.60034,"hit":-0.85825,"double":-1.71651,"bust":0.92557,"split":-0.48422,"best":"stand"}}},"dealer":{"2":{"p17":0.13007,"p18":0.13598,"p19":0.13161,"p20":0.12566,"p21":0.12002,"bust":0.35666},"3":{"p17":0.1259,"p18":0.13193,"p19":0.12666,"p20":0.12218,"p21":0.11637,"bust":0.37696},"4":{"p17":0.12246,"p18":0.12541,"p19":0.12262,"p20":0.11783,"p21":0.11322,"bust":0.39847},"5":{"p17":0.11809,"p18":0.12304,"p19":0.11822,"p20":0.11243,"p21":0.10859,"bust":0.41963},"6":{"p17":0.11506,"p18":0.11457,"p19":0.11504,"p20":0.11018,"p21":0.10588,"bust":0.43926},"7":{"p17":0.36921,"p18":0.13793,"p19":0.07843,"p20":0.07868,"p21":0.07382,"bust":0.26194},"8":{"p17":0.12894,"p18":0.35995,"p19":0.12872,"p20":0.06922,"p21":0.06947,"bust":0.24369},"9":{"p17":0.12031,"p18":0.11735,"p19":0.35185,"p20":0.12037,"p21":0.06088,"bust":0.22924},"10":{"p17":0.12127,"p18":0.12101,"p19":0.12131,"p20":0.36845,"p21":0.03773,"bust":0.23024},"A":{"p17":0.08284,"p18":0.20659,"p19":0.20676,"p20":0.20726,"p21":0.09526,"bust":0.20128}}};
+const UPS = ["2","3","4","5","6","7","8","9","10","A"];
+const ACTIONS = ["hit","stand","double","split"];
+const NAMES = { hit: "Hit", stand: "Stand", double: "Double", split: "Split" };
+const LETTER = { hit: "H", stand: "S", double: "D", split: "P" };
+const SUITS = [["♠","b"],["♥","r"],["♦","r"],["♣","b"]];
+const RANKS10 = ["10","J","Q","K"];
+const STORE_KEY = "bjdrill.v2";
+const STEPS = [3, 8, 20, 50, 120, 300];
+const CLOSE = 0.01;
+const $ = (id) => document.getElementById(id);
+
+// ---------- storage ----------
+function blank() { return { cells: {}, lifetime: { seen: 0, correct: 0 }, sessions: [], mode: "spaced", n: 0, streak: 0, bestStreak: 0, conf: {}, sound: false, haptic: true, anim: true, whyAll: false }; }
+let S = blank();
+try {
+  const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem("bjdrill.v1");
+  if (raw) { S = Object.assign(blank(), JSON.parse(raw)); if (S.mode === "adaptive") S.mode = "spaced"; }
+} catch (e) {}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+function cellStat(row, up) { S.cells[row] = S.cells[row] || {}; return S.cells[row][up] = S.cells[row][up] || { seen: 0, correct: 0, recent: [], step: 0, due: 0 }; }
+const session = { seen: 0, correct: 0, started: Date.now() };
+
+// ---------- helpers ----------
+const rowOf = (k) => CHART.rows.find(r => r.key === k);
+const rowType = (k) => rowOf(k).type;
+const dealerWeak = (up) => ["2","3","4","5","6"].includes(up);
+const rnd = (n) => Math.floor(Math.random() * n);
+function marginOf(cell) { const e = ACTIONS.filter(a => cell[a] !== undefined).map(a => cell[a]).sort((a, b) => b - a); return e[0] - e[1]; }
+function hardTotal(k) { const r = rowOf(k); if (r.type === "hard") return parseInt(k.slice(1)); if (r.type === "soft") return parseInt(k.slice(1)); const x = parseInt(k.slice(1)); return x === 0 ? 12 : x === 9 ? 20 : (x + 1) * 2; }
+function shortLabel(k) { return rowOf(k).label.replace(/ \(.*\)/, ""); }
+
+// ---------- scheduler ----------
+function weight(row, up) {
+  const c = (S.cells[row] || {})[up];
+  if (!c || c.seen === 0) return 2;
+  if (c.due <= S.n) return 3 + Math.min(3, (S.n - c.due) / 5);
+  return 0.08;
+}
+function pickCell() {
+  const mode = S.mode;
+  let rows = CHART.rows;
+  if (mode === "hard" || mode === "soft" || mode === "pair") rows = rows.filter(r => r.type === mode);
+  const pool = [];
+  for (const r of rows) for (const u of UPS) pool.push([r.key, u, mode === "random" ? 1 : weight(r.key, u)]);
+  let total = pool.reduce((a, p) => a + p[2], 0), x = Math.random() * total;
+  for (const p of pool) { x -= p[2]; if (x <= 0) return p; }
+  return pool[pool.length - 1];
+}
+function schedule(cs, ok) {
+  if (ok) cs.step = Math.min((cs.step || 0) + 1, STEPS.length - 1); else cs.step = 0;
+  const base = ok ? STEPS[cs.step] : 3;
+  const jitter = 1 + (Math.random() * 0.5 - 0.25);
+  cs.due = S.n + Math.max(2, Math.round(base * jitter));
+}
+
+// ---------- dealing ----------
+let current = null;
+function rankLabel(idx) { return idx === 0 ? "A" : idx === 9 ? RANKS10[rnd(4)] : String(idx + 1); }
+function makeCard(idx, avoidSuit) { let s; do { s = rnd(4); } while (s === avoidSuit); return { r: rankLabel(idx), suit: SUITS[s][0], red: SUITS[s][1] === "r", s }; }
+function deal() {
+  let [row, up] = pickCell();
+  if (current && current.row === row && current.up === up) [row, up] = pickCell();
+  const r = rowOf(row);
+  const comp = r.comps[rnd(r.comps.length)];
+  let [c1, c2] = Math.random() < 0.5 ? comp : [comp[1], comp[0]];
+  const p1 = makeCard(c1, -1), p2 = makeCard(c2, c1 === c2 ? p1.s : -1);
+  const upIdx = up === "A" ? 0 : up === "10" ? 9 : parseInt(up) - 1;
+  const cs = (S.cells[row] || {})[up];
+  current = { row, up, c1, c2, cards: [p1, p2], dealer: makeCard(upIdx, -1), wasDue: !!(cs && cs.seen && cs.due <= S.n) };
+  S.n++; save();
+  render();
+}
+function cardHTML(c, i) {
+  const a = S.anim ? ` anim" style="animation-delay:${i * 110}ms` : "";
+  return `<div class="card ${c.red ? "red" : ""}${a}"><div class="c">${c.r}<small>${c.suit}</small></div><div class="pip">${c.suit}</div><div class="c b">${c.r}<small>${c.suit}</small></div></div>`;
+}
+function render() {
+  $("dealerRow").innerHTML = cardHTML(current.dealer, 2) + `<div class="card back${S.anim ? " anim" : ""}" style="animation-delay:330ms"></div>`;
+  $("playerRow").innerHTML = current.cards.map(cardHTML).join("");
+  $("handTotal").innerHTML = `<b>${shortLabel(current.row)}</b> vs dealer ${current.up}`;
+  $("aSplit").disabled = rowType(current.row) !== "pair";
+  $("fbView").hidden = true;
+  $("actionView").hidden = false;
+}
+
+// ---------- sound + haptics ----------
+let actx = null;
+function beep(ok) {
+  if (!S.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    const t = actx.currentTime;
+    if (ok) {
+      [1320, 1760].forEach((f, i) => { const o = actx.createOscillator(), g = actx.createGain(); o.type = "triangle"; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t + i * 0.05); g.gain.exponentialRampToValueAtTime(0.25, t + i * 0.05 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.05 + 0.12); o.connect(g).connect(actx.destination); o.start(t + i * 0.05); o.stop(t + i * 0.05 + 0.14); });
+    } else {
+      const o = actx.createOscillator(), g = actx.createGain(); o.type = "sine"; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.18); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); o.connect(g).connect(actx.destination); o.start(t); o.stop(t + 0.24);
+    }
+  } catch (e) {}
+}
+function buzz() { if (S.haptic && navigator.vibrate) { try { navigator.vibrate([60, 40, 60]); } catch (e) {} } }
+
+// ---------- explanations ----------
+function why(row, up, cell, chosen) {
+  const type = rowType(row), best = cell.best, d = CHART.dealer[up];
+  const dB = Math.round(d.bust * 100), d17 = 100 - dB, bust = Math.round(cell.bust * 100);
+  const weak = dealerWeak(up), total = hardTotal(row);
+  const g = (a, b) => (cell[a] - cell[b]).toFixed(3);
+  const an = (u) => (["A", "8", "11", "18"].includes(u) ? "an " : "a ") + u;
+  const anD = (u) => "a dealer " + u;
+  const pairRank = type === "pair" ? row.slice(1) : null; // "0" = aces, "9" = tens
+  let s = "";
+
+  // 1. Why the best play is best
+  if (type === "pair" && best !== "split") {
+    if (row === "P8") s = up === "7" ? `<b>18 beats a dealer 7.</b> A 7 up makes exactly 17 more often than any other total, and your 18 beats it. Splitting throws that away.` : `<b>18 is a made hand against ${an(up)}.</b> Two hands starting at 9 would each need to draw well against a dealer who makes 17+ ${d17}% of the time.`;
+    else if (pairRank === "9") s = `<b>20 wins on its own.</b> Splitting tens turns one near-certain winner into two hands that each start at 10.`;
+    else if (pairRank === "4") s = `<b>Two 5s are a 10, and 10 is a doubling hand.</b> Two hands starting at 5 are weak; one hand starting at 10 against ${an(up)} is strong.`;
+    else if (pairRank === "3") s = `<b>8 is a fine hitting hand.</b> Two hands starting at 4 each are the worst starting cards in the deck, and ${anD(up)} ${weak ? "isn't weak enough" : "makes 17+ " + d17 + "% of the time, far too strong"} to justify doubling your exposure.`;
+    else if (best === "hit") s = `<b>Dealer ${up} makes 17+ ${d17}% of the time.</b> Splitting doubles your bet against a strong card. Play the ${total} as a hitting hand and keep your exposure to one unit.`;
+    else if (best === "double") s = `<b>Treat it as a ${total} and double.</b> Dealer ${up} busts ${dB}% of the time; one card to ${total} makes a strong total often enough that doubling earns ${g("double", "split")} more per unit than splitting.`;
+    else s = `<b>${total} is a made hand.</b> Stand and let dealer ${up} take the ${dB}% bust risk.`;
+  } else if (best === "split") {
+    if (pairRank === "0") s = `<b>Always split aces.</b> Together they're a soft 12; apart, each starts a hand at 11 with a 10 coming ${Math.round(16 * 6 / 309 * 100)}% of the time.`;
+    else if (pairRank === "7") s = `<b>Always split 8s.</b> 16 is the worst hand in blackjack. Two hands starting at 8 lose less than one 16, even against ${anD(up)}${weak ? "" : " that makes 17+ " + d17 + "% of the time"}.`;
+    else if (weak) s = `<b>Dealer ${up} busts ${dB}% of the time.</b> Against a weak card you want more money on the table, and two hands starting at ${pairRank === "9" ? 10 : parseInt(pairRank) + 1} beat one hand of ${total} by ${g("split", ACTIONS.filter(a => a !== "split" && cell[a] !== undefined).sort((a, b) => cell[b] - cell[a])[0])} per unit.`;
+    else if (pairRank === "8") s = `<b>Two 9s beat one 18 against ${an(up)}.</b> Dealer ${up} makes 17+ ${d17}% of the time, so 18 often only pushes or loses; two hands starting at 9 earn ${g("split", "stand")} more per unit than standing.`;
+    else s = `<b>${total} is a bad total against ${an(up)}.</b> Two hands starting at ${parseInt(pairRank) + 1} outperform it even though the dealer makes 17+ ${d17}% of the time; you aren't adding money for value, you're escaping a loser.`;
+  } else if (best === "stand") {
+    if (type === "soft") s = `<b>Soft ${total} is already a made hand against ${an(up)}.</b> Drawing to it gains little and risks turning a winner into a stiff.`;
+    else if (total >= 17) s = `<b>${total} is a made hand.</b> Hitting busts you ${bust}% of the time and rarely improves what you have.`;
+    else s = `<b>Let the dealer bust.</b> Dealer ${up} busts ${dB}% of the time. Hitting ${total} busts you ${bust}% of the time, so you'd be taking a risk the dealer is about to take for you.`;
+  } else if (best === "double") {
+    if (type === "soft") s = `<b>Soft doubles win on the dealer's bust.</b> You can't bust on one card, and dealer ${up} busts ${dB}% of the time, so the second unit rides mostly on the dealer breaking. Doubling earns ${g("double", "hit")} more per unit than hitting.`;
+    else if (total === 11) s = `<b>11 is the best doubling hand.</b> Any ten makes 21 and most cards make 18+. Doubling earns ${g("double", "hit")} more per unit than hitting against ${an(up)}.`;
+    else s = `<b>Dealer ${up} busts ${dB}% of the time.</b> One card to ${total} makes a strong total often enough that putting a second unit down earns ${g("double", "hit")} more per unit than hitting.`;
+  } else { // hit
+    if (type === "soft") s = weak ? `<b>Soft ${total} can't bust, but dealer ${up} isn't weak enough to double into.</b> A ${up} busts only ${dB}% of the time; keep one unit at risk and draw.` : `<b>Soft ${total} can't bust on one card.</b> Standing leaves you under a dealer that makes 17+ ${d17}% of the time; hitting is free improvement.`;
+    else if (total <= 11) s = weak ? `<b>Hit, don't double.</b> You can't bust, but dealer ${up} busts only ${dB}% of the time, not enough to justify a one-card commitment with a second unit.` : `<b>You can't bust ${total}.</b> Take a card; doubling against ${an(up)} that makes 17+ ${d17}% of the time commits a second unit to a single draw.`;
+    else s = `<b>Dealer ${up} makes 17+ ${d17}% of the time.</b> Standing on ${total} only wins when the dealer busts (${dB}%). Hitting busts you ${bust}% of the time, but it's the lesser evil by ${g("hit", "stand")} per unit.`;
+  }
+
+  // 2. What the chosen play cost, if wrong
+  if (chosen && chosen !== best) {
+    let c = "";
+    if (chosen === "stand" && best === "hit") c = `Standing on ${total} only wins when the dealer busts, and ${an(up)} busts ${dB}% of the time.`;
+    else if (chosen === "hit" && best === "stand") c = `Hitting here busts you ${bust}% of the time while the dealer busts ${dB}% on their own.`;
+    else if (chosen === "double" && best === "hit") c = `Doubling locks you into one card. ${total} vs ${up} needs the option to keep hitting.`;
+    else if (chosen === "hit" && best === "double") c = `Hitting wins the same hands as doubling but for one unit instead of two.`;
+    else if (chosen === "double" && best === "stand") c = `Doubling adds a card to a hand that didn't want one, with two units riding on it.`;
+    else if (chosen === "stand" && best === "double") c = `Standing gives up both the extra unit and the draw.`;
+    else if (chosen === "split") c = `Splitting puts a second unit on two weaker hands.`;
+    else if (best === "split") c = `Playing the pair as ${an(String(total))} keeps you in ${cell[chosen] < 0 ? "a losing hand" : "a weaker spot"} when two hands would do better.`;
+    s += ` <span style="color:var(--ink-muted)">${c}</span>`;
+  }
+  return s;
+}
+
+// ---------- answering ----------
+function answer(a) {
+  if (!current || !$("fbView").hidden) return;
+  const cell = CHART.cells[current.row][current.up];
+  if (a === "split" && cell.split === undefined) return;
+  const ok = a === cell.best;
+  const cs = cellStat(current.row, current.up);
+  cs.seen++; if (ok) cs.correct++; cs.recent.push(ok ? 1 : 0); if (cs.recent.length > 10) cs.recent.shift();
+  schedule(cs, ok);
+  S.lifetime.seen++; if (ok) S.lifetime.correct++;
+  session.seen++; if (ok) session.correct++;
+  let endedStreak = 0;
+  if (ok) { S.streak++; if (S.streak > S.bestStreak) S.bestStreak = S.streak; }
+  else { endedStreak = S.streak; S.streak = 0; const k = a + ">" + cell.best; S.conf[k] = (S.conf[k] || 0) + 1; }
+  save(); updateScore();
+  beep(ok); if (!ok) buzz();
+  showFeedback(a, cell, ok, endedStreak);
+}
+function fmt(v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(3); }
+function pct(v) { return Math.round(v * 100) + "%"; }
+function showFeedback(chosen, cell, ok, endedStreak) {
+  const evs = ACTIONS.filter(a => cell[a] !== undefined).map(a => [a, cell[a]]).sort((x, y) => y[1] - x[1]);
+  const lo = Math.min(-1, evs[evs.length - 1][1]), hi = Math.max(1, evs[0][1]);
+  const span = hi - lo;
+  const d = CHART.dealer[current.up];
+  const soft = rowType(current.row) === "soft" || current.row === "P0";
+  const margin = evs[0][1] - evs[1][1];
+  let html = `<div class="verdict ${ok ? "ok" : "no"}"><div class="word">${ok ? "CORRECT" : "WRONG"}</div><div class="play">${shortLabel(current.row)} vs ${current.up}<br><b>${NAMES[cell.best]}</b> is the play</div></div>`;
+  const badges = [];
+  if (margin < CLOSE) badges.push(`<span class="badge cc">Close call · gap ${margin.toFixed(3)}</span>`);
+  if (ok && S.streak >= 5) badges.push(`<span class="badge streak">🔥 ${S.streak} in a row</span>`);
+  if (!ok && endedStreak >= 5) badges.push(`<span class="badge streak">Streak ended at ${endedStreak}</span>`);
+  if (S.streak === S.bestStreak && S.streak >= 10 && ok) badges.push(`<span class="badge streak">Best ever</span>`);
+  if (current.wasDue && S.mode !== "random") badges.push(`<span class="badge due">Review</span>`);
+  if (badges.length) html += `<div class="badges">${badges.join("")}</div>`;
+  if (!ok || S.whyAll) html += `<div class="why ${ok ? "ok" : ""}">${why(current.row, current.up, cell, chosen)}</div>`;
+  else html += `<button class="linkbtn" id="btnWhy">Why?</button>`;
+  html += `<div class="evs">` + evs.map(([a, v]) => {
+    const zero = (0 - lo) / span * 100, pos = (v - lo) / span * 100;
+    const left = Math.min(zero, pos), width = Math.abs(pos - zero);
+    return `<div class="ev ${a === cell.best ? "best" : ""} ${a === chosen ? "chosen" : ""}"><div class="n">${NAMES[a]}</div><div class="bar"><i style="left:${left}%;width:${width}%"></i></div><div class="v num">${fmt(v)}</div></div>`;
+  }).join("") + `</div>`;
+  html += `<div class="margin">${ok ? `Best play beats the next option by ${margin.toFixed(3)}` : `Your pick cost ${(evs[0][1] - cell[chosen]).toFixed(3)} per unit bet`}</div>`;
+  const peek = (current.up === "10" || current.up === "A") ? " (no blackjack)" : "";
+  html += `<div class="odds"><div class="odd"><div class="k">Dealer ${current.up}</div><div class="v num">${pct(d.bust)}</div><div class="s">busts · makes 17+ ${pct(1 - d.bust)}${peek}</div></div><div class="odd"><div class="k">You, one card</div><div class="v num">${soft ? "0%" : pct(cell.bust)}</div><div class="s">${soft ? "soft hand, cannot bust" : "chance to bust on a hit"}</div></div></div>`;
+  html += `<button class="deal" id="btnDeal">Deal next</button>`;
+  const fb = $("fbView");
+  fb.innerHTML = html; fb.hidden = false;
+  $("actionView").hidden = true;
+  $("btnDeal").addEventListener("click", deal);
+  const w = $("btnWhy");
+  if (w) w.addEventListener("click", (e) => { e.stopPropagation(); const div = document.createElement("div"); div.className = "why ok"; div.innerHTML = why(current.row, current.up, cell, null); w.replaceWith(div); });
+}
+function updateScore() {
+  $("sessScore").textContent = `${session.correct} / ${session.seen}`;
+  $("sessPct").textContent = session.seen ? pct(session.correct / session.seen) + " this session" : "—";
+  $("streakV").textContent = S.streak;
+  $("streakBox").classList.toggle("hot", S.streak >= 5);
+}
+
+// ---------- chart panel ----------
+function recentAcc(c) { if (!c || !c.seen) return null; const r = c.recent; return r.reduce((a, b) => a + b, 0) / r.length; }
+function cls(c) { const a = recentAcc(c); if (a === null) return "unseen"; return a >= 0.8 ? "good" : a >= 0.5 ? "mid" : "poor"; }
+function buildChart() {
+  let h = `<table class="chart"><tr><th></th>${UPS.map(u => `<th>${u}</th>`).join("")}</tr>`;
+  let prev = null;
+  for (const r of CHART.rows) {
+    h += `<tr class="${prev && prev !== r.type ? "sep" : ""}"><th class="r">${r.label.replace(/ \(.*\)/, "").replace("Hard ", "H ").replace("Soft ", "S ").replace("Pair ", "")}</th>`;
+    for (const u of UPS) {
+      const cell = CHART.cells[r.key][u], st = (S.cells[r.key] || {})[u];
+      h += `<td class="${cls(st)}${marginOf(cell) < CLOSE ? " cc" : ""}" data-row="${r.key}" data-up="${u}" title="${r.label} vs ${u}">${LETTER[cell.best]}</td>`;
+    }
+    h += `</tr>`; prev = r.type;
+  }
+  $("chartGrid").innerHTML = h + `</table>`;
+  $("dealerStrip").innerHTML = UPS.map(u => { const d = CHART.dealer[u]; return `<div title="Dealer ${u}: busts ${pct(d.bust)}, makes 17+ ${pct(1 - d.bust)}"><span class="p num">${pct(d.bust)}</span><span class="col${dealerWeak(u) ? "" : " strong"}" style="height:${d.bust / 0.5 * 70}px"></span><span class="u">${u}</span></div>`; }).join("");
+}
+function showCellInfo(row, up) {
+  const r = rowOf(row), cell = CHART.cells[row][up], st = (S.cells[row] || {})[up];
+  const evs = ACTIONS.filter(a => cell[a] !== undefined).map(a => `${NAMES[a]} <span class="num">${fmt(cell[a])}</span>`).join(" · ");
+  const rec = st && st.seen ? `Seen ${st.seen}, correct ${st.correct} (${pct(st.correct / st.seen)}), recent ${pct(recentAcc(st))}${st.due > S.n ? ` · next review in ${st.due - S.n} hands` : " · due now"}` : "Not seen yet";
+  const cc = marginOf(cell) < CLOSE ? ` <span class="badge cc">Close call</span>` : "";
+  $("cellInfo").innerHTML = `<h3>${r.label} vs dealer ${up}: ${NAMES[cell.best]}${cc}</h3><div>${evs}</div><div style="margin-top:8px">${why(row, up, cell, null)}</div><div style="margin-top:6px;color:var(--ink-muted)">${rec}</div>`;
+}
+
+// ---------- stats panel ----------
+function buildStats() {
+  const L = S.lifetime;
+  const allCells = CHART.rows.length * 10;
+  let seenCells = 0, mastered = 0, due = 0;
+  for (const r of CHART.rows) for (const u of UPS) { const c = (S.cells[r.key] || {})[u]; if (c && c.seen) { seenCells++; if (recentAcc(c) >= 0.8 && c.recent.length >= 3) mastered++; if (c.due <= S.n) due++; } }
+  $("statGrid").innerHTML = [
+    ["This session", `${session.correct} / ${session.seen}`, session.seen ? pct(session.correct / session.seen) : "—"],
+    ["Lifetime", `${L.correct} / ${L.seen}`, L.seen ? pct(L.correct / L.seen) : "—"],
+    ["Best streak", `${S.bestStreak}`, `current ${S.streak}`],
+    ["Cells mastered", `${mastered} / ${allCells}`, `${seenCells} seen · ${due + (allCells - seenCells)} due for review`],
+  ].map(([k, v, s]) => `<div class="stat"><div class="k">${k}</div><div class="v num">${v}</div><div class="s">${s}</div></div>`).join("");
+  // error patterns
+  const conf = Object.entries(S.conf).sort((a, b) => b[1] - a[1]);
+  const totalErr = conf.reduce((a, c) => a + c[1], 0);
+  $("errList").innerHTML = conf.length ? conf.slice(0, 8).map(([k, n]) => { const [c, b] = k.split(">"); return `<div><span>Chose <b>${NAMES[c]}</b>, play was <b>${NAMES[b]}</b></span><span class="bar"><i style="width:${n / conf[0][1] * 100}%"></i></span><span class="num">${n} · ${pct(n / totalErr)}</span></div>`; }).join("") : `<div><span>No misses yet</span></div>`;
+  // categories
+  const cat = { "Hard totals": [0, 0], "Soft totals": [0, 0], "Pairs": [0, 0], "vs weak dealer (2–6)": [0, 0], "vs strong dealer (7–A)": [0, 0], "Close calls": [0, 0] };
+  for (const r of CHART.rows) for (const u of UPS) {
+    const c = (S.cells[r.key] || {})[u]; if (!c || !c.seen) continue;
+    const add = (k) => { cat[k][0] += c.seen; cat[k][1] += c.correct; };
+    add(r.type === "hard" ? "Hard totals" : r.type === "soft" ? "Soft totals" : "Pairs");
+    add(dealerWeak(u) ? "vs weak dealer (2–6)" : "vs strong dealer (7–A)");
+    if (marginOf(CHART.cells[r.key][u]) < CLOSE) add("Close calls");
+  }
+  $("catList").innerHTML = Object.entries(cat).map(([k, [s, c]]) => `<div><span>${k}</span><span class="num">${s ? `${c} / ${s} · ${pct(c / s)}` : "—"}</span></div>`).join("");
+  const weak = [];
+  for (const r of CHART.rows) for (const u of UPS) { const c = (S.cells[r.key] || {})[u]; const a = recentAcc(c); if (a !== null && a < 0.8) weak.push([shortLabel(r.key) + " vs " + u, a, NAMES[CHART.cells[r.key][u].best]]); }
+  weak.sort((x, y) => x[1] - y[1]);
+  $("weakList").innerHTML = weak.length ? weak.slice(0, 12).map(w => `<div><span>${w[0]} <span style="color:var(--ink-dim)">→ ${w[2]}</span></span><span class="num">${pct(w[1])}</span></div>`).join("") : `<div><span>Nothing under 80% yet</span></div>`;
+  const sess = S.sessions.slice(-8).reverse();
+  $("sessList").innerHTML = sess.length ? sess.map(s => `<div><span>${new Date(s.date).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span><span class="num">${s.correct} / ${s.seen} · ${pct(s.correct / s.seen)}</span></div>`).join("") : `<div><span>No finished sessions yet</span></div>`;
+}
+function flushSession() {
+  if (session.seen >= 5) { S.sessions.push({ date: session.started, seen: session.seen, correct: session.correct }); if (S.sessions.length > 50) S.sessions.shift(); save(); }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") { flushSession(); session.seen = 0; session.correct = 0; session.started = Date.now(); updateScore(); } });
+
+// ---------- settings ----------
+function setMode(m) {
+  S.mode = m; save();
+  document.querySelectorAll("#modeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  $("modeLabel").textContent = `${m[0].toUpperCase() + m.slice(1)}${m === "pair" ? "s" : ""} · 6D · H17 · DAS`;
+}
+function bindSwitch(id, key, after) {
+  const el = $(id); el.setAttribute("aria-checked", String(!!S[key]));
+  el.addEventListener("click", () => { S[key] = !S[key]; el.setAttribute("aria-checked", String(S[key])); save(); if (after) after(); });
+}
+bindSwitch("swSound", "sound", () => { if (S.sound) beep(true); });
+bindSwitch("swHaptic", "haptic", () => { if (S.haptic) buzz(); });
+bindSwitch("swAnim", "anim");
+bindSwitch("swWhyAll", "whyAll");
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 1800); }
+
+// ---------- wiring ----------
+document.querySelectorAll(".actions button").forEach(b => b.addEventListener("click", () => answer(b.dataset.a)));
+document.addEventListener("click", (e) => { if ($("fbView").hidden) return; if (e.target.closest("button, .panel, .toast")) return; deal(); });
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "TEXTAREA") return;
+  if (!$("chartPanel").hidden || !$("statsPanel").hidden || !$("settingsPanel").hidden) { if (e.key === "Escape") closePanels(); return; }
+  const k = e.key.toLowerCase();
+  if (!$("fbView").hidden) { if (k === " " || k === "enter" || k === "n") { e.preventDefault(); deal(); } return; }
+  const map = { h: "hit", s: "stand", d: "double", p: "split" };
+  if (map[k]) answer(map[k]);
+});
+// swipe: up hit, down stand, right double, left split; any swipe on feedback deals the next hand
+let sw0 = null;
+function swipeStart(e) { const t = e.touches ? e.touches[0] : e; sw0 = { x: t.clientX, y: t.clientY, t: Date.now() }; }
+function swipeEnd(e) {
+  if (!sw0) return; const t = e.changedTouches ? e.changedTouches[0] : e;
+  const dx = t.clientX - sw0.x, dy = t.clientY - sw0.y, dt = Date.now() - sw0.t; sw0 = null;
+  if (dt > 800 || Math.max(Math.abs(dx), Math.abs(dy)) < 36) return;
+  if (!$("fbView").hidden) { deal(); return; }
+  if (Math.abs(dx) > Math.abs(dy)) answer(dx > 0 ? "double" : "split"); else answer(dy < 0 ? "hit" : "stand");
+}
+for (const id of ["tableArea", "deck"]) { const el = $(id); el.addEventListener("touchstart", swipeStart, { passive: true }); el.addEventListener("touchend", swipeEnd); }
+function openPanel(id) { closePanels(); $(id).hidden = false; if (id === "chartPanel") buildChart(); if (id === "statsPanel") buildStats(); }
+function closePanels() { document.querySelectorAll(".panel").forEach(p => p.hidden = true); }
+$("btnChart").addEventListener("click", () => openPanel("chartPanel"));
+$("btnStats").addEventListener("click", () => openPanel("statsPanel"));
+$("btnSettings").addEventListener("click", () => openPanel("settingsPanel"));
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", closePanels));
+$("chartGrid").addEventListener("click", (e) => { const td = e.target.closest("td"); if (td) showCellInfo(td.dataset.row, td.dataset.up); });
+document.querySelectorAll("#modeSeg button").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+$("btnExport").addEventListener("click", () => {
+  const txt = JSON.stringify(S); const ta = $("ioText"); ta.value = txt;
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast("Backup copied"), () => { ta.select(); toast("Select the text and copy it"); });
+  else { ta.select(); toast("Select the text and copy it"); }
+});
+$("btnImport").addEventListener("click", () => {
+  // The reviver drops every string except mode: a backup holds only numbers, so any other string is junk or markup aimed at innerHTML.
+  try { const obj = JSON.parse($("ioText").value, (k, v) => typeof v === "string" && k !== "mode" ? undefined : v); if (!obj.cells || !obj.lifetime) throw 0; if (!["spaced", "random", "hard", "soft", "pair", "adaptive"].includes(obj.mode)) obj.mode = "spaced"; S = Object.assign(blank(), obj); if (S.mode === "adaptive") S.mode = "spaced"; save(); setMode(S.mode); updateScore(); toast("Progress restored"); }
+  catch (e) { toast("That text is not a valid backup"); }
+});
+let resetArmed = false;
+$("btnReset").addEventListener("click", (e) => {
+  if (!resetArmed) { resetArmed = true; e.target.textContent = "Tap again to confirm reset"; setTimeout(() => { resetArmed = false; e.target.textContent = "Reset all progress"; }, 3000); return; }
+  const keep = { sound: S.sound, haptic: S.haptic, anim: S.anim, whyAll: S.whyAll };
+  S = Object.assign(blank(), keep); save(); setMode("spaced"); session.seen = 0; session.correct = 0; updateScore(); resetArmed = false; e.target.textContent = "Reset all progress"; toast("Progress cleared");
+});
+
+setMode(S.mode || "spaced");
+updateScore();
+deal();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>

@@ -17,15 +17,15 @@ with `just deploy` (see [Deploying](#deploying)).
 | Unit | Module | What | When |
 |---|---|---|---|
 | `easy-afd` | `easy-afd.nix` | Easy A/FD (gunicorn :8000, tailnet-only via firewall) | always |
-| `nginx` | `proxy.nix` | TLS front for **https://afd.hdgs.me** (LE cert, DNS-01 via Cloudflare) | always |
+| `nginx` | `proxy.nix`, `bj-drill.nix` | TLS front for **https://afd.hdgs.me** (proxy to :8000) and **https://21.hdgs.me** (blackjack drill, static files from the Nix store); LE certs, DNS-01 via Cloudflare | always |
 | `easy-afd-refresh` | `easy-afd.nix` | Rebuilds NASR, the d-TPP chart index, OurAirports and openAIP data; reloads the app; Gatus heartbeat on success; retries twice, then pages via `notify-failure@` | nightly (00:00–01:00) |
 | `homelab-backup` | `backup.nix` | Mirror /srv/homelab + secrets → NAS `backups` share | nightly 03:30 |
 | `mnt-data.automount` | `storage.nix` | `//192.168.1.142/Data` at /mnt/data (MeTube downloads) | on access |
 | `compose-homelab` | `homelab-stack.nix` | Deploys `stacks/homelab/docker-compose.yml` → `docker compose up -d` | on change |
-| `acme-afd.hdgs.me` timers | `proxy.nix` | Cert renewal | automatic |
+| `acme-afd.hdgs.me`, `acme-21.hdgs.me` timers | `proxy.nix`, `bj-drill.nix` | Cert renewal | automatic |
 | `hermes-agent` | `hermes.nix` | NousResearch Hermes agent (Claude via Anthropic API): Telegram bot + host `hermes` CLI, container mode on the host docker daemon | always |
 | `hermes-watchdog` | `hermes.nix` | Checks hermes unit + container, alerts via ntfy (`hermes-alerts` topic) | every 5 min |
-| `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls all eight compose apps + Easy A/FD (liveness and data currency), heartbeat for the nightly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
+| `gatus` | `gatus.nix` | Monitoring + status page (:8080, tailnet-only): pings mini + NAS, polls all eight compose apps + Easy A/FD (liveness and data currency) + the blackjack drill, heartbeat for the nightly refresh; alerts via ntfy (`gatus` topic). HTTPS via the `ts-status` sidecar → **https://status.jaguar-duckbill.ts.net** | always |
 | `hn-summaries` | `hn-summaries.nix` | Shared Hacker News discussion summaries for the Macs' daily_news plugin (:8090, tailnet-only): SQLite cache → HN Companion → one OpenRouter call per story, daily cap, cost ledger in the journal. See [docs/HN-SUMMARIES.md](HN-SUMMARIES.md) | always |
 | `hn-summaries-warm` | `hn-summaries.nix` | Summarises the current HN front page into that cache so Mac refreshes are cache hits | every 30 min |
 | `notify-failure@<unit>` | `gatus.nix` | `OnFailure=` target: pages ntfy (`gatus` topic) with the failed unit's last error lines. Used by `easy-afd-refresh` | when a unit that opts in fails |
@@ -147,8 +147,8 @@ every 5 min with an edge-triggered ntfy alert. It won't catch a Telegram
 poller wedged inside a healthy container — that would need a heartbeat into
 a Gatus external endpoint (future work).
 
-**DNS:** `hdgs.me` on Cloudflare (moved from Hover 2026-07-25). `afd` A
-→ 100.98.163.36 (DNS-only; public name, tailnet-only reachability).
+**DNS:** `hdgs.me` on Cloudflare (moved from Hover 2026-07-25). `afd` and `21` A
+→ 100.98.163.36 (DNS-only; public names, tailnet-only reachability).
 Email = Fastmail (MX/SPF/DKIM/DMARC). API token (zone-scoped, DNS edit)
 in the `cloudflare-acme-env` secret for ACME + automation.
 

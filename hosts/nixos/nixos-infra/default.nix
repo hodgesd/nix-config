@@ -1,5 +1,6 @@
 # nixos-infra: Proxmox guest VM on the HP mini PC.
-# Runs the easy-afd app (easy-afd.nix, proxy.nix), the docker compose
+# Runs the easy-afd app (easy-afd.nix, proxy.nix), the blackjack drill
+# static site (bj-drill.nix), the docker compose
 # estate under /srv/homelab (homelab-stack.nix + sidecars.nix), nightly NAS
 # backups (backup.nix), and the UNAS "Data" share mount (storage.nix). Shared server baseline
 # (tailscale, docker, ssh, firewall, user) comes from
@@ -13,6 +14,7 @@
     ./hardware-configuration.nix
     ./easy-afd.nix
     ./proxy.nix
+    ./bj-drill.nix
     ./backup.nix
     ./storage.nix
     ./homelab-stack.nix
@@ -53,7 +55,7 @@
       # timer-driven oneshot that re-execs on every run, so it picks up
       # new values already (same for hc-heartbeat in healthchecks.nix).
       easy-afd-env.restartUnits = ["easy-afd.service"];
-      cloudflare-acme-env = {}; # DNS-01 token for afd.hdgs.me cert
+      cloudflare-acme-env = {}; # DNS-01 token for the afd.hdgs.me + 21.hdgs.me certs
       nas-backup-credentials = {}; # SMB creds for both UNAS shares
       homelab-env = {}; # TS_AUTHKEY for the compose tailscale sidecars
       # Bearer token for Homepage's MCP endpoint (/api/mcp). Rendered into
