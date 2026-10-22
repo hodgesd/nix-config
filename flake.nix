@@ -19,6 +19,13 @@
     # would rebuild herdr (Rust+Zig) on every deploy. Update with:
     #   nix flake update llm-agents
     llm-agents.url = "github:numtide/llm-agents.nix";
+    # Blackjack drill static site, served at 21.hdgs.me
+    # (hosts/nixos/nixos-infra/bj-drill.nix). Release with:
+    #   nix flake update bj-drill && just deploy
+    bj-drill = {
+      url = "github:hodgesd/bj-drill";
+      flake = false; # plain static files, no flake.nix
+    };
     swiftbar_plugins = {
       url = "github:hodgesd/swiftbar_plugins";
       flake = false; # repo has no flake.nix; treat as raw files

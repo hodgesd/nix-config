@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "bj-drill": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792690594,
+        "narHash": "sha256-7FcmI1gD2CZjVVDT1Je44EzjRnzW6IUlTf/bSaBhLvo=",
+        "owner": "hodgesd",
+        "repo": "bj-drill",
+        "rev": "6a28fc0b28733939b2282cacfcea7092de6d672b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hodgesd",
+        "repo": "bj-drill",
+        "type": "github"
+      }
+    },
     "brew-src": {
       "flake": false,
       "locked": {
@@ -357,6 +373,7 @@
     },
     "root": {
       "inputs": {
+        "bj-drill": "bj-drill",
         "hermes-agent": "hermes-agent",
         "home-manager": "home-manager_2",
         "llm-agents": "llm-agents",
