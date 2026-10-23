@@ -92,6 +92,18 @@
     # attribute on the share, which blocks every later --delete update
     # (the mount's dir_mode/file_mode already yield sane modes).
     ${pkgs.rsync}/bin/rsync -rlt --delete /var/lib/hermes/.hermes/ "$dest/hermes/"
+    # Blackjack drill hand log (bj-drill.nix): the only copy of every hand
+    # played. sqlite's online .backup gives a consistent snapshot while the
+    # API keeps writing; it goes to local tmp first because SQLite locking
+    # over SMB is unreliable.
+    bjdb=/var/lib/private/bj-drill/bj-drill.db
+    if [ -f "$bjdb" ]; then
+      snap=$(${pkgs.coreutils}/bin/mktemp)
+      ${lib.getExe pkgs.sqlite} "$bjdb" ".backup '$snap'"
+      mkdir -p "$dest/bj-drill"
+      ${pkgs.coreutils}/bin/install -m 600 "$snap" "$dest/bj-drill/bj-drill.db"
+      rm -f "$snap"
+    fi
     for f in easy-afd-env cloudflare-acme-env nas-backup-credentials homelab-env hermes-env; do
       ${pkgs.coreutils}/bin/install -m 600 "/run/secrets/$f" "$dest/secrets/"
     done

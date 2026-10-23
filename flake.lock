@@ -3,11 +3,11 @@
     "bj-drill": {
       "flake": false,
       "locked": {
-        "lastModified": 1792710312,
-        "narHash": "sha256-PCMO72KTF/6kq9doMmWpbmhnOAzDvpexeTLJzXRZIXo=",
+        "lastModified": 1792717166,
+        "narHash": "sha256-uOyhEZPElQKIBrLOW3y7PVZwQ2Uy1gnPrAT5ID7Va4E=",
         "owner": "hodgesd",
         "repo": "21",
-        "rev": "2bf5f79eb311e7b41934f72fa63a2a4d8c276948",
+        "rev": "59cd43c5628cc658628597d9414049d4140186aa",
         "type": "github"
       },
       "original": {

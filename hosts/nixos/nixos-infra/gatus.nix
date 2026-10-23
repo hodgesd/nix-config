@@ -191,6 +191,9 @@ in {
           # Static site (bj-drill.nix): the title proves nginx is serving
           # the app, not a default page.
           (http "nixos-infra" "bj-drill" "https://21.hdgs.me/" ["[BODY] == pat(*Basic Strategy Drill*)"])
+          # Its hand log (bj-drill-api): answers through nginx, so this also
+          # proves the /api/ proxy, and [BODY].ok only comes from the app.
+          (http "nixos-infra" "bj-drill-api" "https://21.hdgs.me/api/healthz" ["[BODY].ok == true"])
           # Is Easy A/FD's data current? Same URL as the check above, which
           # only asks whether the app answers — and it answers 200 with
           # five-week-old data, as it did through September 2026. The app
