@@ -5,10 +5,15 @@
 # baseline (tailscale, docker, ssh, firewall, hodgesd) comes from
 # hosts/common/nixos-common.nix.
 #
-# Shape: `t3 serve --tailscale-serve` runs as a systemd user service of the
-# `agent` user and publishes itself over Tailscale Serve (HTTPS :443 on
-# this node's MagicDNS name). The Mac pairs via Settings → Connections →
-# Add environment. Nothing listens on the LAN except SSH.
+# Shape: T3 Code runs as its own self-managed systemd user service
+# (`t3code.service`, installed by `t3 service install` under the `agent`
+# user's ~/.config/systemd/user) on 127.0.0.1:3773, published over
+# Tailscale Serve (HTTPS :443 on this node's MagicDNS name). The Mac pairs
+# via Settings → Connections → Add environment. Nothing listens on the LAN
+# except SSH. Nix deliberately does NOT define a server unit: a second
+# `npx t3 serve` unit fights t3code.service for ~/.t3/userdata
+# (ServerAlreadyRunningError) and breaks in-app updates, which swap the
+# runtime under ~/.t3/runtime/versions and rewrite t3code.service.
 #
 # Security model (same as nixos-infra's agent-workbench.nix): the boundary
 # is the OS user. `agent` has no wheel and no docker, so a prompt-injected
@@ -19,9 +24,10 @@
 # One-time setup after install (state, not config):
 #   sudo tailscale up --ssh --operator=agent
 #   ssh agent@t3-code            # then: claude (login), gh auth login
-#   systemctl --user restart t3-serve && journalctl --user -u t3-serve -f
-# The pairing link is printed in that journal; mint another later with
-# `npx t3 pair --tailscale`.
+#   npx --yes t3 service install
+#   tailscale serve --bg http://127.0.0.1:3773
+# Mint a pairing link with `~/.t3/runtime/versions/<ver>/t3 pair --tailscale`.
+# Update with the app's update button or `t3 update --yes`.
 #
 # No sops secrets here, so no .sops.yaml recipient is needed for this host.
 {pkgs, ...}: {
@@ -49,7 +55,7 @@
     isNormalUser = true;
     description = "T3 Code agent";
     shell = pkgs.zsh;
-    # Start the user service at boot and keep it running after logout.
+    # Start t3code.service at boot and keep it running after logout.
     linger = true;
   };
 
@@ -67,19 +73,4 @@
     htop
     ghostty.terminfo
   ];
-
-  # Login shell so the server, and every agent it spawns, gets the full
-  # system PATH (node, git, gh, claude, tailscale) rather than systemd's
-  # minimal one.
-  systemd.user.services.t3-serve = {
-    description = "T3 Code server (Tailscale Serve)";
-    wantedBy = ["default.target"];
-    unitConfig.ConditionUser = "agent";
-    serviceConfig = {
-      WorkingDirectory = "/home/agent/src";
-      ExecStart = "${pkgs.bash}/bin/bash -lc 'exec npx --yes t3 serve --tailscale-serve'";
-      Restart = "on-failure";
-      RestartSec = 10;
-    };
-  };
 }
