@@ -33,6 +33,7 @@
         "home_comps_uv.8hr.py"
         "lottery_value_uv.12h.py"
         "software_versions.2h.py"
+        "nba.1h.py"
       ];
     };
   };
