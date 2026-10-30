@@ -25,6 +25,8 @@ in {
       # launchd starts the job on any change in the folder, including the
       # script's own moves; those reruns find nothing and exit.
       WatchPaths = ["${root}/New Pubs"];
+      # Also run at login/switch, for files that arrived while it wasn't loaded.
+      RunAtLoad = true;
       StandardOutPath = "${home}/Library/Logs/gulfstream-pubs.log";
       StandardErrorPath = "${home}/Library/Logs/gulfstream-pubs.log";
     };

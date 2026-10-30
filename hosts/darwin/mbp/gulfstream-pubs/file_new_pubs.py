@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -32,6 +33,7 @@ INBOX = "New Pubs"
 REVIEW = "Needs Review"
 EXCERPT_RATIO = 0.8  # fewer pages than this share of the current copy -> review
 SETTLE_SECONDS = 600  # how long to wait for a file that is still being written
+PARTIAL = {".crdownload", ".part", ".download", ".tmp"}
 
 MONTHS = {m: i for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
@@ -147,7 +149,7 @@ def sha(path: Path) -> str:
 def settled(path: Path) -> bool:
     """Wait until the file stops growing and parses (copies and iCloud downloads)."""
     deadline = time.time() + SETTLE_SECONDS
-    last = -1
+    last, failures = -1, 0
     while time.time() < deadline:
         size = path.stat().st_size
         if size == last:
@@ -155,7 +157,11 @@ def settled(path: Path) -> bool:
                 pdf_info(path)
                 return True
             except ValueError:
-                pass
+                failures += 1
+                if failures >= 3:  # same size and still broken: corrupt, not in flight
+                    return False
+        else:
+            failures = 0
         last = size
         time.sleep(3)
     return False
@@ -205,7 +211,22 @@ class Filer:
         if not folder.is_dir():
             return self.review(src, f"no {pub.model} folder yet")
 
-        same = [p for p in (*folder.glob(f"{pub.base}*.pdf"), *folder.glob(f"Archive/{pub.base}*.pdf"))]
+        # Current copies of this manual, any issue. A different issue than the
+        # one on top means the issue line was missed or the lineage changed.
+        tops = {p: m for p in folder.glob(f"{pub.model}_{pub.pub}_*.pdf")
+                if (m := re.fullmatch(rf"{pub.model}_{pub.pub}(_I\d+)?_Rev(\d+)_\d{{4}}-\d\d-\d\d\.pdf", p.name))}
+        if other := [p.name for p, m in tops.items() if (m.group(1) or "") != pub.series[len(f"{pub.model}_{pub.pub}"):]]:
+            return self.review(src, f"issue differs from current {other[0]}")
+        current = {p: int(m.group(2)) for p, m in tops.items()}
+        newest = max(current, key=current.get, default=None)
+        newest_rev = current[newest] if newest else -1
+
+        # Before the duplicate check, so an excerpt of the current revision
+        # isn't mistaken for a re-export and sent to to_delete.
+        if newest and int(info.get("Pages", 0)) < EXCERPT_RATIO * int(pdf_info(newest).get("Pages", 0)):
+            return self.review(src, f"{info.get('Pages')} pages vs {newest.name}; excerpt?")
+
+        same = [*folder.glob(f"{pub.base}*.pdf"), *folder.glob(f"Archive/{pub.base}*.pdf")]
         if same:
             digest = sha(src)
             if any(sha(p) == digest for p in same):
@@ -217,14 +238,8 @@ class Filer:
             dest = self.move(src, self.trash / f"{pub.base}_copy{n}.pdf")
             return notify("Same revision, different file → to_delete", dest.name, dest)
 
-        current = [p for p in folder.glob(f"{pub.series}_Rev*.pdf")
-                   if re.fullmatch(rf"{re.escape(pub.series)}_Rev(\d+)_\d{{4}}-\d\d-\d\d\.pdf", p.name)]
-        newest = max(current, key=lambda p: int(re.search(r"_Rev(\d+)_", p.name).group(1)), default=None)
-        newest_rev = int(re.search(r"_Rev(\d+)_", newest.name).group(1)) if newest else -1
-
-        if newest and int(info.get("Pages", 0)) < EXCERPT_RATIO * int(pdf_info(newest).get("Pages", 0)):
-            return self.review(src, f"{info.get('Pages')} pages vs {newest.name}; excerpt?")
-
+        if pub.rev == newest_rev:
+            return self.review(src, f"same revision as {newest.name} but dated {pub.date}")
         if pub.rev < newest_rev:
             dest = self.move(src, folder / "Archive" / f"{pub.base}.pdf")
             return notify(f"Filed older {pub.pub} → Archive", dest.name, dest)
@@ -232,7 +247,7 @@ class Filer:
         for old in current:
             self.move(old, folder / "Archive" / old.name)
         dest = self.move(src, folder / f"{pub.base}.pdf")
-        archived = ", ".join(f"Rev {re.search(r'_Rev(\d+)_', o.name).group(1)}" for o in current)
+        archived = ", ".join(f"Rev {r}" for r in current.values())
         notify(f"Filed {pub.base.replace('_', ' ')}", f"→ {pub.model}/" + (f" · {archived} archived" if archived else ""), dest)
 
 
@@ -241,7 +256,9 @@ def notify(subtitle: str, message: str, reveal: Path) -> None:
     try:
         subprocess.run(["terminal-notifier", "-title", "Gulfstream Pubs", "-subtitle", subtitle,
                         "-message", message, "-sound", "Glass", "-group", f"gulfstream-pubs-{reveal}",
-                        "-execute", f"/usr/bin/open -R '{reveal}'"], check=True, timeout=30)
+                        # -execute goes through a shell; quote the path so a
+                        # crafted filename can't run code when clicked.
+                        "-execute", f"/usr/bin/open -R {shlex.quote(str(reveal))}"], check=True, timeout=30)
     except (OSError, subprocess.SubprocessError):
         script = ('display notification (item 3 of argv) with title "Gulfstream Pubs" '
                   'subtitle (item 2 of argv) sound name "Glass"')
@@ -252,8 +269,16 @@ def notify(subtitle: str, message: str, reveal: Path) -> None:
 def main() -> None:
     filer = Filer(Path(sys.argv[1]))
     for src in sorted(filer.inbox.iterdir()):
-        if src.is_file() and not src.name.startswith("."):
+        # Skip hidden files and browser downloads still in progress; the
+        # browser's final rename triggers another run.
+        if not src.is_file() or src.name.startswith(".") or src.suffix in PARTIAL:
+            continue
+        try:
             filer.file(src)
+        except Exception as e:  # one bad file must not block the rest of the inbox
+            print(f"error: {src.name}: {e!r}", file=sys.stderr)
+            if src.exists():
+                filer.review(src, f"error: {e}")
 
 
 if __name__ == "__main__":
