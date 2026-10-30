@@ -1,6 +1,6 @@
 # Host-specific configuration for mbp (MacBook Pro, the daily driver).
 {username, ...}: {
-  imports = [./backup.nix];
+  imports = [./backup.nix ./gulfstream-pubs.nix];
 
   # The CPRT plugin needs the two forum feed secrets below, which only this
   # host has; repoFiles is a list, so this appends to the shared plugin set.
