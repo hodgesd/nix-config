@@ -34,8 +34,10 @@ nix-config/
 │   │           ├── finder.nix       # Finder preferences
 │   │           ├── dock.nix         # Dock settings
 │   │           └── security.nix     # Security/privacy settings
-│   ├── darwin/            # Per-Mac overrides (optional; only mbp/ exists today)
-│   │   └── mbp/default.nix
+│   ├── darwin/            # Per-Mac overrides (optional)
+│   │   ├── mbp/           # default.nix, backup.nix (NAS mirror),
+│   │   │                  # gulfstream-pubs.nix (+ dir: files new pubs in iCloud)
+│   │   └── mini/          # default.nix, apple-mcp/, vault-mcp/
 │   └── nixos/             # Per-NixOS-host config (REQUIRED per host)
 │       └── nixos-infra/   # hardware-config, easy-afd, proxy, backup,
 │                          # storage, homelab-stack
