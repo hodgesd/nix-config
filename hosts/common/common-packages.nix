@@ -65,6 +65,10 @@
       nixpkgs-fmt # Nix code formatter
       nmap # Network scanner and mapper
       ffmpeg # Video/audio conversion
+      # PDF tools for the gulfstream-pdf-splitter Claude skill: qpdf splits
+      # without re-encoding, poppler-utils reads text and metadata.
+      qpdf
+      poppler-utils
       qemu # Hardware virtualization
       skopeo # Work with remote container images
       # Secrets editing (Macs are the sops editors; the VM only decrypts
