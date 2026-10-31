@@ -283,38 +283,58 @@ other.
 
 ### Measured: MLX vs llama.cpp on this machine
 
-Same model, same prompt, `num_predict=200`, `temperature=0`, warm,
-successive requests left to right:
+Warm, `num_predict=200`, `temperature=0`, steady state. **Two prompts,
+because the prompt turned out to matter more than anything else:**
 
-| Model | Engine | tok/s |
-|---|---|---|
-| `qwen3.8:27b-mlx` | MLX | 127.1 → 141.1 → **145.5** |
-| `qwen3.8:27b` | llama.cpp | 94.0 → 94.2 → **94.0** |
-| `qwen3.6:35b-a3b-nvfp4` | MLX | 149.8 → 199.6 → 272.3 → **272.8** |
-| `qwen3.6:35b-a3b` | llama.cpp | 105.6 → 102.7 → 91.7 → **103.8** |
+| Model | Engine | Predictable prompt | Realistic prompt |
+|---|---|---|---|
+| `qwen3.6:35b-a3b-nvfp4` | MLX | 272.8 | **239.4** |
+| `qwen3.6:35b-a3b` | llama.cpp | 103.8 | **107.9** |
+| `qwen3.8:27b-mlx` | MLX | 145.5 | **100.1** |
+| `qwen3.8:27b` | llama.cpp | 94.0 | **50.4** |
 
-So MLX is **~55% faster on the dense 27B and ~2.7x on the MoE** — far
-past the ~20% upstream advertises, and the reason the packaging work in
-this phase was worth doing.
+"Predictable" = *"Count from 1 to 60, comma separated"*. "Realistic" =
+a ~150-word prose explanation of B-tree indexing. **Quote the realistic
+column.** The first column is a best case and overstates the dense model
+by ~45%.
+
+**Why the prompt matters so much: speculative decoding.** Ollama runs
+the GGUF path with `--spec-type draft-mtp --spec-draft-n-max 4` (visible
+in the `starting llama-server` log line), and the MLX runner evidently
+does something similar — it does not log its flags, but the arithmetic
+forces it. A dense 27B at 4-bit is ~13.5GB of weights that must be read
+per forward pass; 145 tok/s implies ~1.96 TB/s of weight traffic, well
+past any published Apple unified-memory bandwidth. So more than one
+token is emitted per pass, and a trivially predictable continuation
+makes nearly every draft token accepted. **This is why a counting
+prompt is a useless benchmark** — it measures draft acceptance, not
+generation.
+
+MLX's advantage survives the honest prompt, and in fact widens:
+**~2.0x on the dense 27B, ~2.2x on the MoE**, against upstream's
+advertised ~20%. It is also where the two architectures diverge: the
+MoE barely noticed the harder prompt (−12%) while GGUF-dense halved
+(−46%).
 
 Two behaviours the averages hide:
 
 - **MLX ramps; llama.cpp does not.** MLX needs 3–4 requests to reach
-  steady state (149 → 272 on the MoE), while llama.cpp is flat from the
-  first request. On an always-on box with `OLLAMA_KEEP_ALIVE = 30m` that
-  warmup amortises to nothing, which is the ideal case for MLX — but it
-  means a single cold benchmark run *understates* MLX badly.
-- **Cold first-token is worse on MLX.** A cold `qwen3.8:27b-mlx` showed
-  1625ms prompt-eval against 242ms for GGUF. Irrelevant for a resident
-  server, relevant if anything ever runs it one-shot.
+  steady state (139 → 239 on the MoE); llama.cpp is flat from the first.
+  With `OLLAMA_KEEP_ALIVE = 30m` that warmup amortises to nothing — but
+  a single cold run *understates* MLX badly.
+- **Cold first-token is worse on MLX** — 1625ms prompt-eval against
+  242ms for GGUF. Irrelevant to a resident server; relevant one-shot.
 
 This also settles a claim from an external review that MLX loses on MoE
-architectures (citing an M1 Ultra comparison). Not on this hardware and
-these models: the MoE is where MLX wins by the largest margin.
+architectures (citing an M1 Ultra comparison). Not on this hardware:
+the MoE is where MLX wins by the widest margin.
 
-A cold, single-shot measurement taken earlier suggested the opposite
-(GGUF 65.3 vs MLX 53.8 tok/s) — that was load and warmup, not throughput.
-Measure warm, and more than once.
+**Three measurement mistakes were made getting here, all in one
+session.** A cold single-shot run showed GGUF *ahead* (65.3 vs 53.8) —
+that was load and warmup. Then a warm run on a counting prompt showed
+145/272 — that was draft acceptance. Only the third attempt, warm and
+on prose, measured generation. If you re-benchmark: warm it, repeat it,
+and use a prompt the model has to actually think about.
 
 ## Manual steps (not Nix)
 
