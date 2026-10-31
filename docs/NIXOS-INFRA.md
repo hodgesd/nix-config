@@ -59,6 +59,9 @@ and `/srv/homelab/ts-<name>` and the node in the Tailscale admin console.
 The six older sidecars still carry hand-made serve.json under
 `/srv/homelab/ts-<name>/config`.
 
+Homepage's own config (`/srv/homelab/homepage/config`) is runtime state,
+not in this repo. Update it by hand when an app is added or retired.
+
 Per-app notes:
 
 - **changedetection** (added 2026-09-06): deliberately NOT the nixpkgs
@@ -215,6 +218,12 @@ DR fallback when the Mac is unavailable — on the VM:
 git clone https://github.com/hodgesd/nix-config && cd nix-config
 sudo nixos-rebuild switch --flake .#nixos-infra
 ```
+
+`just switch-nixos` in the checkout does the same.
+
+If the tailnet is down, LAN SSH (`hodgesd@192.168.1.216`) is the
+break-glass path. It is key-only and independent of Tailscale. The
+Proxmox console on hp-mini is the last resort.
 
 ## Secrets (sops-nix)
 

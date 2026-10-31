@@ -158,14 +158,10 @@ You can access machine metadata in your config:
 
 ## Updating README
 
-Don't forget to update `README.md` with your new machine's details:
+Add a row to the Fleet table in `README.md`:
 
 ```markdown
-## Machines
-
-| Hostname | Model | Storage (Ram/HD) | Cores (CPU/GPU) |
-|----------|-------|------------------|-----------------|
-| `newmachine` | MacBook Pro M4 Pro 16" | 32GB / 2TB | 14 / 20 |
+| `newmachine` | MacBook Pro 16" M4 Pro, 32 GB / 2 TB | development | `just`, on the box | `hosts/darwin/newmachine/` |
 ```
 
 ## Troubleshooting

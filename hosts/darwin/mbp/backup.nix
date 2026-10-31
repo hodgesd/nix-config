@@ -21,6 +21,10 @@
 # laptop schedules would need a multi-day grace; `last-backup.txt` on the
 # share and ~/Library/Logs/mbp-backup.log show the last run.
 #
+# Force a run now:
+#   rm ~/.local/state/mbp-backup/last-success && \
+#     launchctl kickstart -k gui/$(id -u)/org.nixos.mbp-backup
+#
 # NAS IP 192.168.1.142 also appears in hosts/nixos/nixos-infra/{backup,storage}.nix.
 {
   config,
