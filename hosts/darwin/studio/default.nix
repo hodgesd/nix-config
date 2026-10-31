@@ -145,6 +145,16 @@ in {
   # daemon runs, so the CLI can never end up talking to a different build.
   environment.systemPackages = [ollama];
 
+  # The CLI needs telling where the server is. `ollama` defaults to
+  # 127.0.0.1:11434, and the daemon below binds the MagicDNS name instead,
+  # so without this EVERY ollama command on this host fails with "could not
+  # connect to ollama server" while the service is running perfectly. It is
+  # the direct cost of the tailnet bind, and it is not optional.
+  #
+  # Same variable the daemon sets, for the opposite reason: there it is the
+  # listen address, here it is the dial address. They must not drift apart.
+  environment.variables.OLLAMA_HOST = "studio.jaguar-duckbill.ts.net:11434";
+
   # Ollama, bound to this node's MagicDNS name so it is reachable ONLY
   # from the tailnet: http://studio.jaguar-duckbill.ts.net:11434
   #
