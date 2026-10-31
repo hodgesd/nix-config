@@ -13,24 +13,31 @@
   lib,
   ...
 }: {
-  # FileVault stays ON, and unlike the mini this host can be recovered
-  # remotely: macOS 26+ on Apple silicon runs a limited SSH server at the
-  # FileVault pre-boot stage, so the volume unlocks with the local account
-  # password (this is why Remote Login is load-bearing here — Phase 1).
-  # Worth knowing before you reboot this box:
-  #   - Planned reboots: `sudo fdesetup authrestart` pre-authorizes the
-  #     unlock, so it returns to a live session unattended.
-  #   - Unexpected reboot or power cut: it waits at pre-boot. Unlock over
-  #     SSH on the LAN — there is no tailscaled that early, so from away
-  #     from home, jump via nixos-infra to studio's reserved LAN IP.
-  #     Password auth only; the session drops while the data volume mounts
-  #     and macOS finishes booting, then you reconnect.
-  #   - That is attended recovery: something still has to authenticate.
-  #     Gatus on nixos-infra (Phase 4) is what tells you it needs you.
+  # FileVault is deliberately OFF on this host (decided 2026-10-30), which
+  # is the opposite of the mini and worth understanding before changing it.
   #
-  # NO auto-login, deliberately: FileVault gates boot before loginwindow
-  # ever reads it, so setting it would imply reboots are handled when they
-  # are not. Same reasoning as hosts/darwin/mini/default.nix.
+  # Rationale: the box is physically secure, holds no personal data and no
+  # Apple ID, and its whole job is to be available. Apple silicon still
+  # encrypts the internal SSD in hardware regardless; FileVault adds
+  # password protection of the keys at rest. The trade accepted here is
+  # weaker at-rest protection against physical access, in exchange for a
+  # machine that boots all the way back on its own.
+  #
+  # What that buys, and what it costs:
+  #   - No pre-boot gate. After a reboot or power cut it boots unattended
+  #     to loginwindow; system LaunchDaemons start with nobody logged in.
+  #     (The macOS 26+ FileVault-over-SSH unlock path is therefore not in
+  #     play here. It would be, if FileVault were ever turned back on.)
+  #   - User LaunchAgents still need a login session. So anything that must
+  #     survive an unattended reboot is either a system LaunchDaemon, or a
+  #     user agent plus auto-login — and auto-login is only an option
+  #     *because* FileVault is off. Phase 3 picks between those on evidence;
+  #     see docs/studio/phase-3.md.
+  #   - Nothing about this makes the Mac unattended-proof: Gatus on
+  #     nixos-infra (Phase 4) is still what tells you it went away.
+  #
+  # Remote Login remains load-bearing — it is how this box is administered
+  # headlessly over the tailnet — just no longer for pre-boot unlock.
 
   # Come back by itself after a power cut, and never sleep out from under an
   # inference run or a remote build. Display sleep is fine — headless box.
@@ -79,11 +86,11 @@
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICqtGYhL9lNLBifxD6zjgV89isCQacI54IKFIgj8dxTA t3-code-agent"
   ];
 
-  # Check for updates; never install them unattended. An unattended
-  # FileVault box that installs an OS update reboots into the pre-boot
-  # unlock screen and stays there until someone authenticates — see the
-  # recovery ladder above. OS updates are a deliberate
-  # `sudo fdesetup authrestart` ritual instead.
+  # Check for updates; never install them unattended. A self-installing
+  # OS update reboots the box out from under an inference run or a remote
+  # build, and — depending on how Phase 3 launches the serving stack —
+  # may leave it not serving until someone logs in. Updates here are a
+  # deliberate, scheduled act.
   system.defaults.SoftwareUpdate.AutomaticallyInstallMacOSUpdates = false;
 
   # The rest of the update posture is already right, fleet-wide, from
@@ -141,15 +148,14 @@
       /usr/bin/tmutil addexclusion "$d" >/dev/null 2>&1 || true
     done
 
-    # Remote Login is this machine's only remote recovery path: it is the
-    # prerequisite for FileVault pre-boot SSH unlock. It cannot be set
-    # declaratively (see the comment above), so the real risk is that it
-    # drifts off and nobody notices until an outage. Warn loudly, but do
-    # NOT fail the rebuild over it.
+    # Remote Login is how this keyboard-less box is administered at all,
+    # and it is what the authorized key above is for. It cannot be set
+    # declaratively (see the comment near the top), so the real risk is
+    # that it drifts off and nobody notices until they need to get in.
+    # Warn loudly, but do NOT fail the rebuild over it.
     if ! /bin/launchctl print system/com.openssh.sshd >/dev/null 2>&1; then
       printf >&2 '\e[1;33mwarning: Remote Login (SSH) is OFF on studio.\e[0m\n'
-      printf >&2 '  FileVault pre-boot unlock depends on it, so this box cannot be\n'
-      printf >&2 '  recovered remotely until it is back on:\n'
+      printf >&2 '  This box is headless — SSH is the only way in. Re-enable at:\n'
       printf >&2 '    System Settings > General > Sharing > Remote Login\n'
     fi
   '';
