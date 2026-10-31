@@ -1,8 +1,9 @@
 # Phase 3 — studio: Ollama serving
 
-**Status: switched on studio 2026-10-31 — daemon up, bound to
-`100.126.144.70:11434`, no serve config. Acceptance checks below PENDING
-the two model pulls.**
+**Status: DONE 2026-10-31.** Daemon up on `100.126.144.70:11434`, no
+serve config, MLX runtime packaged, both MLX models resident and
+measured. Remaining acceptance items need real workloads, not more
+setup.
 
 ## What was built
 
@@ -10,7 +11,7 @@ the two model pulls.**
 
 | Thing | Detail |
 |---|---|
-| Package | `unstablePkgs.ollama` — **0.34.3** at our locked rev, past the 0.19 that added the Apple-silicon MLX backend. No brew fallback needed. |
+| Package | `unstablePkgs.ollama` **0.34.3**, rebuilt with upstream's MLX runtime added — see "FIXED: the MLX runtime" below. No brew, no Xcode. |
 | CLI | `environment.systemPackages = [ollama]` — same store path as the daemon, so `ollama ps` can never talk to a different build |
 | Service | `launchd.daemons.ollama` → label `org.nixos.ollama` |
 | Bind | `OLLAMA_HOST = studio.jaguar-duckbill.ts.net:11434` — tailscale interface only |
@@ -27,8 +28,15 @@ the service is running perfectly. Hence
 `environment.variables.OLLAMA_HOST` as well as the daemon's — listen
 address and dial address, same string, and they must not drift apart.
 
-nix-darwin writes it into `/etc/zshenv`, which non-interactive SSH
-commands do source, so `ssh studio 'ollama pull …'` works unattended.
+nix-darwin writes it into `/etc/zshenv` (which sources the generated
+`…-set-environment`), and non-interactive SSH does source that — so
+`ssh studio 'ollama pull …'` works unattended. Verified:
+`ssh studio 'echo $OLLAMA_HOST'` prints the address.
+
+**Gotcha, and it will catch you once:** `/etc/zshenv` is read at shell
+*startup*, so the shell you ran `darwin-rebuild switch` in still fails
+with `could not connect to ollama server`. The daemon is fine; the shell
+is stale. `exec zsh -l`, or open a new tab.
 
 ### Why it binds the MagicDNS name, not loopback
 
@@ -262,26 +270,51 @@ then file sizes, then manifest digests — without executing anything.
 
 ### Model assignment
 
-Currently **GGUF**, because that is what is deployed and verified:
+**MLX, both of them** — measured on the deployed daemon 2026-10-31:
 
 | Workload | Model | Architecture | Size |
 |---|---|---|---|
-| Hermes, tool calling | `qwen3.6:35b-a3b` | MoE, 256 experts / 8 active | 21.1 GiB |
-| Code review, reasoning, vision | `qwen3.8:27b` | dense 27B | 16.5 GiB |
+| Hermes, tool calling | `qwen3.6:35b-a3b-nvfp4` | MoE, 256 experts / 8 active | 21.5 GiB |
+| Code review, reasoning, vision | `qwen3.8:27b-mlx` | dense 27B | 16.9 GiB |
 
-Both resident = 37.6 GiB, comfortable under the 81.5 GiB ceiling, and
+Both resident = 38.4 GiB, comfortable under the 81.5 GiB ceiling, and
 `OLLAMA_MAX_LOADED_MODELS = 2` keeps both hot so they do not evict each
 other.
 
-**Pending step, now that the MLX runtime is packaged:** switch to
-`qwen3.6:35b-a3b-nvfp4` (21.5 GiB) and `qwen3.8:27b-mlx` (16.9 GiB).
-Same models, MLX engine, nothing else in this config changes. Deliberately
-not written in as the assignment until it has run on the deployed daemon
-rather than the scratch tree — this file has already been wrong three
-times from reasoning ahead of measurement.
+### Measured: MLX vs llama.cpp on this machine
 
-Order: switch → `ollama pull` both MLX tags → confirm `mlx runner is
-ready` in the log → then update this table and drop the GGUF copies.
+Same model, same prompt, `num_predict=200`, `temperature=0`, warm,
+successive requests left to right:
+
+| Model | Engine | tok/s |
+|---|---|---|
+| `qwen3.8:27b-mlx` | MLX | 127.1 → 141.1 → **145.5** |
+| `qwen3.8:27b` | llama.cpp | 94.0 → 94.2 → **94.0** |
+| `qwen3.6:35b-a3b-nvfp4` | MLX | 149.8 → 199.6 → 272.3 → **272.8** |
+| `qwen3.6:35b-a3b` | llama.cpp | 105.6 → 102.7 → 91.7 → **103.8** |
+
+So MLX is **~55% faster on the dense 27B and ~2.7x on the MoE** — far
+past the ~20% upstream advertises, and the reason the packaging work in
+this phase was worth doing.
+
+Two behaviours the averages hide:
+
+- **MLX ramps; llama.cpp does not.** MLX needs 3–4 requests to reach
+  steady state (149 → 272 on the MoE), while llama.cpp is flat from the
+  first request. On an always-on box with `OLLAMA_KEEP_ALIVE = 30m` that
+  warmup amortises to nothing, which is the ideal case for MLX — but it
+  means a single cold benchmark run *understates* MLX badly.
+- **Cold first-token is worse on MLX.** A cold `qwen3.8:27b-mlx` showed
+  1625ms prompt-eval against 242ms for GGUF. Irrelevant for a resident
+  server, relevant if anything ever runs it one-shot.
+
+This also settles a claim from an external review that MLX loses on MoE
+architectures (citing an M1 Ultra comparison). Not on this hardware and
+these models: the MoE is where MLX wins by the largest margin.
+
+A cold, single-shot measurement taken earlier suggested the opposite
+(GGUF 65.3 vs MLX 53.8 tok/s) — that was load and warmup, not throughput.
+Measure warm, and more than once.
 
 ## Manual steps (not Nix)
 
@@ -296,9 +329,8 @@ tailscale serve --https=11434 off
 # 3. The two models. OLLAMA_HOST comes from environment.variables after
 #    step 1; before that it must be set by hand (see below). NOT
 #    127.0.0.1 — nothing listens there any more.
-# NOT the -nvfp4 / -mlx tags: this build has no MLX runtime (see above).
-ollama pull qwen3.6:35b-a3b   # Hermes / tool calling (GGUF MoE)
-ollama pull qwen3.8:27b       # code review / reasoning / vision (GGUF dense)
+ollama pull qwen3.6:35b-a3b-nvfp4   # Hermes / tool calling (MLX MoE)
+ollama pull qwen3.8:27b-mlx         # code review / reasoning / vision (MLX dense)
 ```
 
 ## How to verify
@@ -328,7 +360,7 @@ ollama list && ls ~/.ollama/models
 sudo reboot
 # then, WITHOUT logging in at the screen, from another machine:
 curl -s http://studio.jaguar-duckbill.ts.net:11434/api/version   # tailnet still up?
-ssh hodgesd@studio 'ollama run qwen3.8:27b "say hi"'
+ssh hodgesd@studio 'ollama run qwen3.8:27b-mlx "say hi"'
 ```
 
 A generation completing with no session is what justifies the daemon
@@ -351,8 +383,8 @@ decide whether the box is actually doing its job:
 
 | Check | Result |
 |---|---|
-| Both models load, GPU-resident, no memory pressure | **PASS** 2026-10-31 — see below |
-| `qwen3.6:35b-a3b` completes real Hermes tool-calling turns | pending real workload |
+| Both models load, GPU-resident, no memory pressure | **PASS** 2026-10-31 — both engines, see below |
+| `qwen3.6:35b-a3b-nvfp4` completes real Hermes tool-calling turns | pending real workload |
 | Responsive through a long conversation, not just a cold prompt | pending real workload |
 
 Measured for check 1, `qwen3.8:27b` cold:
@@ -373,12 +405,16 @@ between two GPU paths, not GPU versus CPU.
 
 Models pulled: 38G in `~/.ollama/models`, inside the Phase 1 exclusions.
 
-Yes to all three ends Phase 3 on GGUF. The open question that remains
-is whether MLX is worth leaving nixpkgs for — see ledger item 1e; it is
-a packaging decision, not a models decision. The 36.5G of
-`mlx-community` weights in `~/.cache/huggingface` are inert for now
-(nixpkgs MLX is CPU-only); harmless where they are, already excluded
-from backup and Spotlight by Phase 1.
+Yes to all three ends Phase 3. Ledger 1e is resolved — MLX runs under
+one nix-managed daemon, so there is no serving-stack question left open.
+The 36.5G of `mlx-community` weights in `~/.cache/huggingface` are now
+redundant (Ollama serves the same models itself); harmless where they
+are, already excluded from backup and Spotlight by Phase 1, reclaimable
+whenever the disk is wanted.
+
+The GGUF copies (`qwen3.6:35b-a3b`, `qwen3.8:27b`, 37.6 GiB) are kept
+for now as the comparison baseline above. Delete them once the MLX pair
+has a few weeks of real use.
 
 ## Manual test script (5 items)
 
@@ -389,10 +425,10 @@ from backup and Spotlight by Phase 1.
 3. `kill` the process; it comes back within ~15s (KeepAlive + ThrottleInterval).
 4. `ollama list` after a pull, and `ls ~/.ollama/models` is non-empty —
    proves `OLLAMA_MODELS` took and the models are inside the Phase 1
-   exclusions. Then run `qwen3.8:27b` once and confirm the log names
-   `llama-server`. Do NOT expect MLX: this build has no MLX runtime
-   (see "THE DECIDING FACT"). Re-run this check after any change to how
-   Ollama is installed — it is the only thing that proves which engine
-   is live.
+   exclusions. Then run `qwen3.8:27b-mlx` and confirm the log says
+   `mlx runner is ready`; run `qwen3.8:27b` and confirm it says
+   `starting llama-server`. Re-run both after any change to how Ollama
+   is installed or packaged — the log is the only thing that proves
+   which engine is live.
 5. Reboot without logging in, then generate over SSH. This is the one that
    decides whether the daemon branch was right.
