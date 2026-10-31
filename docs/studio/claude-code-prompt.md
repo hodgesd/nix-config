@@ -455,6 +455,18 @@ ACCEPTANCE
 
 ## PHASE 3B — oMLX, the agent-facing engine (requires the machine)
 
+> **SHELVED 2026-10-31 — do not execute this phase as written.** Ollama
+> has its own MLX engine, selected per model by tag, *including* a
+> 4-bit NVFP4 MoE, so the premise ("oMLX is how you get MLX, or how you
+> get a quantized MoE on MLX") is wrong on both counts. Reopens only
+> for a feature Ollama lacks — tiered SSD KV cache, Anthropic
+> `/v1/messages` — and if it does, `mlx-lm` from nixpkgs is tried
+> first because it is packaged and declarative. See ledger item **1b**.
+> Everything below is retained for that day; the brew-tap instructions
+> in particular are stale (the tap is
+> `jundot/omlx https://github.com/jundot/omlx`, and the custom kernels
+> need full Xcode).
+
 ```
 GOAL: serve models through oMLX (omlx.ai, github.com/jundot/omlx,
 Apache 2.0) so my agent tooling — Claude Code, T3 Code, OpenCode,
@@ -790,8 +802,10 @@ ACCEPTANCE
 | # | Decision | Status |
 |---|----------|--------|
 | 1 | Serving stack: Ollama (MLX backend, nixpkgs 0.34.3) as the proven baseline | **Decided** |
-| 1b | oMLX added in Phase 3b as the agent-facing engine (Anthropic `/v1/messages` + SSD KV cache), via brew tap; Ollama retired only if measurements justify it | **Decided: evaluate, measure, then choose** |
-| 1c | oMLX in the shared `brews` list installs it on laptops too — accept, or do Phase 6 first | Pending |
+| 1b | oMLX / `mlx-lm` as a second engine | **Decided 2026-10-31: NO — one server, no model-coverage gap.** Ollama runs its own MLX engine, selected per model by tag, and the library includes a **4-bit (NVFP4) MLX MoE** — `qwen3.6:35b-a3b-nvfp4`, 21.5 GiB, `Qwen3_5MoeForConditionalGeneration`, 256 experts / 8 active. An earlier draft claimed that gap existed and made it the trigger for this item; it was wrong (see phase-3.md). Reopen only for a *feature* Ollama lacks — tiered SSD KV cache, Anthropic `/v1/messages` — never for model access. If it ever reopens, `mlx-lm` outranks oMLX: `python3Packages.mlx-lm` 0.31.3 is in nixpkgs for aarch64-darwin and not broken, whereas oMLX is in neither nixpkgs nor PyPI and needs **full Xcode** for its Metal custom kernels (CLT alone → `xcrun: unable to find utility "metal"`), with silent slow fallbacks otherwise. |
+| 1c | ~~oMLX in the shared `brews` list installs it on laptops too~~ | **Moot** — no brew install happening (see 1b) |
+| 1d | Model assignment: **`qwen3.6:35b-a3b`** (GGUF MoE) for Hermes/tool calling, **`qwen3.8:27b`** (GGUF dense) for code review/reasoning/vision. 37.6 GiB resident together, both hot under `OLLAMA_MAX_LOADED_MODELS = 2`. GGUF because of 1e, not by preference — the MLX tags are `…-a3b-nvfp4` / `…27b-mlx` and nothing else changes if 1e flips. Identify models by **manifest digest + `config.json`**, never by tag name — several tags alias one manifest (`35b-mlx` ≡ `35b-a3b-nvfp4`; `35b` ≡ `35b-a3b`). | **Decided 2026-10-31** |
+| 1e | **MLX requires leaving nixpkgs. Open.** Measured on studio 2026-10-31: `ollama pull …-nvfp4` → `this model requires MLX support, but the MLX runtime is not available`; the closure ships only `llama-server`/`llama-quantize`, no `.dylib`, no `.metallib`, while the binary `dlopen`s the runtime (`failed to load MLX dynamic library`). And `nixpkgs#python3Packages.mlx` reports `Device(cpu, 0)` — CPU-only. Cause: MLX's Metal kernels need Apple's `metal` compiler (full Xcode only), unavailable to a nix build; the same limit oMLX's README documents. So MLX needs an Apple-built binary — Ollama DMG/Homebrew, PyPI `mlx` wheel, or oMLX DMG — each giving up the nixpkgs-managed launchd daemon. **Not decided.** Candidate worth pricing first: Ollama via the repo's existing declarative `homebrew.nix` (keeps one server, one API), cost being a third-party download in the activation path and a conflict with the nix daemon to resolve. Unverified whether brew's ollama ships the runtime — check for a `.metallib`/MLX dylib before committing to it. | Pending — needs a go |
 | 2 | FileVault **OFF** on studio (revised 2026-10-30): physically secure, no Apple ID, no personal data, and availability is the point. Hardware encryption still applies. Mini stays FileVault-on. | **Decided: off** |
 | 3 | Model storage: internal SSD, `~/.ollama` | **Decided** |
 | 4 | Remote builder (Phase 5) | **Decided: yes** |
