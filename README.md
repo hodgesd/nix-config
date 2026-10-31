@@ -145,11 +145,13 @@ store-pinned baseline, then oMLX for its Anthropic-compatible
 before either is retired. Everything binds to `127.0.0.1` and is reached
 over the tailnet via `tailscale serve`; nothing listens on the LAN.
 
-Unlike the mini, it can be recovered remotely: macOS 26+ on Apple silicon
-runs a limited SSH server at the FileVault pre-boot stage, so an unexpected
-reboot is unlocked over the LAN (jumping via `nixos-infra` from away)
-rather than needing someone at the keyboard. Still attended recovery —
-something must authenticate.
+Unlike the mini, FileVault is deliberately **off** here (decided
+2026-10-30): the box is physically secure, has no Apple ID and holds no
+personal data beyond re-downloadable model weights, and availability is
+the point. Apple silicon still encrypts the SSD in hardware. So it boots
+back to loginwindow on its own after a reboot or power cut, with no
+pre-boot unlock to perform — whether it also *serves* unattended depends
+on how the model servers are launched, which Phase 3 decides on evidence.
 
 ## 🐧 NixOS Homelab (`nixos-infra`)
 

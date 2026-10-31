@@ -42,12 +42,19 @@ Confirmed by introspecting nix-darwin 26.05's option set, not assumed:
 | Screen Sharing | no option; same TCC problem | done by hand, optional |
 | "Start up when power is connected" = Always | `power.*` exposes only `restartAfterFreeze`, `restartAfterPowerFailure`, `sleep` | **done by hand 2026-10-30** |
 
-Remote Login being manual is the uncomfortable one, because it is the
-prerequisite for FileVault pre-boot SSH unlock — i.e. the only remote
-recovery path this box has. Hence the activation warning: if it ever
-drifts off, every rebuild says so in yellow, instead of the fact
-surfacing during an outage. The warning is deliberately non-fatal; a
-rebuild should not fail over it.
+Remote Login being manual is the uncomfortable one: it is how a
+keyboard-less box is administered at all, and it carries the authorized
+key that lets this repo be driven against studio over the tailnet. Hence
+the activation warning: if it ever drifts off, every rebuild says so in
+yellow, instead of the fact surfacing when you need in. The warning is
+deliberately non-fatal; a rebuild should not fail over it.
+
+**Superseded 2026-10-30:** this section originally justified Remote Login
+as the prerequisite for FileVault pre-boot SSH unlock. FileVault was
+subsequently turned off on studio (see the plan's CONTEXT block), so that
+recovery path no longer applies — the machine boots to loginwindow
+unattended instead. Remote Login is still load-bearing for the reason
+above.
 
 ## How to verify (after the first switch)
 

@@ -52,32 +52,30 @@ ENVIRONMENT
       ical-buddy, mactop and opencode: a homebrew tap + brew, declared
       in homebrew.nix. The `brew trust` loop in that file already
       handles third-party taps.
-- FileVault decision (made): stays ON — and the recovery story is
-  BETTER than the mini's, because studio runs macOS 26+: on Apple
-  silicon, a limited SSH server runs at the FileVault pre-boot stage
-  (Remote Login must be on), so the disk can be unlocked remotely with
-  the local account password. Caveats that must be reflected wherever
-  this is documented: password auth only at pre-boot (no keys), NO
-  Tailscale at that stage (LAN/Ethernet path required), and a remote
-  unlock boots the OS but may NOT create a GUI user session — which is
-  why the agent-vs-daemon question below is settled by a Phase 2 test,
-  not by assumption. Recovery ladder: planned reboots via
-  `sudo fdesetup authrestart`; unexpected reboots via SSH pre-boot
-  unlock over the LAN — from home directly, from anywhere via
-  nixos-infra as the jump host (tailnet → nixos-infra → LAN → studio's
-  pre-boot SSH; the VM is the always-on tailnet node that does not
-  depend on the Mac being up). This requires studio to have a DHCP
-  reservation: MagicDNS is NOT available at pre-boot, so the jump path
-  needs a stable LAN IP. Mechanics of the unlock (per Apple's
-  apple_ssh_and_filevault(7)): the pre-boot session authenticates with
-  the local account password, the volume unlocks, SSH DISCONNECTS
-  while macOS mounts the data volume and finishes booting, and you
-  reconnect afterward for normal admin — a dropped connection there is
-  the feature working, not failing. This is remote ATTENDED recovery:
-  someone still authenticates; nothing resumes with zero humans.
-  Gatus/ntfy tell me when recovery is needed. Never store the
-  FileVault password on nixos-infra to automate the unlock — the jump
-  host provides reachability, not credentials.
+- FileVault decision (REVISED 2026-10-30): **OFF on studio.** Earlier
+  drafts of this plan assumed ON and built a whole pre-boot SSH-unlock
+  recovery ladder around it; that is obsolete for this host and has
+  been removed so nobody implements against it. Apple silicon still
+  encrypts the internal SSD in hardware; FileVault adds password
+  protection of the keys at rest. Accepted trade: weaker protection
+  against physical access to the machine, in exchange for a box that
+  boots all the way back unattended. Justified because it is
+  physically secure, has no Apple ID, and holds no personal data —
+  only re-downloadable model weights.
+  Consequences that MUST drive implementation:
+    * No pre-boot gate. A reboot or power cut returns to loginwindow on
+      its own, and system LaunchDaemons start with nobody logged in.
+    * User LaunchAgents still require a login session. So anything that
+      must survive an unattended reboot is either a system LaunchDaemon
+      or a user agent plus AUTO-LOGIN — and auto-login is available
+      precisely because FileVault is off. This replaces the old "decided
+      by the Phase 2 pre-boot test" rule; Phase 3 chooses on evidence.
+    * The mini's posture is unchanged and still FileVault-on. Do not
+      copy studio's choice there: that box holds an iCloud session.
+  If FileVault is ever switched back on, the macOS 26+ SSH pre-boot
+  unlock path becomes relevant again (password auth only, no Tailscale
+  that early, LAN/jump-host required) — but write it down then rather
+  than carrying dead guidance here.
 - Model storage decision (made): internal SSD, default ~/.ollama.
   Models are re-downloadable — exclude from Time Machine and Spotlight,
   never back them up.
@@ -89,8 +87,9 @@ ENVIRONMENT
 - macOS version: **27.2 (build 26B123)** — the Studio shipped newer
   than the 26.x this plan was drafted against. Consequences to carry
   into every phase:
-    * Both recovery features are available (SSH FileVault unlock needs
-      26+, "start up when power is connected" needs 26.5+).
+    * "Start up when power is connected" (needs 26.5+) is available.
+      The SSH FileVault unlock path (26+) is moot here — FileVault is
+      off — but would be available if that ever changed.
     * `hosts/common/darwin/homebrew.nix` already handles macOS > 26:
       its activation script injects HOMEBREW_FAKE_MACOS=26.0 so `brew
       bundle` does not abort. That path WILL be exercised on first
@@ -163,8 +162,8 @@ TASKS
      power.restartAfterPowerFailure = true;
      power.restartAfterFreeze = true;
      power.sleep = { computer = "never"; display = 15; harddisk = "never"; };
-   Include the mini's FileVault caveat comment, adapted (authrestart for
-   planned reboots; power cut → unlock screen → Gatus tells me).
+   Include a recovery-posture comment (superseded 2026-10-30: FileVault
+   is off, so it boots to loginwindow on its own; Gatus tells me).
 4. CI: add studio to the eval matrix (.github/workflows/eval.yaml,
    attr darwinConfigurations.studio.system) and to the darwin build
    matrix in build.yaml.
@@ -196,9 +195,11 @@ TASKS
      calling `systemsetup -setremotelogin on`). Use the most declarative
      mechanism available; if it needs one manual `systemsetup` run,
      write it into the Phase 2 bootstrap checklist instead of hacking
-     around TCC. Remote Login is LOAD-BEARING on this host: it is the
-     prerequisite for FileVault pre-boot SSH unlock (the CONTEXT
-     recovery ladder), not just a convenience.
+     around TCC. Remote Login is LOAD-BEARING on this host: it is how a
+     headless, keyboard-less box is administered at all, and it carries
+     the authorized key in hosts/darwin/studio/default.nix. (It was also
+     the prerequisite for FileVault pre-boot unlock, which no longer
+     applies now that FileVault is off.)
    - Power-on behavior: "Start up when power is connected" = Always
      (System Settings → Energy; macOS 26.5+, Mac Studio 2025+ — this
      machine qualifies). Strictly better than the old
@@ -217,9 +218,10 @@ TASKS
 2. macOS update posture: via system.defaults (SoftwareUpdate /
    commerce domains as exposed by nix-darwin 26.05): automatic CHECK on,
    automatic INSTALL (OS updates and app auto-updates) off. Comment WHY:
-   an unattended FileVault machine that self-updates reboots into the
-   unlock screen and stays down. OS updates are a deliberate
-   `fdesetup authrestart` ritual.
+   a self-installing OS update reboots the box mid-inference and, if the
+   serving stack turns out to need a login session, leaves it not
+   serving until someone logs in. Updates are a deliberate, scheduled
+   act here.
 3. GPU wired-memory ceiling: a launchd DAEMON (root; not a user agent)
    that runs at load:
      sysctl iogpu.wired_limit_mb=83500
@@ -266,9 +268,9 @@ it at the machine.
 
 TASKS (the checklist to produce, verify, and refine)
 1. macOS first-boot: create user "hodgesd" (registry default — confirm
-   against lib/machines.nix; studio sets no username override), enable
-   FileVault, sign in to iCloud ONLY if needed — default is NO Apple ID
-   on this box (it is not a bridges host; keep it session-free).
+   against lib/machines.nix; studio sets no username override), leave
+   FileVault OFF (decided 2026-10-30 — see CONTEXT), and do NOT sign in
+   to iCloud: no Apple ID on this box, it is not a bridges host.
 2. Hostname: scripts/set_mac_name.sh or the three scutil --set commands,
    value "studio" — must match the flake attr exactly.
 3. Install nix + bootstrap: follow scripts/bootstrap.sh (read it first;
@@ -297,55 +299,42 @@ TASKS (the checklist to produce, verify, and refine)
 6. Manual steps carried over from Phase 1's doc (Remote Login / Screen
    Sharing toggles if they stayed manual; verify SSH from the mbp works
    over the tailnet).
-7. Networking: Ethernet, not Wi-Fi (the FileVault pre-boot SSH server
-   is unreliable on Wi-Fi-only, and an inference server should not
-   contend on the WLAN anyway), plus a DHCP reservation for studio on
-   the router — the pre-boot recovery path addresses it by LAN IP, not
-   MagicDNS. Record the reserved IP in phase-2.md.
-8. Smoke tests, in this order, each answering a specific question:
-   a. `sudo fdesetup authrestart` — comes back to a live session
-      unattended? (planned-reboot path)
-   b. Plain `sudo reboot`, then from the mbp ON THE LAN (not via
-      Tailscale — tailscaled is not running at pre-boot): SSH to
-      studio's LAN address, password auth, unlock FileVault. Expect
-      the documented disconnect after unlock while macOS finishes
-      booting — reconnect, don't panic. Does the OS come up? Does
-      normal (key) SSH return? (unexpected-reboot path)
-      FIRST TIME ONLY: record the pre-boot SSH server's host-key
-      fingerprint in phase-2.md. All future recoveries verify against
-      it — the pre-boot environment authenticates with my PASSWORD, so
-      never instruct the operator (me, tired, at work) to blindly
-      accept a changed host key to regain access.
-   c. Same as (b) but from OFF the LAN, via the jump host:
-      ssh -J nixos-infra <studio LAN IP> while studio sits at the
-      pre-boot screen. This is the recovery path that matters when I
-      am not home; normal post-boot SSH working proves nothing about
-      it. (away-from-home path)
-   d. CRITICAL FINDINGS TO RECORD after test (b)/(c), before anyone
-      touches the GUI:
-      - did the launchd USER agents start, or is there no GUI session
-        until someone logs in? Our agents are nix-darwin
-        `launchd.user.agents` (installed to ~/Library/LaunchAgents,
-        loaded in the gui domain) — so also probe the middle option:
-        after an SSH (non-GUI) login post-unlock, does `launchctl
-        print user/$(id -u)` show a live user domain, i.e. could a
-        user-domain background service run with no GUI session? If
-        yes, that's a third branch for Phase 3 that keeps per-user
-        service semantics without a root daemon — check whether our
-        pinned nix-darwin/HM can even declare one before proposing it.
-      This set of observations decides whether Phase 3/3b engines run
-      as gui-domain user agents (mini pattern), a user-domain
-      background service, or system LaunchDaemons.
-      - did Tailscale come up (is studio on the tailnet) without a GUI
-        login? If not, post-unlock admin also rides the jump host
-        until someone logs in — document, don't assume.
-      - log out of the GUI session later and note whether the user
-        agents die (KeepAlive user agents stop at logout) — on a
-        headless box this is how a Screen Sharing session ends.
-      Record all three in phase-2.md; Phase 3 reads them before
-      choosing agent vs daemon.
-   e. Power tests, gentle first (verify the config with `pmset -g`
-      before either):
+7. Networking: Ethernet, not Wi-Fi (an inference server should not
+   contend on the WLAN), plus a DHCP reservation so the LAN address is
+   stable for break-glass access when the tailnet is unavailable.
+   DONE 2026-10-30: en0, 192.168.1.198. Confirm the reservation exists
+   on the router and record it in phase-2.md.
+8. Smoke tests. FileVault is off, so there is no pre-boot unlock to
+   exercise; what remains is "does it come back by itself, and does it
+   SERVE by itself". Run these before trusting the box unattended:
+   a. Plain `sudo reboot`. Without touching the keyboard, from another
+      tailnet node: does SSH return on its own? Does studio rejoin the
+      tailnet with nobody logged in? (If Tailscale needs a GUI session,
+      remote admin after every reboot depends on the LAN path — find
+      that out now, not during an outage.)
+   b. THE DECIDING OBSERVATION for Phase 3, taken after (a) with NOBODY
+      logged in at the screen. SSH in and run:
+         launchctl print gui/$(id -u) >/dev/null 2>&1 \
+           && echo "GUI domain live" || echo "no GUI session"
+         launchctl print user/$(id -u) >/dev/null 2>&1 \
+           && echo "user domain live" || echo "no user domain"
+      - "no GUI session" means nix-darwin `launchd.user.agents` (the
+        mini's pattern) will NOT serve after an unattended reboot. The
+        answer is then either a system LaunchDaemon, or auto-login —
+        which is an option here precisely because FileVault is off
+        (`system.defaults.loginwindow.autoLoginUser`).
+      - a live `user` domain without a GUI session is the middle
+        branch: per-user service semantics, no root daemon, no
+        auto-login. Check whether our pinned nix-darwin can declare
+        one before proposing it.
+      Record the output verbatim in phase-2.md; Phase 3 reads it.
+   c. Log out of a GUI session afterwards and note whether user agents
+      die (KeepAlive user agents stop at logout) — on a headless box
+      that is how a Screen Sharing session ends, and it is a second way
+      to lose the serving stack without a reboot.
+   d. Power tests, gentle first (verify the config with `pmset -g`
+      before either; `autorestartatconnect` should read 1 once the
+      Energy setting is on — it read 0 on 2026-10-30):
       - graceful: `sudo shutdown -h now`, disconnect power, wait ~30s
         (the PSU needs to discharge), reconnect — "start up when power
         is connected" = Always should power it on with no button press.
@@ -357,8 +346,8 @@ TASKS (the checklist to produce, verify, and refine)
 ACCEPTANCE
 - I can SSH to studio over the tailnet and run
   `darwin-rebuild switch --flake .` headless.
-- `sysctl iogpu.wired_limit_mb` shows the Phase 1 value after the
-  authrestart (proves the daemon ran at boot).
+- `sysctl iogpu.wired_limit_mb` shows the Phase 1 value after a
+  reboot (proves the daemon ran at boot).
 - docs/studio/phase-2.md is the as-executed checklist with any surprises
   recorded.
 ```
@@ -388,20 +377,29 @@ TASKS
      OLLAMA_HOST = "127.0.0.1:11434";   # loopback ONLY — rule 1
      OLLAMA_KEEP_ALIVE = "30m";          # hot models stay resident
      OLLAMA_MAX_LOADED_MODELS = "2";
-   Agent-vs-daemon is NOT a style choice here — it is decided by the
-   Phase 2 smoke-test finding (phase-2.md, test c): if a pre-boot SSH
-   unlock brings up user agents (or we accept "log in via Screen
-   Sharing after unlock" as a documented recovery step), use a USER
-   agent like the mini's bridges. If a non-GUI user domain is live
-   post-unlock and our pinned nix-darwin/HM can declare a service
-   there, that middle branch is preferred over a root daemon. If only
-   a system LaunchDaemon serves pre-login, use one with
-   `UserName = "hodgesd"` — running as me, it can usually keep
-   OLLAMA_MODELS / the HF cache in ~ once the data volume is unlocked;
-   relocate paths out of ~ only if testing shows a real permissions or
-   lifecycle problem, and move the Phase 1 TM/Spotlight exclusions
-   with them. Read the findings, state which branch you are on in
-   PLAN.md, and comment the WHY in the nix.
+   Agent-vs-daemon is NOT a style choice — it decides whether this box
+   serves after an unattended reboot. FileVault is off, so it boots to
+   loginwindow by itself; the only question is what runs there. Pick
+   from the Phase 2 (b) observation, in this order of preference:
+     1. System LaunchDaemon with `UserName = "hodgesd"`. Serves with
+        nobody logged in, needs no auto-login, and running as me it can
+        still read OLLAMA_MODELS / the HF cache in ~ (the disk is not
+        gated — that is the upside of FileVault being off). PREFERRED
+        if it works. Relocate paths out of ~ only if testing shows a
+        real permissions problem, and move the Phase 1 TM/Spotlight
+        exclusions with them.
+     2. Non-GUI `user` domain service, if Phase 2 (b) found that domain
+        live and our pinned nix-darwin can declare one.
+     3. `launchd.user.agents` (the mini's pattern) PLUS auto-login
+        (`system.defaults.loginwindow.autoLoginUser`) — available only
+        because FileVault is off. Last resort: it trades an
+        always-unlocked desktop for simplicity, so take it only if 1
+        and 2 fail.
+   VERIFY, do not assume, that option 1 actually does Metal inference
+   with no session — a daemon that starts but cannot reach the GPU is
+   the specific failure to rule out. If it can't, fall back to 3 and
+   say so plainly rather than shipping something fragile. State which
+   branch you are on in PLAN.md and comment the WHY in the nix.
 3. tailscale serve: one-time command (persisted in tailscaled state,
    same as the mini's bridges):
      tailscale serve --bg --https=11434 http://127.0.0.1:11434
@@ -419,14 +417,14 @@ TASKS
    Time Machine (tmutil isexcluded) and not Spotlight-indexed.
 
 ACCEPTANCE
-- Agent restarts after `kill` (KeepAlive) and after authrestart.
-- A REAL generation completes in the recovery state the phase claims
-  to support (post-authrestart; post-remote-unlock if the daemon
-  branch was chosen). A running process is not the test — Metal
-  inference actually producing tokens in that state is. If pre-login
-  GPU inference proves unreliable under a daemon, fall back to the
-  user-agent branch and document "serves after login" honestly rather
-  than shipping a fragile daemon.
+- Service restarts after `kill` (KeepAlive) and after a plain
+  `sudo reboot`.
+- THE REAL TEST: after an unattended `sudo reboot` with NOBODY logged
+  in at the screen, a generation completes end to end. A running
+  process is not the test — Metal actually producing tokens with no
+  session is. If the daemon branch cannot reach the GPU pre-login,
+  fall back per the ordering above and document "serves after login"
+  honestly rather than shipping a fragile daemon.
 - API reachable tailnet-wide over HTTPS, NOT reachable on the LAN IP
   (verify with a curl against the machine's LAN address — must refuse).
 - SINGLE OWNER: exactly one listener on :11434 (`lsof -i :11434`), and
@@ -536,7 +534,7 @@ ACCEPTANCE
 - SINGLE OWNER check as in Phase 3: one listener on :8000, launchd
   label is ours, and specifically NO `omlx start` supervisor or
   brew-services unit running alongside.
-- Agent restarts after `kill` and after `fdesetup authrestart`.
+- Agent restarts after `kill` and after a plain `sudo reboot`.
 - Claude Code completes a round-trip against studio.
 - The three measurements are recorded, with an explicit
   keep-or-retire recommendation for Ollama.
@@ -557,7 +555,7 @@ TASKS
 1. hosts/nixos/nixos-infra/gatus.nix: add a "studio" group using the
    existing helpers:
    - icmp "studio" "studio" <tailnet name> — liveness (distinguishes
-     "box down / parked at FileVault unlock" from "ollama down").
+     "box down" from "ollama down").
    - http check against https://studio.<tailnet>.ts.net:11434/api/version
      — cheap, unauthenticated, no model load. Follow the existing
      helper's conditions; 60s interval like peers unless the file's
@@ -782,7 +780,7 @@ ACCEPTANCE
 | 1 | Serving stack: Ollama (MLX backend, nixpkgs 0.34.3) as the proven baseline | **Decided** |
 | 1b | oMLX added in Phase 3b as the agent-facing engine (Anthropic `/v1/messages` + SSD KV cache), via brew tap; Ollama retired only if measurements justify it | **Decided: evaluate, measure, then choose** |
 | 1c | oMLX in the shared `brews` list installs it on laptops too — accept, or do Phase 6 first | Pending |
-| 2 | FileVault stays on; authrestart ritual | **Decided** |
+| 2 | FileVault **OFF** on studio (revised 2026-10-30): physically secure, no Apple ID, no personal data, and availability is the point. Hardware encryption still applies. Mini stays FileVault-on. | **Decided: off** |
 | 3 | Model storage: internal SSD, `~/.ollama` | **Decided** |
 | 4 | Remote builder (Phase 5) | **Decided: yes** |
 | 5 | Cask role split (Phase 6) | Pending — needs mini-removal list approval |
