@@ -105,11 +105,23 @@ ENVIRONMENT
   simplicity and say so.
 
 NON-NEGOTIABLE SECURITY RULES
-1. Ollama's API has NO authentication and can pull/delete/run models.
-   It binds to 127.0.0.1 only, always. The tailnet reaches it via
-   tailscale serve. Nothing listens on LAN/WAN. Phase 7 (public access)
-   is decision-gated and adds an authenticating proxy — never expose
-   the bare API, not even "temporarily".
+1. Ollama's API has NO authentication and can pull/delete/run models,
+   so its bind address IS the access control. **Nothing listens on the
+   LAN or the internet — ever.** Two bind shapes satisfy that; both are
+   acceptable, nothing else is:
+     - loopback (127.0.0.1) fronted by `tailscale serve`, the mini's
+       pattern, for services that tolerate a proxied Host header; or
+     - the node's MagicDNS name, i.e. the tailscale interface alone.
+   Ollama uses the second (REVISED 2026-10-30, superseding "127.0.0.1
+   only, always"): it validates the HTTP Host header, `tailscale serve`
+   forwards the original Host, and every proxied request therefore
+   returned 403. Measured — a `Host: 127.0.0.1` override returned 200
+   through the same proxy, OLLAMA_ORIGINS (including `*`) does not
+   affect it, and serve has no Host-rewrite option. Verify the socket
+   with `lsof -nP -i :11434`; it must show the 100.x tailscale address
+   and nothing else. NEVER 0.0.0.0, never a LAN address. Phase 7
+   (public access) is decision-gated and adds an authenticating proxy
+   — never expose the bare API, not even "temporarily".
 2. No secrets in the repo. sops-nix is the mechanism (see .sops.yaml);
    v1 needs no secrets at all — if you believe one is needed, stop and
    ask. Credentials a human must create → numbered checklist for me.

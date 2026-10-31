@@ -145,9 +145,35 @@ in {
   # daemon runs, so the CLI can never end up talking to a different build.
   environment.systemPackages = [ollama];
 
-  # Ollama, reachable on the tailnet at https://studio.<tailnet>:11434
-  # after the one-time (state, not Nix — same as the mini's bridges):
-  #     tailscale serve --bg --https=11434 http://127.0.0.1:11434
+  # Ollama, bound to this node's MagicDNS name so it is reachable ONLY
+  # from the tailnet: http://studio.jaguar-duckbill.ts.net:11434
+  #
+  # This deliberately does NOT use the mini's loopback + `tailscale serve`
+  # pattern, and the reason is Ollama-specific. Ollama validates the HTTP
+  # Host header (DNS-rebinding protection) against localhost plus whatever
+  # OLLAMA_HOST names. `tailscale serve` forwards the original Host, so
+  # every proxied request arrived as the tailnet name and Ollama answered
+  # 403. Measured, not assumed: a `Host: 127.0.0.1` override returned 200
+  # through the same proxy, and OLLAMA_ORIGINS (including `*`) does not
+  # affect this check — it governs CORS only. tailscale serve has no
+  # Host-rewrite option.
+  #
+  # Binding the MagicDNS name makes the Host match, and keeps the security
+  # property that actually matters: the socket is on the tailscale
+  # interface alone (verified: `LISTEN 100.126.144.70:11434`), so nothing
+  # is exposed to the LAN or the internet, and WireGuard already encrypts
+  # the transport. The alternative that preserves a loopback bind — a
+  # Host-rewriting proxy in front — was rejected as a whole extra daemon
+  # for no real gain in exposure.
+  #
+  # Consequence to know: this makes the service depend on tailscaled
+  # having assigned the address. At boot Ollama will exit with
+  # "bind: can't assign requested address" until it has; KeepAlive plus
+  # ThrottleInterval retries every 15s until the bind succeeds, so it
+  # self-heals rather than needing a kick. If Tailscale on macOS turns out
+  # to need a GUI login, the tailnet is down after an unattended reboot
+  # regardless of how Ollama is bound — that is a Tailscale question, not
+  # an Ollama one, and it is on the reboot test list.
   #
   # A system DAEMON, not a user agent, and that is the whole point: with
   # FileVault off this box boots to loginwindow by itself, and a daemon
@@ -161,8 +187,8 @@ in {
   # exclusions already point. That works precisely because FileVault is off
   # — the data volume is never gated, so a pre-login daemon can read ~.
   #
-  # One-line disable: comment out this block and rebuild, then
-  # `tailscale serve --https=11434 off` to retract the tailnet route.
+  # One-line disable: comment out this block and rebuild. There is no
+  # serve config to retract — that is part of the point.
   launchd.daemons.ollama = {
     serviceConfig = {
       ProgramArguments = ["${ollama}/bin/ollama" "serve"];
@@ -175,10 +201,12 @@ in {
       StandardOutPath = "${ollamaHome}/Library/Logs/ollama.log";
       StandardErrorPath = "${ollamaHome}/Library/Logs/ollama.log";
       EnvironmentVariables = {
-        # Loopback ONLY. Ollama has no authentication and its API can pull,
-        # delete and run models, so it must never bind a routable address;
-        # the tailnet reaches it through `tailscale serve` above.
-        OLLAMA_HOST = "127.0.0.1:11434";
+        # Tailnet interface ONLY — see the Host-header discussion above.
+        # Ollama has no authentication and its API can pull, delete and run
+        # models, so the bind address is the entire access control here: it
+        # must stay a MagicDNS name (tailscale interface), never 0.0.0.0, a
+        # LAN address, or a routable one.
+        OLLAMA_HOST = "studio.jaguar-duckbill.ts.net:11434";
 
         # HOME is NOT inherited by a LaunchDaemon just because UserName is
         # set — it would be unset or `/`, and Ollama would quietly choose a
