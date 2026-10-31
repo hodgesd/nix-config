@@ -13,9 +13,36 @@ deliberately empty rather than guessed — Phase 3b compares against it.
 | Package | `unstablePkgs.ollama` — **0.34.3** at our locked rev, past the 0.19 that added the Apple-silicon MLX backend. No brew fallback needed. |
 | CLI | `environment.systemPackages = [ollama]` — same store path as the daemon, so `ollama ps` can never talk to a different build |
 | Service | `launchd.daemons.ollama` → label `org.nixos.ollama` |
-| Bind | `OLLAMA_HOST = 127.0.0.1:11434` — loopback only |
+| Bind | `OLLAMA_HOST = studio.jaguar-duckbill.ts.net:11434` — tailscale interface only |
 | Residency | `OLLAMA_KEEP_ALIVE = 30m`, `OLLAMA_MAX_LOADED_MODELS = 2` |
 | Logs | `~/Library/Logs/ollama.log` |
+
+### Why it binds the MagicDNS name, not loopback
+
+The mini's bridges use loopback + `tailscale serve`. Ollama can't: it
+validates the HTTP **Host header** (DNS-rebinding protection) against
+localhost plus whatever `OLLAMA_HOST` names, and `tailscale serve`
+forwards the *original* Host — so every proxied request arrived as
+`studio.jaguar-duckbill.ts.net` and got **403**.
+
+Measured, not assumed: a `Host: 127.0.0.1` override returned 200 through
+the same proxy; `OLLAMA_ORIGINS` (tested with the tailnet name, a bare
+host, and `*`) does not affect it — that governs CORS only; and
+`tailscale serve` has no Host-rewrite flag.
+
+Binding the MagicDNS name makes the Host match while keeping the property
+that matters: the socket is on the tailscale interface alone, so nothing
+is on the LAN or the internet, and WireGuard already encrypts transport.
+The loopback-preserving alternative (a Host-rewriting Caddy in front) was
+rejected as an extra daemon buying no reduction in exposure.
+
+**Dependency this creates:** the bind now needs tailscaled to have
+assigned the address. Verified behaviour — Ollama exits immediately with
+`bind: can't assign requested address` rather than hanging, so KeepAlive
++ `ThrottleInterval = 15` retries until it succeeds. Self-healing. Open
+question for the reboot test: whether Tailscale on macOS comes up without
+a GUI login at all. If it doesn't, the tailnet is unreachable after an
+unattended reboot no matter how Ollama binds.
 
 ### Why a system daemon and not a user agent
 
@@ -46,11 +73,12 @@ Do not "simplify" them away.
 # 1. Activate
 cd ~/nix-config && git pull && sudo darwin-rebuild switch --flake .#studio
 
-# 2. One-time tailnet route — state, not config, same as the mini's bridges
-tailscale serve --bg --https=11434 http://127.0.0.1:11434
+# 2. No `tailscale serve` — see below. If the earlier serve config is
+#    still present, remove it so there is exactly one path in:
+tailscale serve --https=11434 off
 
 # 3. Something to benchmark
-ollama pull <model>
+ollama pull qwen3.5:122b
 ```
 
 ## How to verify
@@ -60,13 +88,15 @@ ollama pull <model>
 sudo launchctl print system/org.nixos.ollama | head -20
 lsof -i :11434                      # exactly one listener
 
-# Loopback only: must ANSWER on localhost and REFUSE on the LAN address
-curl -s localhost:11434/api/version
+# Socket must be the 100.x tailscale address and NOTHING else
+lsof -nP -i :11434        # => TCP 100.126.144.70:11434 (LISTEN)
+
+# Must REFUSE on the LAN address
 curl -s --max-time 5 http://192.168.1.198:11434/api/version   # must fail
 
 # From another tailnet node
-curl -s https://studio.<tailnet>.ts.net:11434/api/version
-curl -s https://studio.<tailnet>.ts.net:11434/v1/models
+curl -s http://studio.jaguar-duckbill.ts.net:11434/api/version
+curl -s http://studio.jaguar-duckbill.ts.net:11434/v1/models
 
 # Models landed in the exclusion-covered path, not somewhere else
 ollama list && ls ~/.ollama/models
@@ -77,7 +107,8 @@ ollama list && ls ~/.ollama/models
 ```bash
 sudo reboot
 # then, WITHOUT logging in at the screen, from another machine:
-ssh hodgesd@studio 'curl -s localhost:11434/api/version && ollama run <model> "say hi"'
+curl -s http://studio.jaguar-duckbill.ts.net:11434/api/version   # tailnet still up?
+ssh hodgesd@studio 'ollama run qwen3.5:122b "say hi"'
 ```
 
 A generation completing with no session is what justifies the daemon
@@ -87,9 +118,9 @@ and say so plainly rather than shipping something fragile.
 
 ## How to disable
 
-Comment out the `launchd.daemons.ollama` block and rebuild, then
-`tailscale serve --https=11434 off` to retract the tailnet route. The CLI
-stays until `environment.systemPackages` is also trimmed.
+Comment out the `launchd.daemons.ollama` block and rebuild. There is no
+serve config to retract. The CLI stays until `environment.systemPackages`
+is also trimmed.
 
 ## Measurements — PENDING
 
@@ -105,8 +136,9 @@ Fill after the switch; Phase 3b measures oMLX against these.
 ## Manual test script (5 items)
 
 1. `sudo launchctl print system/org.nixos.ollama` → running, `UserName hodgesd`.
-2. `curl localhost:11434/api/version` answers; the same curl against
-   `192.168.1.198` refuses. (Loopback discipline — security rule 1.)
+2. `lsof -nP -i :11434` shows `100.126.144.70` and nothing else; a curl
+   against `192.168.1.198:11434` refuses. (Bind address *is* the access
+   control — security rule 1.)
 3. `kill` the process; it comes back within ~15s (KeepAlive + ThrottleInterval).
 4. `ollama list` after a pull, and `ls ~/.ollama/models` is non-empty —
    proves `OLLAMA_MODELS` took and the models are inside the Phase 1
