@@ -292,9 +292,27 @@ decide whether the box is actually doing its job:
 
 | Check | Result |
 |---|---|
-| Both models load, GPU-resident, no memory pressure | |
-| `qwen3.6:35b-a3b` completes real Hermes tool-calling turns | |
-| Responsive through a long conversation, not just a cold prompt | |
+| Both models load, GPU-resident, no memory pressure | **PASS** 2026-10-31 — see below |
+| `qwen3.6:35b-a3b` completes real Hermes tool-calling turns | pending real workload |
+| Responsive through a long conversation, not just a cold prompt | pending real workload |
+
+Measured for check 1, `qwen3.8:27b` cold:
+
+```
+starting llama-server  …/lib/ollama/llama-server  -c 262144 -np 1
+                       --spec-type draft-mtp --spec-draft-n-max 4 --flash-attn auto
+load_tensors: offloaded 66/66 layers to GPU
+llama-server started in 2.77 seconds
+ollama ps → 20 GB   100% GPU   context 262144
+```
+
+4.0s cold round-trip including load. **Losing MLX cost the MLX engine,
+not GPU acceleration** — llama.cpp offloads every layer to Metal, and
+speculative decoding with MTP drafting is on by default. Worth knowing
+before paying anything for 1e: the gap being argued over is the ~20%
+between two GPU paths, not GPU versus CPU.
+
+Models pulled: 38G in `~/.ollama/models`, inside the Phase 1 exclusions.
 
 Yes to all three ends Phase 3 on GGUF. The open question that remains
 is whether MLX is worth leaving nixpkgs for — see ledger item 1e; it is
