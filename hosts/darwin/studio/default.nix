@@ -14,12 +14,69 @@
   unstablePkgs,
   ...
 }: let
-  # Phase 3: Ollama from nixpkgs-unstable. 0.34.3 at our locked rev, well
-  # past the 0.19 that added the MLX backend for Apple silicon >= 32GB, so
-  # no homebrew fallback is needed. Pinned to one store path and shared by
-  # the daemon and the CLI, so `ollama ps` always talks to the server this
-  # config started.
-  ollama = unstablePkgs.ollama;
+  # Phase 3: Ollama from nixpkgs-unstable. 0.34.3 at our locked rev.
+  ollamaBase = unstablePkgs.ollama;
+
+  # Phase 3: the MLX runtime, which nixpkgs cannot build.
+  #
+  # Ollama ships two engines: llama.cpp (GGUF) and MLX, picked per model by
+  # tag. The MLX code IS compiled into the nixpkgs binary — it dlopens the
+  # runtime at startup — but the runtime itself is absent, so every MLX tag
+  # fails with "this model requires MLX support, but the MLX runtime is not
+  # available".
+  #
+  # It is absent because it cannot be built here: mlx.metallib is ~190MB of
+  # precompiled Metal shaders, and compiling Metal needs Apple's `metal`
+  # tool, which ships only with full Xcode and is unavailable to a nix
+  # build. (Same wall oMLX documents: `xcrun: unable to find utility
+  # "metal"`. It is a nix-on-macOS limit, not a packaging oversight.)
+  #
+  # So take the prebuilt artifacts from upstream's own release of the EXACT
+  # same version — no ABI risk — and put them where the binary looks.
+  # Verified: hash below matches upstream's published sha256sum.txt.
+  #
+  # NOTE the url is derived from ollamaBase.version, so a nixpkgs bump
+  # cannot silently pair the binary with a mismatched runtime: the version
+  # follows automatically and the pinned hash then fails the build until
+  # it is deliberately updated. Loud failure, not quiet breakage. To
+  # update: bump nixpkgs, take the new hash from the release's
+  # sha256sum.txt, and re-run the acceptance check in docs/studio/phase-3.md.
+  mlxRuntime = unstablePkgs.fetchurl {
+    url = "https://github.com/ollama/ollama/releases/download/v${ollamaBase.version}/ollama-darwin.tgz";
+    hash = "sha256-LEWGX5S84NTR0lZ2A90v2srzdVhSIKF1qkgAEFGT024=";
+  };
+
+  # The search path is derived from the binary's own location — measured,
+  # with OLLAMA_DEBUG=1:
+  #   <prefix>/bin/lib/ollama, <prefix>/lib/ollama, <prefix>/bin
+  # NOTE: OLLAMA_LIBRARY_PATH exists as a string in the binary but 0.34.3
+  # does NOT read it (absent from the server's env dump; setting it changes
+  # nothing). So the libraries must sit beside the binary, which means
+  # rebuilding the tree rather than setting a variable.
+  #
+  # COPIED, not symlinked: Go resolves its own executable path, so a
+  # symlinked bin/ollama would make the search resolve back to the original
+  # store path and miss these libraries entirely. This is the one
+  # non-obvious constraint here — do not "tidy" it into a symlinkJoin.
+  #
+  # Both mlx_metal_v3 and v4 are installed. This machine selects v4
+  # (verified: "MLX dynamic library loaded path=.../mlx_metal_v4/
+  # libmlxc.dylib"); v3 costs ~190MB and is kept so a GPU-family probe
+  # change cannot silently break a headless box. Drop it to halve the
+  # closure if that is ever worth more than the safety.
+  ollama =
+    unstablePkgs.runCommand "ollama-${ollamaBase.version}-mlx" {
+      inherit (ollamaBase) meta;
+      passthru = {inherit (ollamaBase) version;};
+    } ''
+      mkdir -p $out
+      cp -R ${ollamaBase}/. $out/
+      chmod -R u+w $out
+      tar -xzf ${mlxRuntime} -C $out/lib/ollama mlx_metal_v3 mlx_metal_v4
+      test -f $out/lib/ollama/mlx_metal_v4/mlx.metallib
+      test -f $out/bin/ollama && test ! -L $out/bin/ollama
+    '';
+
   ollamaHome = "/Users/${username}";
 in {
   # FileVault is deliberately OFF on this host (decided 2026-10-30), which
