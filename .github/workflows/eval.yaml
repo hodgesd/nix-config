@@ -25,6 +25,8 @@ jobs:
             attr: darwinConfigurations.mini.system
           - host: air
             attr: darwinConfigurations.air.system
+          - host: studio
+            attr: darwinConfigurations.studio.system
           - host: nixos-infra
             attr: nixosConfigurations.nixos-infra.config.system.build.toplevel
           - host: t3-code
