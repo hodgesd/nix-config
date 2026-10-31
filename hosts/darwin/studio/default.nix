@@ -60,6 +60,25 @@
   #     returns — so both are in force: the nix option for what it
   #     covers, the GUI setting for the rest.
 
+  # Key-based SSH from the t3-code VM, so config work and read-only
+  # verification can be driven over the tailnet instead of at this
+  # machine's keyboard. Declared rather than appended to
+  # ~/.ssh/authorized_keys by hand so it survives a from-scratch rebuild
+  # and is reviewable in git — the same reasoning that puts the LAN key in
+  # nixos-common.nix. Public keys only; nothing here is secret.
+  #
+  # nix-darwin serves these through sshd's AuthorizedKeysCommand
+  # (/etc/ssh/nix_authorized_keys.d/%u), which is ADDITIVE: it does not
+  # replace or disturb anything already in ~/.ssh/authorized_keys.
+  #
+  # This adds no network surface — Remote Login is already on and already
+  # tailnet-reachable. It authorizes one more key. One-line disable:
+  # delete the entry and rebuild.
+  users.users.${username}.openssh.authorizedKeys.keys = [
+    # t3-code (Proxmox VM), `agent` user — the box this repo is edited from.
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICqtGYhL9lNLBifxD6zjgV89isCQacI54IKFIgj8dxTA t3-code-agent"
+  ];
+
   # Check for updates; never install them unattended. An unattended
   # FileVault box that installs an OS update reboots into the pre-boot
   # unlock screen and stays there until someone authenticates — see the
