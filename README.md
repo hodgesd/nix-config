@@ -1,7 +1,7 @@
 # 🛠️ My Nix Config
 
-A modular Nix flake managing **all my machines**: three Macs via nix-darwin and the
-NixOS homelab VM via the same repo — one lockfile, shared modules, machine metadata
+A modular Nix flake managing **all my machines**: four Macs via nix-darwin and two
+NixOS VMs via the same repo — one lockfile, shared modules, machine metadata
 for conditional config.
 
 ## ✨ Features
@@ -10,7 +10,7 @@ for conditional config.
 - 🤖 Machine metadata system for conditional configs (`lib/machines.nix`)
 - 📦 Declarative package management (Nix + Homebrew on macOS)
 - 🏠 Home Manager integration (macOS; opt-in per NixOS host)
-- 🐧 NixOS homelab host deployed from the Mac over Tailscale
+- 🐧 NixOS hosts deployed from the Mac over Tailscale
 - 🔄 Easy rollbacks and reproducibility (generations on every machine)
 - ✅ CI: every host is evaluated and built on each PR, pushed to Cachix
 
@@ -20,6 +20,8 @@ for conditional config.
 - **[ADDING_MACHINE.md](docs/ADDING_MACHINE.md)** - Step-by-step guide to add new machines
 - **[HOMEBREW.md](docs/HOMEBREW.md)** - Managing Homebrew packages and Mac App Store apps
 - **[CUSTOMIZATION.md](docs/CUSTOMIZATION.md)** - Common customization tasks
+- **[NIXOS-INFRA.md](docs/NIXOS-INFRA.md)** - Homelab VM architecture and disaster-recovery runbook
+- **[studio/](docs/studio/)** - Phased build-out of the Mac Studio AI server
 
 ## 💻 Machines
 
@@ -34,6 +36,7 @@ role, chip, user).
 | `air`         | 🍏 | MacBook Air M1 13"       | laptop, development     | `hodgesd`       | 16GB / 500GB  | 8 / 7           |
 | `studio`      | 🍏 | Mac Studio M5 Ultra      | desktop, always-on AI inference server | `hodgesd` | 96GB / 2TB    | 30 / 64         |
 | `nixos-infra` | 🐧 | Proxmox VM (QEMU guest on the HP mini PC) | vm, homelab | `hodgesd`  | — / 39GB disk | 2 vCPU          |
+| `t3-code`     | 🐧 | Proxmox VM (QEMU guest on the HP mini PC, VMID 101) | vm, T3 Code remote server | `hodgesd` | 12GB / 64GB disk | 4 vCPU     |
 
 ## 🍎 Mac Installation
 
@@ -126,6 +129,28 @@ from NAS snapshots. Credentials: `secrets/mbp.yaml`, decrypted with the mbp's SS
 host key (`host_mbp` in `.sops.yaml`). Log: `~/Library/Logs/mbp-backup.log`.
 Force a run: `rm ~/.local/state/mbp-backup/last-success && launchctl kickstart -k gui/$(id -u)/org.nixos.mbp-backup`.
 
+## 🤖 Local AI Server (`studio`)
+
+**Status: Phase 0 of 8 — the host is registered and CI-covered; no services yet.**
+
+The Mac Studio (M5 Ultra, 96GB) is a dedicated local-inference box: model
+serving only, deliberately nothing else. `nixos-infra` stays the monitoring
+and control plane and watches it; the `mini` keeps the Hermes Apple/vault
+bridges, which need its iCloud session. It carries no Apple ID.
+
+The plan and per-phase execution prompts live in
+[`docs/studio/`](docs/studio/) — Ollama (MLX backend) first as the
+store-pinned baseline, then oMLX for its Anthropic-compatible
+`/v1/messages` endpoint and SSD-backed KV cache, measured head-to-head
+before either is retired. Everything binds to `127.0.0.1` and is reached
+over the tailnet via `tailscale serve`; nothing listens on the LAN.
+
+Unlike the mini, it can be recovered remotely: macOS 26+ on Apple silicon
+runs a limited SSH server at the FileVault pre-boot stage, so an unexpected
+reboot is unlocked over the LAN (jumping via `nixos-infra` from away)
+rather than needing someone at the keyboard. Still attended recovery —
+something must authenticate.
+
 ## 🐧 NixOS Homelab (`nixos-infra`)
 
 A Proxmox guest VM on the HP mini PC, fully managed by this flake
@@ -205,8 +230,11 @@ just update
 # Garbage collect generations older than 14 days
 just gc
 
-# Format nix files
-nix fmt
+# Format nix files — pass explicit paths.
+# Bare `nix fmt` makes alejandra read stdin (fails "unexpected end of file")
+# on nix 2.34+, and `nix fmt .` reformats pre-existing drift, including the
+# hardware-configuration.nix files that must stay byte-for-byte as generated.
+nix fmt lib/machines.nix flake.nix
 
 # Rollback (macOS / NixOS)
 darwin-rebuild switch --rollback
