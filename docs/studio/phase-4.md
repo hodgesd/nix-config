@@ -1,6 +1,6 @@
 # Phase 4 — monitoring studio from nixos-infra
 
-**Status: config written 2026-10-31, PENDING `just deploy` from a Mac.**
+**Status: DONE 2026-10-31.** Deployed and the failure test passed.
 
 ## The goal, and why this phase exists
 
@@ -96,6 +96,32 @@ Tailscale-SSH and `root@` paths need interactive auth there):
 just deploy-check     # dry-activate, shows what would change
 just deploy
 ```
+
+## Result — deployed and tested 2026-10-31 16:32
+
+The `studio` group appears between `nixos-infra` and `yellow`, both
+checks green. The failure test behaved exactly as the design intends:
+
+| | During `bootout` | After `bootstrap` |
+|---|---|---|
+| `ollama` | **Unhealthy** | Healthy |
+| `ping` | **Healthy**, ~1ms | Healthy |
+
+Gatus's recorded error is the distinction this phase exists to surface:
+
+```
+dial tcp 100.126.144.70:11434: connect: connection refused
+```
+
+**Refused, not timed out** — the host answered, nothing was listening.
+One red service beside a green box, which is the state that took ten
+minutes to establish by hand in each of the three phase-2 incidents.
+
+Counted over the same window: `ollama` failed 6 of 8 polls and
+recovered; `ping` failed 0 of 8. The checks are genuinely independent,
+which is the property that makes the red/green table below diagnostic
+rather than decorative. Recovery to green took the expected ~2 minutes
+(`success-threshold = 2` at a 60s interval).
 
 ## How to verify
 
