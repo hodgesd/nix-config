@@ -158,30 +158,71 @@ tag names and file sizes. The 1055-layer match with
 `35b-a3b-mlx-bf16` was already visible and should have settled it.
 **Check digests and `config.json`; never the tag.**
 
-### Model assignment, and why no benchmark was run
+### THE DECIDING FACT: nixpkgs ships no MLX runtime on macOS
 
-Both production models are MLX, because MLX *and* MoE are jointly
-available — the tradeoff an earlier draft reasoned about does not exist:
+Everything above is about what the *registry* offers. What this *build*
+can execute is a separate question, and it is the one that governs.
+Measured on studio 2026-10-31:
+
+```
+$ ollama pull qwen3.6:35b-a3b-nvfp4
+Error: this model requires MLX support, but the MLX runtime is not available
+```
+
+Why, from the closure itself:
+
+- `lib/ollama/` contains **only** `llama-server` and `llama-quantize`.
+- No `.dylib` and no `.metallib` anywhere in the ollama store path.
+- The binary *does* contain the MLX code — `github.com/ollama/ollama/mlxrunner`,
+  `mlx._Ctype_*` cgo symbols, `mlx_metal_get_metallib_path` — and
+  `dlopen`s the runtime at startup: `failed to load MLX dynamic library
+  (searched: %v)`. Compiled in, never shipped.
+
+And it is not just Ollama. `nixpkgs#python3Packages.mlx` imports and
+computes, but:
+
+```
+>>> mx.default_device()
+Device(cpu, 0)
+```
+
+A **CPU-only** MLX. So there is **no MLX GPU path through nixpkgs on
+macOS at all** — not Ollama, not `mlx-lm`.
+
+The shared cause: MLX's Metal kernels must be compiled by Apple's
+`metal` compiler, which ships only with full Xcode and is unavailable to
+a nix build. This is the same constraint oMLX's README documents
+(`xcrun: unable to find utility "metal"`); it is a general nix-on-macOS
+limit, not an oMLX quirk. Any MLX on this machine must come from an
+Apple-toolchain-built binary — Ollama's official DMG/Homebrew, a PyPI
+`mlx` wheel, or oMLX's DMG — each of which gives up the
+nixpkgs-managed daemon.
+
+**Lesson for this file:** a registry manifest proves what the weights
+are. Only running it proves what the box does. Three successive drafts
+here got the model story wrong by reasoning from metadata — tag names,
+then file sizes, then manifest digests — without executing anything.
+
+### Model assignment
+
+GGUF, because that is what this build runs:
 
 | Workload | Model | Architecture | Size |
 |---|---|---|---|
-| Hermes, tool calling | `qwen3.6:35b-a3b-nvfp4` | MoE, 256 experts / 8 active | 21.5 GiB |
-| Code review, reasoning, vision | `qwen3.8:27b-mlx` | dense 27B | 16.9 GiB |
+| Hermes, tool calling | `qwen3.6:35b-a3b` | MoE, 256 experts / 8 active | 21.1 GiB |
+| Code review, reasoning, vision | `qwen3.8:27b` | dense 27B | 16.5 GiB |
 
-`qwen3.6:35b-a3b-nvfp4` rather than its alias `qwen3.6:35b-mlx`: same
-bytes, but the explicit tag names the architecture and quantization, so
-the next reader does not have to re-derive what this section just had
-to.
-
-Both resident = 38.4 GiB, comfortable under the 81.5 GiB ceiling, and
+Both resident = 37.6 GiB, comfortable under the 81.5 GiB ceiling, and
 `OLLAMA_MAX_LOADED_MODELS = 2` keeps both hot so they do not evict each
 other.
 
-A formal GGUF-vs-MLX benchmark was deliberately **not** made a gate on
-this phase: MLX is the expected winner on this hardware, both chosen
-models are MLX, and a tok/s table would not change either assignment.
-`qwen3.6:35b-a3b` (GGUF, 21.1 GiB) is kept only as an optional
-comparison. The acceptance criteria below are behavioural instead.
+The MLX equivalents — `qwen3.6:35b-a3b-nvfp4` (21.5 GiB) and
+`qwen3.8:27b-mlx` (16.9 GiB) — are the tags to switch to **if** the
+runtime question above is ever resolved in MLX's favour. Nothing else
+about this config would change.
+
+No GGUF-vs-MLX benchmark: there is currently no MLX to benchmark
+against. The acceptance criteria below are behavioural instead.
 
 ## Manual steps (not Nix)
 
@@ -196,8 +237,9 @@ tailscale serve --https=11434 off
 # 3. The two models. OLLAMA_HOST comes from environment.variables after
 #    step 1; before that it must be set by hand (see below). NOT
 #    127.0.0.1 — nothing listens there any more.
-ollama pull qwen3.6:35b-a3b-nvfp4   # Hermes / tool calling (MLX MoE)
-ollama pull qwen3.8:27b-mlx         # code review / reasoning / vision (MLX dense)
+# NOT the -nvfp4 / -mlx tags: this build has no MLX runtime (see above).
+ollama pull qwen3.6:35b-a3b   # Hermes / tool calling (GGUF MoE)
+ollama pull qwen3.8:27b       # code review / reasoning / vision (GGUF dense)
 ```
 
 ## How to verify
@@ -227,7 +269,7 @@ ollama list && ls ~/.ollama/models
 sudo reboot
 # then, WITHOUT logging in at the screen, from another machine:
 curl -s http://studio.jaguar-duckbill.ts.net:11434/api/version   # tailnet still up?
-ssh hodgesd@studio 'ollama run qwen3.8:27b-mlx "say hi"'
+ssh hodgesd@studio 'ollama run qwen3.8:27b "say hi"'
 ```
 
 A generation completing with no session is what justifies the daemon
@@ -251,15 +293,15 @@ decide whether the box is actually doing its job:
 | Check | Result |
 |---|---|
 | Both models load, GPU-resident, no memory pressure | |
-| `qwen3.6:35b-a3b-nvfp4` completes real Hermes tool-calling turns | |
+| `qwen3.6:35b-a3b` completes real Hermes tool-calling turns | |
 | Responsive through a long conversation, not just a cold prompt | |
 
-Yes to all three ends Phase 3. Phase 3b stays unopened unless one of
-them fails — and no longer on model-coverage grounds, since Ollama
-serves a 4-bit MLX MoE itself. The 36.5G of `mlx-community` weights in
-`~/.cache/huggingface` are now redundant; harmless where they are
-(already excluded from backup and Spotlight by Phase 1), reclaimable
-whenever the disk is wanted.
+Yes to all three ends Phase 3 on GGUF. The open question that remains
+is whether MLX is worth leaving nixpkgs for — see ledger item 1e; it is
+a packaging decision, not a models decision. The 36.5G of
+`mlx-community` weights in `~/.cache/huggingface` are inert for now
+(nixpkgs MLX is CPU-only); harmless where they are, already excluded
+from backup and Spotlight by Phase 1.
 
 ## Manual test script (5 items)
 
@@ -270,9 +312,10 @@ whenever the disk is wanted.
 3. `kill` the process; it comes back within ~15s (KeepAlive + ThrottleInterval).
 4. `ollama list` after a pull, and `ls ~/.ollama/models` is non-empty —
    proves `OLLAMA_MODELS` took and the models are inside the Phase 1
-   exclusions. Then run `qwen3.8:27b-mlx` once and confirm the log names
-   the **MLX** runner: a registry tag proves the model exists, not that
-   this build executes it on that engine. If it silently falls back to
-   llama.cpp, the dense/MLX half of the assignment above is void.
+   exclusions. Then run `qwen3.8:27b` once and confirm the log names
+   `llama-server`. Do NOT expect MLX: this build has no MLX runtime
+   (see "THE DECIDING FACT"). Re-run this check after any change to how
+   Ollama is installed — it is the only thing that proves which engine
+   is live.
 5. Reboot without logging in, then generate over SSH. This is the one that
    decides whether the daemon branch was right.
