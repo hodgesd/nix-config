@@ -274,6 +274,18 @@ TASKS (the checklist to produce, verify, and refine)
 3. Install nix + bootstrap: follow scripts/bootstrap.sh (read it first;
    reflect what it ACTUALLY does in the checklist, including Rosetta if
    it installs it — nix-homebrew has enableRosetta = true).
+   NIX FLAVOUR IS NOT OPTIONAL HERE. Since 2026-01-01 the Determinate
+   installer defaults to *Determinate Nix*, whose daemon lives at
+   /usr/local/bin/determinate-nixd. nix-darwin 26.05 checks for exactly
+   that path and aborts activation (exit 2) unless `nix.enable = false`
+   — verified by reading the generated activation script, not from
+   docs. bootstrap.sh therefore passes `--prefer-upstream-nix` and
+   fails fast if determinate-nixd exists anyway. Confirm the flag still
+   exists (`... | sh -s -- install --help`) before the first run; if it
+   was withdrawn, use `sh <(curl -L https://nixos.org/nix/install)
+   --daemon` rather than quietly accepting Determinate, which would
+   diverge studio from mbp/mini/air and silently drop the nix.settings
+   in lib/helpers.nix.
 4. First build: darwin-rebuild switch --flake .#studio from a clone of
    this repo. Expect the full cask download storm on first activation;
    note the known risk that one rotted vendor URL fails the whole
