@@ -298,7 +298,33 @@ in {
   # serve config to retract — that is part of the point.
   launchd.daemons.ollama = {
     serviceConfig = {
-      ProgramArguments = ["${ollama}/bin/ollama" "serve"];
+      # /bin/wait4path is not decoration — without it this daemon dies at
+      # every boot. Measured 2026-10-31 (docs/studio/phase-2.md):
+      #
+      #   launchd: Missing executable detected. Job: 'org.nixos.ollama'
+      #            Executable: '/nix/store/…-ollama-0.34.3-mlx/bin/ollama'
+      #
+      # /nix is a separate APFS volume (`/dev/disk3s7 on /nix`) mounted by
+      # org.nixos.darwin-store, and a RunAtLoad system daemon can win the
+      # race against it. The fatal part is launchd's reaction: a *missing
+      # executable* makes it abandon the job — `state = spawn scheduled`,
+      # `active count = 0`, forever. KeepAlive does NOT rescue this; it
+      # only restarts processes that ran and exited. So the service stayed
+      # dead for the whole uptime even after its other blockers cleared.
+      #
+      # /bin/sh and /bin/wait4path live outside /nix, so launchd can
+      # always exec them; wait4path blocks until the store appears, then
+      # `exec` replaces the shell so launchd still supervises the real
+      # process (no stray wrapper PID, KeepAlive semantics unchanged).
+      #
+      # Why launchd.daemons.gpu-wired-limit above needs none of this: its
+      # program is /usr/sbin/sysctl, outside /nix. Any daemon on this host
+      # whose program lives in the store wants this treatment.
+      ProgramArguments = [
+        "/bin/sh"
+        "-c"
+        "/bin/wait4path ${ollama}/bin/ollama && exec ${ollama}/bin/ollama serve"
+      ];
       UserName = username;
       RunAtLoad = true;
       KeepAlive = true;

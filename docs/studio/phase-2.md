@@ -1,122 +1,140 @@
 # Phase 2 — studio: hardware bootstrap and the unattended-reboot test
 
-**Status: test run 2026-10-31 — it FAILED, and the cause is Tailscale,
-not anything in this repo.** Fix below.
+**Status: two reboot tests run 2026-10-31, both failed, two independent
+causes found and fixed.** Re-test pending.
 
-## The test
-
-The whole FileVault-off design (see phase-1.md, phase-3.md) rests on one
+The whole FileVault-off design (phase-1.md, phase-3.md) rests on one
 claim: *this box comes back serving after an unattended reboot, with
-nobody logged in.* That had never been tested. It is now.
+nobody logged in.* Testing it found two unrelated faults, and the first
+test could not see past the first one.
 
 ```bash
 sudo reboot
-# then, WITHOUT logging in at the screen, from another tailnet node:
+# then, WITHOUT logging in, from another tailnet node:
 curl -s http://studio.jaguar-duckbill.ts.net:11434/api/version
 ```
 
-Result: timeout. `tailscale status` from the control plane showed
+## Fault 1 — Tailscale was not running
 
-```
-100.126.144.70  studio  hodgesd@  macOS  offline, last seen 1m ago
-```
-
-## What actually failed
-
-The machine was fine. Diagnosed from a VM on the same LAN, which is why
-having a second path in mattered:
+First reboot: `tailscale status` from the control plane showed
+`studio … offline, last seen 1m ago`. The machine itself was healthy —
+diagnosed over the LAN, which is the only reason any of this was
+visible:
 
 | Probe | Result |
 |---|---|
 | `ping 192.168.1.198` | 0.6ms, 0% loss |
 | `ssh hodgesd@192.168.1.198` | works |
-| `uptime` | `up 0:02, 0 users` — booted, nobody logged in |
-| `who` | empty |
-| `ifconfig \| grep utun` | **no interfaces at all** |
-| `Tailscale status` / `ip` | **exit 124 (timeout)** — CLI backend unreachable |
-| `/Applications/Tailscale.app` process | running as `hodgesd`, started at boot |
-| system LaunchDaemon/LaunchAgent for tailscale | none |
+| `uptime` | `up 0:02, 0 users` |
+| `ifconfig \| grep utun` | **no interfaces** |
+| `Tailscale status` / `ip` | **exit 124 (timeout)** |
 
-So Tailscale's macOS **GUI app** launches at boot but cannot establish
-the tunnel without a login session: no `utun`, and the CLI hangs because
-the backend it talks to lives in the GUI app's session context.
+With no login session the Tailscale CLI cannot reach its backend, so
+that state was **undiagnosable from the box** — which is what made the
+first conclusion wrong (see below). Enabling auto-login produced a
+session (`who` → `hodgesd console`), the CLI started answering, and the
+actual state was:
 
-Ollama behaved exactly as designed, which is the one piece of good news:
+```
+Tailscale status  → "Tailscale is stopped."
+WantRunning: false
+LoggedOut:   false
+```
+
+Authenticated, but deliberately disconnected, and that preference
+persists across reboots. `tailscale up` fixed it immediately and the
+node came back on the tailnet.
+
+**The first draft of this file concluded "Tailscale's macOS GUI app
+cannot establish the tunnel without a login session."** That was wrong,
+or at least unproven: no `utun` and a hanging CLI are equally consistent
+with `WantRunning = false`, and once a session existed the app did come
+up. The honest statement is narrower: *without a session the CLI backend
+is unreachable, so the app's state cannot be inspected* — and the app was
+in a stopped state for reasons not established.
+
+Auto-login is kept regardless (`system.defaults.loginwindow.autoLoginUser`).
+It is what made the box diagnosable, and the GUI app is session-bound
+for other things. It is available only because FileVault is off; it costs
+an unlocked desktop, acceptable on a box whose threat model already
+accepts physical access, and **must not be copied to the mini**. It also
+needs a manual step — see phase-1.md's not-expressible list — because
+macOS wants the obfuscated password in `/etc/kcpassword`, which
+nix-darwin does not write.
+
+## Fault 2 — the daemon lost a race with the /nix volume, and died for good
+
+This is the more important one, and it was hidden behind fault 1. Even
+after Tailscale came up, Ollama stayed dead:
 
 ```
 launchctl print system/org.nixos.ollama
   state = spawn scheduled
-  last exit code = 78: EX_CONFIG
+  active count = 0
 ```
 
-It cannot bind `studio.jaguar-duckbill.ts.net:11434` while tailscaled has
-not assigned the address, so it exits and `KeepAlive` +
-`ThrottleInterval = 15` retries. It will self-heal the instant Tailscale
-comes up. **The Phase 3 daemon choice is correct and needs no change —
-only its prerequisite was unmet.** This is precisely the open question
-flagged in phase-3.md ("whether Tailscale on macOS comes up without a
-GUI login at all. If it doesn't, the tailnet is unreachable after an
-unattended reboot no matter how Ollama binds"), now answered: it does
-not.
+It never respawned — watched for 88s across four samples, and no new
+line appeared in `~/Library/Logs/ollama.log` for the entire uptime. The
+system log said why:
 
-## The fix: auto-login
+```
+launchd: Missing executable detected. Job: 'org.nixos.ollama'
+         Executable: '/nix/store/…-ollama-0.34.3-mlx/bin/ollama'
+```
 
-`system.defaults.loginwindow.autoLoginUser = "hodgesd"`. A GUI session
-exists from boot, Tailscale.app connects, Ollama's retry loop succeeds.
+The executable was plainly there — running it by hand as the service user
+worked perfectly, resolved MagicDNS, and bound
+`100.126.144.70`. The cause is boot ordering:
 
-This is the fallback the plan designated from the start, and it is
-available *because* FileVault is off. What it costs: the desktop sits
-unlocked. That is a smaller marginal loss than it sounds here — the
-threat model already accepts physical access to this box (FileVault off,
-no Apple ID, no personal data, only re-downloadable weights). It is the
-wrong choice on the mini and must not be copied there.
+```
+/dev/disk3s7 on /nix (apfs, local, nosuid, journaled, noatime, nobrowse)
+org.nixos.darwin-store   program = /usr/sbin/diskutil   runs = 1, exit 0
+```
 
-**Not fully declarative.** macOS also requires the account password,
-obfuscated, in `/etc/kcpassword`; `autoLoginUser` alone preselects the
-user without completing the login. Writing kcpassword declaratively
-would mean putting the login password in sops to be written back out in
-a trivially reversible format — worse than the GUI step. So auto-login
-joins the manual list in phase-1.md:
+`/nix` is a **separate APFS volume**, mounted by a launchd job. A
+`RunAtLoad` system daemon whose program lives in the store can start
+before that mount completes. And launchd's reaction to a *missing
+executable* is to abandon the job — `KeepAlive` does not rescue it,
+because KeepAlive restarts processes that ran and exited, not jobs whose
+binary was absent at exec time.
 
-> System Settings → Users & Groups → "Automatically log in as" → hodgesd
+So the service was dead for the entire uptime, and would have stayed
+dead until a manual `launchctl kickstart` or another reboot that happened
+to win the race.
 
-The nix option is still declared, so the intent is in git and drift is
-visible.
+Two things that previously looked like evidence of something else, now
+explained:
 
-### The alternative, and why it is not the default
+- `last exit code = 78: EX_CONFIG` was a **stale** record from before the
+  reboot, when Ollama really was exiting on a failed bind. It was not
+  what was happening after the reboot, and it misled the first diagnosis.
+- `launchd.daemons.gpu-wired-limit` survived the same boot
+  (`runs = 1, exit 0`, sysctl reads 83500) because its program is
+  `/usr/sbin/sysctl` — outside `/nix`. The difference between the two
+  daemons is the location of the binary, nothing else.
 
-Run `tailscaled` from nixpkgs (`tailscale` 1.102.4 is available for
-aarch64-darwin) as a system LaunchDaemon. Architecturally this is the
-right answer for a headless server: no GUI session, no auto-login, no
-unlocked desktop, fully declarative.
+### The fix
 
-It was not chosen now because it carries several risks that are hard to
-validate on a box reachable only over LAN SSH:
+```nix
+ProgramArguments = [
+  "/bin/sh" "-c"
+  "/bin/wait4path ${ollama}/bin/ollama && exec ${ollama}/bin/ollama serve"
+];
+```
 
-- It conflicts with the installed Tailscale.app; that would have to go.
-- Registration needs an auth key (a new sops secret) or a one-time
-  interactive login, and would likely appear as a **new node** unless
-  the old one is removed in the admin console.
-- `tailscaled` on macOS with `utun` is the unsupported path.
-- MagicDNS resolution may not work under it, and Ollama binds *by name*
-  — so that bind would have to move to the literal `100.126.144.70`.
+`/bin/sh` and `/bin/wait4path` live outside `/nix`, so launchd can always
+exec them. `wait4path` blocks until the store appears; `exec` then
+replaces the shell, so launchd supervises the real process and KeepAlive
+semantics are unchanged.
 
-The plan's stated principle applies: "When a choice trades simplicity
-against another nine of availability, take simplicity and say so."
-Auto-login is one option plus one GUI toggle. Revisit `tailscaled` if
-auto-login proves flaky.
+**This applies to any daemon on any Mac in this repo whose program lives
+in the Nix store** — it is not studio-specific. Studio is just the first
+host with an always-on store-resident system daemon, so it is the first
+place the race could bite.
 
-## What this says about Phase 4
-
-Gatus would have reported this within a minute of the reboot instead of
-it being noticed by hand. Phase 4 is no longer just nice to have — the
-box has now demonstrated a failure mode that is completely silent from
-the outside.
-
-## How to verify the fix
+## How to verify
 
 ```bash
-# after enabling auto-login and switching:
 sudo reboot
 # WITHOUT touching the machine, from another tailnet node:
 tailscale status | grep studio                 # must NOT say offline
@@ -124,34 +142,41 @@ curl -s http://studio.jaguar-duckbill.ts.net:11434/api/version
 ssh hodgesd@studio 'ollama run qwen3.8:27b-mlx "say hi"'
 ```
 
-All three must pass with no interaction. If Tailscale still does not
-connect, auto-login is not sufficient and `tailscaled` becomes the next
-move — not more auto-login tinkering.
+All three with no interaction. And on the box:
 
-## How to disable
+```bash
+launchctl print system/org.nixos.ollama | grep "state ="   # running, not spawn scheduled
+```
 
-Remove `system.defaults.loginwindow.autoLoginUser` and rebuild, then
-turn auto-login off in System Settings (the nix option does not own
-`/etc/kcpassword`). The box reverts to requiring a login, which means
-reverting to LAN-only access after a reboot.
+If Tailscale is `offline` again, the next move is `tailscaled` as a
+system daemon rather than more auto-login tinkering — `tailscale`
+1.102.4 is in nixpkgs for aarch64-darwin. Risks recorded: it conflicts
+with the installed app, needs an auth key or a new node registration,
+uses the unsupported `utun` path on macOS, and may break MagicDNS, which
+Ollama binds *by name* (that bind would move to the literal
+`100.126.144.70`).
+
+## What this says about Phase 4
+
+Both faults were silent from outside: the box looked fine, one daemon
+was healthy, and the only symptom was a timeout someone happened to
+notice. Gatus would have reported it within a minute. Phase 4 is not a
+nice-to-have.
 
 ## Keep this in mind
 
-The LAN path is the reason this was diagnosable at all. Remote Login
-plus a second network route is the recovery mechanism for this host —
-phase-1.md already calls Remote Login load-bearing, and this is the
-incident that proves it.
+The LAN path is the recovery mechanism for this host. Remote Login plus a
+second route is why these faults were diagnosable at all — phase-1.md
+calls Remote Login load-bearing, and this is the incident that proves it.
 
 ## Manual test script (5 items)
 
 1. `defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser`
-   → `hodgesd`.
-2. Reboot and do not touch the machine. From another node,
-   `tailscale status | grep studio` must not say `offline`.
-3. Same reboot: `curl http://studio.jaguar-duckbill.ts.net:11434/api/version`
-   returns a version.
-4. Same reboot: generate over SSH. This is the acceptance bar Phase 3
-   claimed and Phase 2 must actually deliver.
-5. `launchctl print system/org.nixos.ollama` → `state = running`, not
-   `spawn scheduled`. If it reads `spawn scheduled` with
-   `last exit code = 78`, the tunnel is still down.
+   → `hodgesd`, and `/etc/kcpassword` exists.
+2. Reboot untouched; `launchctl print system/org.nixos.ollama` shows
+   `state = running`. If it shows `spawn scheduled` with
+   `active count = 0`, the store race is back.
+3. Same reboot: `tailscale status | grep studio` is not `offline`.
+4. Same reboot: the API answers over the tailnet.
+5. Same reboot: a generation completes over SSH. This is the bar Phase 3
+   claimed and Phase 2 has to actually deliver.
