@@ -809,6 +809,7 @@ ACCEPTANCE
 | 2 | FileVault **OFF** on studio (revised 2026-10-30): physically secure, no Apple ID, no personal data, and availability is the point. Hardware encryption still applies. Mini stays FileVault-on. | **Decided: off** |
 | 3 | Model storage: internal SSD, `~/.ollama` | **Decided** |
 | 4 | Remote builder (Phase 5) | **Decided: yes** |
+| 1f | **Delete the GGUF comparison pair** — `qwen3.6:35b-a3b` + `qwen3.8:27b`, 37.6 GiB. Kept after 1d as the measurement baseline. Not urgent (2TB disk), so the trigger is evidence not calendar: `~/Library/Logs/ollama.log` records every model load, so grep it for either tag. Never loaded since 2026-10-31 → delete both. Loaded → find out what is still pinning a tag you thought was replaced, *then* decide. A scheduled agent checks this on 2026-11-14 and reports with the answer attached. | Pending — review 2026-11-14 |
 | 5 | Cask role split (Phase 6) | Pending — needs mini-removal list approval |
 | 6 | Public access (Phase 7) + chat-vs-API shape | Deferred — needs workplace-policy check + explicit go |
 | 7 | Studio hardware: **96GB / 30 CPU / 64 GPU / 2TB, macOS 27.2** — sysctl N = 83,500; Phase 5 maxJobs sized off 30 cores | **Resolved 2026-10-30** |
