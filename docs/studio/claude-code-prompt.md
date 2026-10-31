@@ -789,3 +789,45 @@ ACCEPTANCE
 | 6 | Public access (Phase 7) + chat-vs-API shape | Deferred — needs workplace-policy check + explicit go |
 | 7 | Studio hardware: **96GB / 30 CPU / 64 GPU / 2TB, macOS 27.2** — sysctl N = 83,500; Phase 5 maxJobs sized off 30 cores | **Resolved 2026-10-30** |
 | 8 | UPS for studio + network gear + Proxmox host (graceful-shutdown signaling; macOS supports UPS shutdown policies in Energy settings) | Pending — hardware purchase, my call; plan assumes none until then |
+| 9 | **Nix flavour / installer.** The whole fleet runs **upstream Nix**, and `nix.enable` stays `true` so `lib/helpers.nix` keeps managing `trusted-users` and `experimental-features` declaratively. `scripts/bootstrap.sh` pins this with `--prefer-upstream-nix` and aborts if `/usr/local/bin/determinate-nixd` exists. | **Decided: upstream, fleet-wide** — but see the standing liability below |
+
+### Standing liability — item 9 (review on trigger, not on a schedule)
+
+Determinate's installer calls upstream Nix "not a supported configuration"
+and says the `--prefer-upstream-nix` flag "may be removed in a future
+release". Verified present in installer **v3.24.1** on 2026-10-30 by
+reading the binary's own `install --help`, alongside `--determinate`
+(env equivalents: `NIX_INSTALLER_PREFER_UPSTREAM_NIX`,
+`NIX_INSTALLER_DETERMINATE`). The shell wrapper at
+install.determinate.systems/nix injects neither flag — it passes
+arguments straight through.
+
+**Why this is a tracked decision and not a preference.** nix-darwin 26.05
+aborts activation outright (`exit 2`, "Determinate detected") when
+`determinate-nixd` is present and `nix.enable` is true. The documented
+alternative, `nix.enable = false`, hands Nix management to Determinate and
+takes the `nix.*` options with it — `lib/helpers.nix`'s `nix.settings`
+would have to move to `/etc/nix/nix.custom.conf`, i.e. out of this flake.
+That is a real loss of declarativeness and must be an all-four-Macs
+migration, never a per-host accident.
+
+**Triggers to revisit** (not a date):
+1. `--prefer-upstream-nix` disappears or stops working — bootstrap.sh's
+   guard turns this into a loud, early failure rather than a broken Mac.
+2. Building any Mac from scratch — cheapest moment to change install path.
+3. A deliberate decision to adopt Determinate fleet-wide.
+
+**If trigger 1 or 2 fires**, the drop-in replacement is upstream's own
+installer, already noted in `scripts/bootstrap.sh`:
+`sh <(curl -L https://nixos.org/nix/install) --daemon`. The end state is
+identical — upstream Nix, multi-user daemon — so switching costs no config
+change. Only the install path differs; the DetSys installer is kept for now
+because its macOS handling (APFS volume, real uninstaller, idempotent
+re-runs) is still better.
+
+**Not verified, and it does not matter:** which flavour the installer picks
+when *neither* flag is passed. The docs say Determinate; the binary's
+`--determinate` flag reads like opt-in; `plan` needs root, so it was not
+settled empirically. The pin is correct either way — essential if the
+default is Determinate, a no-op documenting intent if it is not — and the
+guard catches any mismatch. Do not spend time resolving this.
