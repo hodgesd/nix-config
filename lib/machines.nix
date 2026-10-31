@@ -25,6 +25,18 @@
     primaryUse = "server";
   };
 
+  # Local AI inference server (see docs/studio/). primaryUse = "server" is
+  # deliberate rather than a new "ai" role: it reuses the existing
+  # `primaryUse != "server"` gates, so studio skips masApps, the t3-code
+  # cask and the agent-workbench client for free. Studio-only behavior
+  # branches on `machine.hostname == "studio"`.
+  studio = {
+    type = "darwin";
+    chip = "m5-ultra";
+    formFactor = "desktop";
+    primaryUse = "server";
+  };
+
   # NixOS machines
   nixos-infra = {
     type = "nixos";

@@ -42,6 +42,7 @@
         mbp = libx.mkDarwin {hostname = "mbp";};
         mini = libx.mkDarwin {hostname = "mini";};
         air = libx.mkDarwin {hostname = "air";};
+        studio = libx.mkDarwin {hostname = "studio";};
       };
 
       nixosConfigurations = {
