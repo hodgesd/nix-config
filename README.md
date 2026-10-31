@@ -131,27 +131,49 @@ Force a run: `rm ~/.local/state/mbp-backup/last-success && launchctl kickstart -
 
 ## 🤖 Local AI Server (`studio`)
 
-**Status: Phase 0 of 8 — the host is registered and CI-covered; no services yet.**
+**Status: Phase 3 of 8 done — serving models over the tailnet.**
 
 The Mac Studio (M5 Ultra, 96GB) is a dedicated local-inference box: model
 serving only, deliberately nothing else. `nixos-infra` stays the monitoring
 and control plane and watches it; the `mini` keeps the Hermes Apple/vault
 bridges, which need its iCloud session. It carries no Apple ID.
 
-The plan and per-phase execution prompts live in
-[`docs/studio/`](docs/studio/) — Ollama (MLX backend) first as the
-store-pinned baseline, then oMLX for its Anthropic-compatible
-`/v1/messages` endpoint and SSD-backed KV cache, measured head-to-head
-before either is retired. Everything binds to `127.0.0.1` and is reached
-over the tailnet via `tailscale serve`; nothing listens on the LAN.
+Ollama runs as a system LaunchDaemon bound to the node's MagicDNS name —
+`studio.jaguar-duckbill.ts.net:11434`, the tailscale interface alone.
+Nothing listens on the LAN or the internet; the API has no authentication,
+so the bind address *is* the access control. A system daemon rather than a
+user agent because FileVault is off here, so the box boots to loginwindow
+unattended and the service comes back with nobody logged in.
+
+Ollama ships two engines behind one API — llama.cpp for GGUF and MLX for
+Apple silicon — selected per model by tag. nixpkgs can't build the MLX
+runtime (`mlx.metallib` is precompiled Metal shaders, and compiling Metal
+needs full Xcode), so the config pulls that one artifact from upstream's
+own release of the same version, pinned by hash. One nix-managed daemon, no
+Homebrew, no Xcode. It is worth the trouble — measured warm on a prose
+prompt, `num_predict=200`:
+
+| Model | MLX | llama.cpp |
+|---|---|---|
+| `qwen3.6:35b-a3b` — MoE, 256 experts / 8 active | **239 tok/s** | 108 tok/s |
+| `qwen3.8:27b` — dense | **100 tok/s** | 50 tok/s |
+
+~2× either way. Benchmark honestly if you repeat this: both engines use
+MTP speculative decoding, so a predictable prompt ("count to 60") measures
+draft acceptance instead and reports up to 45% higher. See
+[`docs/studio/phase-3.md`](docs/studio/phase-3.md) for the full plan,
+per-phase notes, and the traps — several Ollama tags alias one manifest,
+so models must be identified by digest rather than name.
 
 Unlike the mini, FileVault is deliberately **off** here (decided
 2026-10-30): the box is physically secure, has no Apple ID and holds no
 personal data beyond re-downloadable model weights, and availability is
 the point. Apple silicon still encrypts the SSD in hardware. So it boots
 back to loginwindow on its own after a reboot or power cut, with no
-pre-boot unlock to perform — whether it also *serves* unattended depends
-on how the model servers are launched, which Phase 3 decides on evidence.
+pre-boot unlock to perform — which is what lets the serving daemon start
+with nobody logged in. Whether the *tailnet* also comes up without a GUI
+session is still untested (Phase 2); if it doesn't, the box is
+unreachable after an unattended reboot however well Ollama is configured.
 
 ## 🐧 NixOS Homelab (`nixos-infra`)
 
