@@ -270,7 +270,7 @@ ACCEPTANCE
 
 ---
 
-## PHASE 2 — Hardware bootstrap (requires the machine; mostly ME, not Claude)
+## PHASE 2 — Hardware bootstrap — DONE 2026-10-31, see docs/studio/phase-2.md
 
 ```
 GOAL: the physical Studio runs this flake. Claude's job in this phase is
@@ -366,7 +366,7 @@ ACCEPTANCE
 
 ---
 
-## PHASE 3 — Ollama serving (requires the machine)
+## PHASE 3 — Ollama serving — DONE 2026-10-31, see docs/studio/phase-3.md
 
 ```
 GOAL: Ollama serves models on loopback, reachable tailnet-wide over
