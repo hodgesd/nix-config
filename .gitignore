@@ -17,3 +17,6 @@ secrets/*.dec.yaml
 
 # Python bytecode (swiftbar plugins)
 __pycache__/
+
+# Per-phase scratch plans (see docs/studio/PLAN.md header) — never tracked
+docs/*/PLAN.md
