@@ -1,7 +1,8 @@
 # Phase 2 — studio: hardware bootstrap and the unattended-reboot test
 
-**Status: two reboot tests run 2026-10-31, both failed, two independent
-causes found and fixed.** Re-test pending.
+**Status: DONE 2026-10-31.** Three reboot tests. The first two failed,
+for two independent reasons; the third passed every criterion with
+nobody touching the machine.
 
 The whole FileVault-off design (phase-1.md, phase-3.md) rests on one
 claim: *this box comes back serving after an unattended reboot, with
@@ -132,7 +133,46 @@ in the Nix store** — it is not studio-specific. Studio is just the first
 host with an always-on store-resident system daemon, so it is the first
 place the race could bite.
 
-## How to verify
+## Result — third reboot, 2026-10-31 14:17
+
+Untouched from power-on:
+
+```
+14:17        boot, auto-login (who -> hodgesd console)
+14:18        /api/version answers over the tailnet
+14:18:19     "mlx runner is ready"
+```
+
+| Check | Result |
+|---|---|
+| `launchctl print system/org.nixos.ollama` | `state = running`, `active count = 1` |
+| listener | `100.126.144.70:11434` |
+| generation over SSH | 2.9s |
+| engine | `mlx runner is ready` |
+| `ollama ps` | 18 GB, 100% GPU |
+| `tailscale status` | online |
+
+The `exec` in the wrapper behaves as intended: the plist's `program` is
+`/bin/sh`, but the live process is the ollama binary with **PPID 1** —
+launchd supervises the real process directly and there is no stray
+wrapper PID, so KeepAlive still applies to the server itself.
+
+## One more non-declarative item
+
+Tailscale reported *"start at login could not be set. Enable Tailscale in
+the System Settings app."* That is macOS's Login Items approval, which
+since macOS 13 lives in **System Settings > General > Login Items &
+Extensions**, under the per-app "Allow in the Background" list. It is
+held in `backgroundtaskmanagementd`'s private database and is not
+writable declaratively, so it joins Remote Login, Screen Sharing, Energy
+and auto-login on phase-1.md's manual list.
+
+It did not block this test — the app launches with the session anyway
+(observed starting at 13:09:42 and 14:17, both immediately after
+auto-login) and `TailscaleLoginItemHelper-macsys.app` is present in the
+bundle. Approve it for robustness, not to fix anything.
+
+## How to re-verify
 
 ```bash
 sudo reboot

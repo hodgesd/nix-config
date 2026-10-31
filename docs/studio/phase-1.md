@@ -41,6 +41,7 @@ Confirmed by introspecting nix-darwin 26.05's option set, not assumed:
 | Remote Login (SSH) | `services.openssh`'s activation script only runs `ssh-keygen` for host keys — enabling it does not turn Remote Login on. `systemsetup -setremotelogin on` needs Full Disk Access for the calling process, which an activation script run over SSH lacks. | **done by hand 2026-10-30** |
 | Screen Sharing | no option; same TCC problem | done by hand, optional |
 | "Start up when power is connected" = Always | `power.*` exposes only `restartAfterFreeze`, `restartAfterPowerFailure`, `sleep` | **done by hand 2026-10-30** |
+| Login Items approval ("Allow in the Background") | macOS 13+ holds login-item approval in `backgroundtaskmanagementd`'s private database; not writable declaratively. Tailscale reports *"start at login could not be set"* until it is granted: System Settings > General > Login Items & Extensions. | **optional**, see phase-2.md |
 | Auto-login (`/etc/kcpassword`) | `system.defaults.loginwindow.autoLoginUser` sets the username but macOS also needs the obfuscated password in `/etc/kcpassword`, which nix-darwin does not write. The declarative alternative is storing the login password in sops to be written back out in a trivially reversible format — worse. | **required 2026-10-31**, see phase-2.md |
 
 Remote Login being manual is the uncomfortable one: it is how a
