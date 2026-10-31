@@ -277,6 +277,12 @@ then file sizes, then manifest digests — without executing anything.
 | Hermes, tool calling | `qwen3.6:35b-a3b-nvfp4` | MoE, 256 experts / 8 active | 21.5 GiB |
 | Code review, reasoning, vision | `qwen3.8:27b-mlx` | dense 27B | 16.9 GiB |
 
+**These are intended assignments, not live wiring.** Nothing consumes
+this server yet: `hermes.nix` still has
+`model.base_url = "https://openrouter.ai/api/v1"` and is untouched.
+Pointing Hermes here is **Phase 8**, and it is optional. Phase 3 ends
+with a server that works and is measured — not with anything using it.
+
 Both resident = 38.4 GiB, comfortable under the 81.5 GiB ceiling, and
 `OLLAMA_MAX_LOADED_MODELS = 2` keeps both hot so they do not evict each
 other.

@@ -105,6 +105,15 @@ in {
   # Remote Login remains load-bearing — it is how this box is administered
   # headlessly over the tailnet — just no longer for pre-boot unlock.
 
+  # No desktop, so no wallpaper. modules/wallpaper.nix is on by default for
+  # every Mac and warns on every activation here that
+  # ~/Documents/Wallpapers does not exist. Harmless (it skips and the
+  # rebuild succeeds), but a headless inference server has no business
+  # setting one, and a warning nobody will ever act on trains you to
+  # ignore activation output — which is where the Remote Login drift
+  # warning below also lives.
+  majordouble.wallpaper.enable = false;
+
   # Come back by itself after a power cut, and never sleep out from under an
   # inference run or a remote build. Display sleep is fine — headless box.
   power = {
