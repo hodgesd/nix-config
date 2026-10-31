@@ -158,7 +158,64 @@ tag names and file sizes. The 1055-layer match with
 `35b-a3b-mlx-bf16` was already visible and should have settled it.
 **Check digests and `config.json`; never the tag.**
 
-### THE DECIDING FACT: nixpkgs ships no MLX runtime on macOS
+### FIXED: the MLX runtime, which nixpkgs cannot build
+
+**Resolved 2026-10-31.** The section below describes the problem; this
+describes the fix, which keeps one nix-managed daemon and needs neither
+Homebrew, Xcode, nor a login session.
+
+The runtime is `dlopen`ed, so it is a missing *file*, not a wrong build.
+The search path comes from the binary's own location (measured with
+`OLLAMA_DEBUG=1`):
+
+```
+<prefix>/bin/lib/ollama
+<prefix>/lib/ollama          ← where nixpkgs puts llama-server
+<prefix>/bin
+```
+
+`OLLAMA_LIBRARY_PATH` exists as a string in the binary but 0.34.3 does
+**not** read it — absent from the server's env dump, and setting it
+changes nothing. So the libraries have to sit beside the binary.
+
+`hosts/darwin/studio/default.nix` therefore `fetchurl`s upstream's own
+`ollama-darwin.tgz` for the **same version** (hash verified against the
+release's published `sha256sum.txt`) and rebuilds the tree with
+`mlx_metal_v3` and `mlx_metal_v4` inside `lib/ollama`. Two constraints
+that are easy to get wrong:
+
+- **Copy, do not symlink.** Go resolves its own executable path, so a
+  symlinked `bin/ollama` sends the search back to the original store
+  path and misses the libraries. No `symlinkJoin`.
+- **The url is derived from `ollamaBase.version`.** A nixpkgs bump
+  cannot silently pair the binary with a mismatched runtime: the version
+  follows, and the pinned hash then fails the build until updated.
+
+Verified on studio before writing the config, using a scratch copy of
+the tree:
+
+```
+DEBUG dynamic.go:30  "MLX dynamic library loaded"
+                     path=.../lib/ollama/mlx_metal_v4/libmlxc.dylib
+INFO  client.go:420  "starting mlx runner subprocess"  model=gemma4:12b-mlx
+DEBUG runner.go:221  "Configured MLX wired memory"  active="7.13 GiB"
+INFO  client.go:109  "mlx runner is ready"
+
+/api/generate → 'Red, Yellow, Blue'
+                117 tokens, 159.4 tok/s, TTFT 299 ms, ollama ps 100% GPU
+```
+
+This machine selects **v4**. `v3` is kept anyway (~190MB) so a
+GPU-family probe change cannot silently break a headless box.
+
+Upstream's own macOS install would not do: `docs.ollama.com/macos`
+documents only the `.dmg` drag-and-drop, and `install.sh` on Darwin
+does `rm -rf /Applications/Ollama.app`, installs the GUI app, symlinks
+`/usr/local/bin/ollama`, and runs `open -a Ollama`. That needs a login
+session, starts a second server on `:11434`, and shadows the nix CLI.
+The tarball is used as a library source only.
+
+### The problem this fixed: nixpkgs ships no MLX runtime on macOS
 
 Everything above is about what the *registry* offers. What this *build*
 can execute is a separate question, and it is the one that governs.
@@ -205,7 +262,7 @@ then file sizes, then manifest digests — without executing anything.
 
 ### Model assignment
 
-GGUF, because that is what this build runs:
+Currently **GGUF**, because that is what is deployed and verified:
 
 | Workload | Model | Architecture | Size |
 |---|---|---|---|
@@ -216,13 +273,15 @@ Both resident = 37.6 GiB, comfortable under the 81.5 GiB ceiling, and
 `OLLAMA_MAX_LOADED_MODELS = 2` keeps both hot so they do not evict each
 other.
 
-The MLX equivalents — `qwen3.6:35b-a3b-nvfp4` (21.5 GiB) and
-`qwen3.8:27b-mlx` (16.9 GiB) — are the tags to switch to **if** the
-runtime question above is ever resolved in MLX's favour. Nothing else
-about this config would change.
+**Pending step, now that the MLX runtime is packaged:** switch to
+`qwen3.6:35b-a3b-nvfp4` (21.5 GiB) and `qwen3.8:27b-mlx` (16.9 GiB).
+Same models, MLX engine, nothing else in this config changes. Deliberately
+not written in as the assignment until it has run on the deployed daemon
+rather than the scratch tree — this file has already been wrong three
+times from reasoning ahead of measurement.
 
-No GGUF-vs-MLX benchmark: there is currently no MLX to benchmark
-against. The acceptance criteria below are behavioural instead.
+Order: switch → `ollama pull` both MLX tags → confirm `mlx runner is
+ready` in the log → then update this table and drop the GGUF copies.
 
 ## Manual steps (not Nix)
 
