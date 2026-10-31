@@ -11,8 +11,17 @@
 {
   username,
   lib,
+  unstablePkgs,
   ...
-}: {
+}: let
+  # Phase 3: Ollama from nixpkgs-unstable. 0.34.3 at our locked rev, well
+  # past the 0.19 that added the MLX backend for Apple silicon >= 32GB, so
+  # no homebrew fallback is needed. Pinned to one store path and shared by
+  # the daemon and the CLI, so `ollama ps` always talks to the server this
+  # config started.
+  ollama = unstablePkgs.ollama;
+  ollamaHome = "/Users/${username}";
+in {
   # FileVault is deliberately OFF on this host (decided 2026-10-30), which
   # is the opposite of the mini and worth understanding before changing it.
   #
@@ -129,6 +138,61 @@
       # in a loop forever.
       KeepAlive = false;
       StandardErrorPath = "/var/log/gpu-wired-limit.log";
+    };
+  };
+
+  # The `ollama` CLI on PATH for `pull` / `ps` / `run`. Same store path the
+  # daemon runs, so the CLI can never end up talking to a different build.
+  environment.systemPackages = [ollama];
+
+  # Ollama, reachable on the tailnet at https://studio.<tailnet>:11434
+  # after the one-time (state, not Nix — same as the mini's bridges):
+  #     tailscale serve --bg --https=11434 http://127.0.0.1:11434
+  #
+  # A system DAEMON, not a user agent, and that is the whole point: with
+  # FileVault off this box boots to loginwindow by itself, and a daemon
+  # starts there with nobody logged in — so an unattended reboot comes back
+  # serving. `launchd.user.agents` (the mini's pattern) would wait for a
+  # login session. The alternative that would make agents work, auto-login,
+  # trades an always-unlocked desktop for nothing we need here.
+  #
+  # UserName = the login user rather than root: least privilege, and it
+  # keeps the model store in ~ where the Phase 1 Time Machine and Spotlight
+  # exclusions already point. That works precisely because FileVault is off
+  # — the data volume is never gated, so a pre-login daemon can read ~.
+  #
+  # One-line disable: comment out this block and rebuild, then
+  # `tailscale serve --https=11434 off` to retract the tailnet route.
+  launchd.daemons.ollama = {
+    serviceConfig = {
+      ProgramArguments = ["${ollama}/bin/ollama" "serve"];
+      UserName = username;
+      RunAtLoad = true;
+      KeepAlive = true;
+      ThrottleInterval = 15;
+      # Keep launchd from throttling a long-running inference server.
+      ProcessType = "Interactive";
+      StandardOutPath = "${ollamaHome}/Library/Logs/ollama.log";
+      StandardErrorPath = "${ollamaHome}/Library/Logs/ollama.log";
+      EnvironmentVariables = {
+        # Loopback ONLY. Ollama has no authentication and its API can pull,
+        # delete and run models, so it must never bind a routable address;
+        # the tailnet reaches it through `tailscale serve` above.
+        OLLAMA_HOST = "127.0.0.1:11434";
+
+        # HOME is NOT inherited by a LaunchDaemon just because UserName is
+        # set — it would be unset or `/`, and Ollama would quietly choose a
+        # models directory outside ~/.ollama, i.e. outside the Phase 1
+        # backup/Spotlight exclusions, with nothing visibly broken. Both of
+        # these are set deliberately; do not "simplify" them away.
+        HOME = ollamaHome;
+        OLLAMA_MODELS = "${ollamaHome}/.ollama/models";
+
+        # 96GB is the reason this machine exists: keep models resident
+        # rather than paying the load cost on every request.
+        OLLAMA_KEEP_ALIVE = "30m";
+        OLLAMA_MAX_LOADED_MODELS = "2";
+      };
     };
   };
 
