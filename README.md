@@ -1,327 +1,90 @@
-# 🛠️ My Nix Config
+# nix-config
 
-A modular Nix flake managing **all my machines**: four Macs via nix-darwin and two
-NixOS VMs via the same repo — one lockfile, shared modules, machine metadata
-for conditional config.
+[![Eval](https://github.com/hodgesd/nix-config/actions/workflows/eval.yaml/badge.svg)](https://github.com/hodgesd/nix-config/actions/workflows/eval.yaml)
+[![Build](https://github.com/hodgesd/nix-config/actions/workflows/build.yaml/badge.svg)](https://github.com/hodgesd/nix-config/actions/workflows/build.yaml)
 
-## ✨ Features
+One Nix flake for every machine I own: four Macs on nix-darwin and two NixOS
+VMs on the HP mini PC's Proxmox host. One lockfile, shared modules, and a
+registry in `lib/machines.nix` whose fields (type, form factor, role, chip,
+user) drive every per-host branch. Hosts reach each other only over
+Tailscale. CI evaluates every host on each push and pushes closures to
+Cachix.
 
-- 🔧 Modular configuration structure
-- 🤖 Machine metadata system for conditional configs (`lib/machines.nix`)
-- 📦 Declarative package management (Nix + Homebrew on macOS)
-- 🏠 Home Manager integration (macOS; opt-in per NixOS host)
-- 🐧 NixOS hosts deployed from the Mac over Tailscale
-- 🔄 Easy rollbacks and reproducibility (generations on every machine)
-- ✅ CI: every host is evaluated and built on each PR, pushed to Cachix
+## Fleet
 
-## 📖 Documentation
+| Host | Machine | Role | Activate | Config |
+|---|---|---|---|---|
+| `mbp` | MacBook Pro 14" M3 Pro, 18 GB / 1 TB | daily driver; NAS backup, Gulfstream pubs watcher | `just`, on the box | `hosts/darwin/mbp/` |
+| `mini` | Mac mini M2 Pro, user `derrickhodges` | always-on; Hermes bridges (vault-mcp, apple-mcp) | `just`, on the box only | `hosts/darwin/mini/` |
+| `air` | MacBook Air 13" M1, 16 GB / 500 GB | spare laptop | `just`, on the box | common only |
+| `studio` | Mac Studio M5 Ultra, 96 GB / 2 TB | local AI inference (Ollama on the tailnet) | `just`, on the box | `hosts/darwin/studio/` |
+| `nixos-infra` | Proxmox VM, 2 vCPU, 39 GB disk | homelab: Docker apps behind tailnet sidecars, Gatus, Hermes, easy-afd, 21.hdgs.me, agent workbench | `just deploy`, from a Mac | `hosts/nixos/nixos-infra/` |
+| `t3-code` | Proxmox VM 101, 4 vCPU, 12 GB / 64 GB | T3 Code remote server, kept apart from the homelab | `just deploy t3-code switch <ssh-dest>` | `hosts/nixos/t3-code/` |
 
-- **[STRUCTURE.md](docs/STRUCTURE.md)** - Configuration layout and organization
-- **[ADDING_MACHINE.md](docs/ADDING_MACHINE.md)** - Step-by-step guide to add new machines
-- **[HOMEBREW.md](docs/HOMEBREW.md)** - Managing Homebrew packages and Mac App Store apps
-- **[CUSTOMIZATION.md](docs/CUSTOMIZATION.md)** - Common customization tasks
-- **[NIXOS-INFRA.md](docs/NIXOS-INFRA.md)** - Homelab VM architecture and disaster-recovery runbook
-- **[studio/](docs/studio/)** - Phased build-out of the Mac Studio AI server
+## Get started
 
-## 💻 Machines
-
-This table is the record of each machine's hardware (the flake registry in
-`lib/machines.nix` only carries what modules branch on: type, form factor,
-role, chip, user).
-
-| Hostname      | OS | Model                    | Role                    | User            | RAM / Storage | Cores (CPU/GPU) |
-|---------------|----|--------------------------|-------------------------|-----------------|---------------|-----------------|
-| `mbp`         | 🍏 | MacBook Pro M3 Pro 14"   | laptop, development     | `hodgesd`       | 18GB / 1TB    | 12 / 18         |
-| `mini`        | 🍏 | Mac Mini M2 Pro          | desktop, always-on server (Hermes bridges) | `derrickhodges` | — | —     |
-| `air`         | 🍏 | MacBook Air M1 13"       | laptop, development     | `hodgesd`       | 16GB / 500GB  | 8 / 7           |
-| `studio`      | 🍏 | Mac Studio M5 Ultra      | desktop, always-on AI inference server | `hodgesd` | 96GB / 2TB    | 30 / 64         |
-| `nixos-infra` | 🐧 | Proxmox VM (QEMU guest on the HP mini PC) | vm, homelab | `hodgesd`  | — / 39GB disk | 2 vCPU          |
-| `t3-code`     | 🐧 | Proxmox VM (QEMU guest on the HP mini PC, VMID 101) | vm, T3 Code remote server | `hodgesd` | 12GB / 64GB disk | 4 vCPU     |
-
-## 🍎 Mac Installation
-
-### Fresh Install (recommended path)
-
-On a brand-new Mac, `scripts/bootstrap.sh` does everything: Xcode CLT, Nix
-(Determinate Systems installer), host validation, build, and activation.
-Idempotent — safe to re-run.
+**New Mac.** The hostname must be a darwin host above. The script installs
+the Xcode CLT and Nix, builds, and activates. It is safe to re-run.
 
 ```bash
 git clone https://github.com/hodgesd/nix-config.git ~/nix-config
 cd ~/nix-config && ./scripts/bootstrap.sh <hostname>
 ```
 
-`<hostname>` must be one of the darwin machines above. Set the Mac's name first
-(or let the script infer it from `hostname -s`):
+**Mac with apps and data to keep.** Read [docs/MAC-SETUP.md](docs/MAC-SETUP.md)
+first. It covers the pre-install audit, Homebrew cleanup mode, and the
+one-time toggles after the first switch.
 
-```bash
-./scripts/set_mac_name.sh
-```
-
-⏱️ **Expected time:** 15–30 minutes. Then restart your shell: `exec zsh`.
-
-### Existing System (Mac with apps/data to preserve)
-
-Same as above, but **before** running bootstrap:
-
-1. Time Machine backup recommended.
-2. Run the audit to identify apps at risk:
-   ```bash
-   ./scripts/pre_install_audit.sh
-   ```
-3. Add apps you want kept to `hosts/common/darwin/homebrew.nix` (`casks = [...]`)
-   and make sure `onActivation.cleanup = "none"` while migrating.
-
-After verifying everything works, find stragglers with
-`./scripts/find_unmanaged_apps.sh` and optionally re-enable cleanup.
-
-### Post-Install Configuration
-
-**Wallpaper** — on every Mac (opt out per host with
-`majordouble.wallpaper.enable = false`), the switch selects `~/Documents/Wallpapers/` (iCloud-synced) as the wallpaper
-source via desktoppr (`modules/wallpaper.nix`), once per path. macOS 14+ has
-no scriptable way to turn on "Change picture", so rotation is a one-time
-toggle **after the first switch**: **System Settings** → **Wallpaper** →
-**Change picture** (pick the interval; enable **Show on all Spaces** if shown).
-Later switches leave that alone. Toggled before the first switch? It gets
-reset once — toggle again. A Mac without `~/Documents/Wallpapers` (or
-without the desktoppr cask) logs a warning at activation and is left alone.
-
-**Reduce transparency** — one-time toggle: **System Settings** →
-**Accessibility** → **Display** → **Reduce transparency**. Glass menus let
-windows behind SwiftBar menus show through as light and dark patches. Not set
-in nix: writing `com.apple.universalaccess` needs Full Disk Access for the
-terminal, and without it the switch aborts at "user defaults".
-
-**Hotkeys (skhd + Karabiner Elements)**
-
-1. Launch Karabiner Elements: `open -a Karabiner-Elements`
-2. Grant Accessibility permissions: **System Settings** → **Privacy & Security** →
-   **Accessibility** → Enable `skhd` and `Karabiner-Elements`
-3. skhd starts automatically at activation (`skhd --start-service` under the hood);
-   if it didn't, run `/opt/homebrew/bin/skhd --start-service` manually.
-4. Test: Press `shift + ctrl + alt + y` (creates `~/skhd-test.log`)
-
-**Note:** Enable "Launch at login" in Karabiner Elements preferences.
-
-**Manual App Setup**
-- Reminders Menubar: enable "Launch at login"; bind `meh-r`.
-- iStat Menus: add registration key.
-- Launch at login: Raycast, Rectangle, SwiftBar, Ice.
-
-**Manually Installed Apps**
-
-- [llm](https://llm.datasette.io/en/stable/) - CLI for LLMs with MLX support
-  ```bash
-  uv tool install llm --with sentencepiece
-  llm install llm-mlx llm-hacker-news
-  llm mlx download-model mlx-community/Mistral-7B-Instruct-v0.3-4bit
-  llm aliases set m7b mlx-community/Mistral-7B-Instruct-v0.3-4bit
-  llm models default m7b
-  ```
-
-**mbp → NAS backup** (`hosts/darwin/mbp/backup.nix`)
-
-A launchd user agent mirrors `~/.config/swiftbar-plugins` and `~/Documents/Maps`
-to the UNAS `backups` share (`backups/mbp/`). It wakes hourly but only runs when
-the NAS answers on SMB (home LAN) and the last success is >20 h old; versions come
-from NAS snapshots. Credentials: `secrets/mbp.yaml`, decrypted with the mbp's SSH
-host key (`host_mbp` in `.sops.yaml`). Log: `~/Library/Logs/mbp-backup.log`.
-Force a run: `rm ~/.local/state/mbp-backup/last-success && launchctl kickstart -k gui/$(id -u)/org.nixos.mbp-backup`.
-
-## 🤖 Local AI Server (`studio`)
-
-**Status: Phase 3 of 8 done — serving models over the tailnet.**
-
-The Mac Studio (M5 Ultra, 96GB) is a dedicated local-inference box: model
-serving only, deliberately nothing else. `nixos-infra` stays the monitoring
-and control plane and watches it; the `mini` keeps the Hermes Apple/vault
-bridges, which need its iCloud session. It carries no Apple ID.
-
-Ollama runs as a system LaunchDaemon bound to the node's MagicDNS name —
-`studio.jaguar-duckbill.ts.net:11434`, the tailscale interface alone.
-Nothing listens on the LAN or the internet; the API has no authentication,
-so the bind address *is* the access control. A system daemon rather than a
-user agent because FileVault is off here, so the box boots to loginwindow
-unattended and the service comes back with nobody logged in.
-
-Ollama ships two engines behind one API — llama.cpp for GGUF and MLX for
-Apple silicon — selected per model by tag. nixpkgs can't build the MLX
-runtime (`mlx.metallib` is precompiled Metal shaders, and compiling Metal
-needs full Xcode), so the config pulls that one artifact from upstream's
-own release of the same version, pinned by hash. One nix-managed daemon, no
-Homebrew, no Xcode. It is worth the trouble — measured warm on a prose
-prompt, `num_predict=200`:
-
-| Model | MLX | llama.cpp |
-|---|---|---|
-| `qwen3.6:35b-a3b` — MoE, 256 experts / 8 active | **239 tok/s** | 108 tok/s |
-| `qwen3.8:27b` — dense | **100 tok/s** | 50 tok/s |
-
-~2× either way. Benchmark honestly if you repeat this: both engines use
-MTP speculative decoding, so a predictable prompt ("count to 60") measures
-draft acceptance instead and reports up to 45% higher. See
-[`docs/studio/phase-3.md`](docs/studio/phase-3.md) for the full plan,
-per-phase notes, and the traps — several Ollama tags alias one manifest,
-so models must be identified by digest rather than name.
-
-Unlike the mini, FileVault is deliberately **off** here (decided
-2026-10-30): the box is physically secure, has no Apple ID and holds no
-personal data beyond re-downloadable model weights, and availability is
-the point. Apple silicon still encrypts the SSD in hardware. So it boots
-back on its own after a reboot or power cut, with no pre-boot unlock to
-perform.
-
-That turned out to be necessary but not sufficient: tested 2026-10-31,
-an unattended reboot came back with **no tailnet**. Tailscale's macOS GUI
-app launches at boot but can't establish the tunnel without a login
-session, so Ollama couldn't bind its MagicDNS name and the box was
-reachable only on the LAN. The fix is auto-login — available precisely
-because FileVault is off — which costs an unlocked desktop and is
-deliberately *not* copied to the mini. See
-[`docs/studio/phase-2.md`](docs/studio/phase-2.md) for the diagnosis and
-the `tailscaled`-as-system-daemon alternative.
-
-## 🐧 NixOS Homelab (`nixos-infra`)
-
-A Proxmox guest VM on the HP mini PC, fully managed by this flake
-(`hosts/nixos/nixos-infra/`). It runs:
-
-- **easy-afd** — Flask/gunicorn app behind nginx with a Let's Encrypt DNS-01 cert
-  (`afd.hdgs.me`, tailnet-only reachability)
-- **Docker compose estate** (`/srv/homelab`) — 8 apps, each with a Tailscale
-  sidecar: Actual Budget, Homepage, ntfy, AdGuard Home, LibreSpeed, MeTube,
-  changedetection.io, Stirling PDF (compose snapshot:
-  `stacks/homelab/docker-compose.yml`).
-  Homepage's own config (`/srv/homelab/homepage/config`) is runtime state,
-  not in the repo — update it by hand when a service is added or retired.
-- **Monitoring** — Gatus (`hosts/nixos/nixos-infra/gatus.nix`) at
-  https://status.jaguar-duckbill.ts.net, alerting via ntfy; the VM itself is
-  watched from outside by a healthchecks.io dead-man (`healthchecks.nix`)
-- **Hermes agent** (NousResearch) — Claude-backed agent in a container on the
-  host docker daemon; Telegram bot front end + `hermes` CLI on the VM
-- **Agent workbench** (`agent-workbench.nix`) — herdr multiplexer + OpenCode +
-  pi for an unprivileged `agent` user, reached only over Tailscale SSH
-  (`ssh -t agent@nixos-infra-1 herdr`); packages from numtide's `llm-agents`
-  flake input, one credit-limited OpenRouter key in sops. Workstation Macs
-  carry a herdr client (`herdr --remote workbench`); pi stays VM-only
-- **Nightly NAS backups** (03:30 → UNAS Pro 8) and weekly aeronautical-data refresh
-
-### Deploying (from the Mac)
-
-The Mac evaluates the flake; the VM builds and activates (the Mac can't build
-x86_64-linux). Runs as root over Tailscale SSH — no password prompts:
+**Homelab, from a Mac.** The Mac evaluates, the VM builds and activates over
+Tailscale SSH.
 
 ```bash
 just deploy-check   # dry-activate: show what would change
-just deploy         # build + switch
+just deploy         # activate nixos-infra
 ```
 
-Rollback on the VM: `sudo nixos-rebuild switch --rollback`, or pick the previous
-generation in the systemd-boot menu from the Proxmox console.
+## Everyday
 
-### DR fallback (Mac unavailable)
+| Command | Does |
+|---|---|
+| `just` | build and switch this Mac |
+| `just build` / `just trace` | build only / build with `--show-trace` |
+| `just deploy-check` / `just deploy` | dry-activate / activate nixos-infra |
+| `just update` | bump every input on the 26.05 release branches |
+| `just gc [days]` | drop generations older than 14 days, optimise the store |
+| `nix fmt <paths>` | format; see the note below |
 
-On the VM itself:
+Rollback is `darwin-rebuild switch --rollback` on a Mac and
+`sudo nixos-rebuild switch --rollback` on a VM.
 
-```bash
-git clone https://github.com/hodgesd/nix-config && cd nix-config
-sudo nixos-rebuild switch --flake .#nixos-infra
-```
+Pass `nix fmt` explicit paths. Bare `nix fmt` makes alejandra read stdin and
+fail on nix 2.34+, and `nix fmt .` would reformat the
+`hardware-configuration.nix` files, which must stay byte-for-byte as
+generated.
 
-### Notes
+Inputs: nixpkgs, nix-darwin and Home Manager track the 26.05 release
+branches, and `nixpkgs-unstable` supplies anything that must be fresh. The
+rest are sops-nix, nix-homebrew, hermes-agent, llm-agents, bj-drill and
+swiftbar_plugins. Renovate opens a weekly PR for the homelab images and one
+for the lockfile.
 
-- `/etc/nixos` on the VM is just a pointer README — this repo is authoritative.
-  (Pre-flake config preserved at `/etc/nixos.pre-flake.bak` for now.)
-- LAN SSH (`hodgesd@192.168.1.216`) is key-only and independent of Tailscale —
-  the break-glass path if the tailnet is down. Proxmox console is the last resort.
-- Secrets are root-only files on the VM (`/etc/easy-afd.env`,
-  `/etc/cloudflare-acme.env`, `/etc/nas-backup.credentials`, `/srv/homelab/.env`),
-  mirrored nightly to the NAS. Migration to sops-nix is in progress.
-- The easy-afd **app source** (`/srv/easy-afd`) is rsynced from the dev Mac and is
-  *not* managed by Nix — a from-scratch rebuild needs that rsync before the
-  service starts.
+## Secrets
 
-## 🚀 Quick Commands
+sops-nix. Ciphertext lives in `secrets/<host>.yaml` and is safe in git.
+Recipients are in `.sops.yaml`: the Mac editing key plus each host's SSH host
+key. Hosts decrypt to `/run/secrets` at activation, and a decrypt failure
+aborts before any service restarts. Edit with `sops secrets/<host>.yaml`.
 
-```bash
-# Macs: build and switch current host (uses justfile)
-just
+## Go deeper
 
-# Macs: build only (no activation)
-just build
-
-# Homelab: dry-run / deploy from the Mac
-just deploy-check
-just deploy
-
-# Update flake inputs (get latest packages)
-just update
-
-# Garbage collect generations older than 14 days
-just gc
-
-# Format nix files — pass explicit paths.
-# Bare `nix fmt` makes alejandra read stdin (fails "unexpected end of file")
-# on nix 2.34+, and `nix fmt .` reformats pre-existing drift, including the
-# hardware-configuration.nix files that must stay byte-for-byte as generated.
-nix fmt lib/machines.nix flake.nix
-
-# Rollback (macOS / NixOS)
-darwin-rebuild switch --rollback
-sudo nixos-rebuild switch --rollback
-```
-
-## 📁 Configuration Structure
-
-```
-nix-config/
-├── flake.nix              # Inputs + darwin/nixos configurations + formatter
-├── lib/
-│   ├── machines.nix       # Machine metadata registry (all machines)
-│   ├── helpers.nix        # mkDarwin + mkNixos builders
-│   └── options.nix        # majordouble.* option schema
-├── hosts/
-│   ├── common/
-│   │   ├── common-packages.nix   # Cross-platform CLI set (+ darwin-only extras)
-│   │   ├── darwin-common.nix     # macOS entry point
-│   │   ├── nixos-common.nix      # NixOS server baseline
-│   │   └── darwin/               # macOS modules (homebrew, defaults, desktop…)
-│   ├── darwin/<host>/     # Per-Mac overrides
-│   └── nixos/<host>/      # Per-NixOS-host config (hardware, services…)
-├── home/                  # Home Manager configurations (portable)
-├── modules/               # Custom modules (swiftbar, wallpaper…)
-├── stacks/                # Docker compose stacks (homelab)
-├── scripts/               # bootstrap + audit helper scripts
-└── docs/                  # Documentation
-```
-
-See [STRUCTURE.md](docs/STRUCTURE.md) for detailed information.
-
-## 🔧 Common Tasks
-
-- **Add a package (all machines)**: Edit `hosts/common/common-packages.nix`
-- **Add Homebrew app**: Edit `hosts/common/darwin/homebrew.nix`
-- **Change dock**: Edit `hosts/common/darwin/defaults/dock.nix` or host config
-- **Modify macOS settings**: Edit files in `hosts/common/darwin/defaults/`
-- **Add keyboard shortcut**: Edit `hosts/common/darwin/desktop/skhd.nix`
-- **Change a homelab service**: Edit `hosts/nixos/nixos-infra/*.nix`, then `just deploy-check`
-- **Add a new machine**: See [ADDING_MACHINE.md](docs/ADDING_MACHINE.md)
-- **Audit installed apps**: Run `./scripts/find_unmanaged_apps.sh` (after nix-darwin installed)
-- **Pre-install audit**: Run `./scripts/pre_install_audit.sh` (before nix-darwin installed)
-
-For more, see [CUSTOMIZATION.md](docs/CUSTOMIZATION.md).
-
-## 🛡️ Safety Features
-
-- **Rollback capability**: Every change creates a new generation you can roll back to
-- **Declarative**: Configuration is version-controlled and reproducible
-- **CI before switch**: every host evaluates + builds on each PR (Cachix-cached)
-- **App protection**: Set `cleanup = "none"` in homebrew.nix to prevent app removal
-
-## 📝 Helper Scripts
-
-- **`scripts/bootstrap.sh`** - Fresh Mac → fully-activated nix-darwin, idempotent
-- **`scripts/pre_install_audit.sh`** - Audit system BEFORE installing nix-darwin
-- **`scripts/find_unmanaged_apps.sh`** - Find apps not managed by nix AFTER installation
-- **`scripts/set_mac_name.sh`** - Set hostname to match configuration
+| I want to… | Read |
+|---|---|
+| understand the layout and how a host is assembled | [docs/STRUCTURE.md](docs/STRUCTURE.md) |
+| add a machine | [docs/ADDING_MACHINE.md](docs/ADDING_MACHINE.md) |
+| set up or migrate a Mac, run the audits | [docs/MAC-SETUP.md](docs/MAC-SETUP.md) |
+| change packages, macOS defaults, hotkeys, Homebrew | [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md), [docs/HOMEBREW.md](docs/HOMEBREW.md) |
+| operate or recover the homelab | [docs/NIXOS-INFRA.md](docs/NIXOS-INFRA.md), [status board](https://status.jaguar-duckbill.ts.net) |
+| run models on the studio | [docs/studio/](docs/studio/) |
+| work on Hermes | [docs/hermes/](docs/hermes/) |
+| Home Assistant, HN summaries, the Gatus decision | [HOME-ASSISTANT.md](docs/HOME-ASSISTANT.md), [HN-SUMMARIES.md](docs/HN-SUMMARIES.md), [GATUS-EVAL.md](docs/GATUS-EVAL.md) |
+| CI, Cachix, Renovate | [.github/workflows/README.md](.github/workflows/README.md) |

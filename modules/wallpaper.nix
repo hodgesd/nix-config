@@ -12,7 +12,8 @@
 # scriptable flips it: desktoppr has no flag, and System Events'
 # `picture rotation` write fails with -10000. So rotation is: Nix selects the
 # folder here, then a one-time toggle in System Settings → Wallpaper
-# ("Change picture" + interval; "Show on all Spaces" if offered). See README.
+# ("Change picture" + interval; "Show on all Spaces" if offered). See
+# docs/MAC-SETUP.md.
 #
 # Why not a launchd loop calling `desktoppr <random file>`: that NSWorkspace
 # call only changes the current Space per screen; the native engine is
