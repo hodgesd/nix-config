@@ -569,7 +569,7 @@ ACCEPTANCE
 
 ---
 
-## PHASE 4 — Monitoring from nixos-infra (no studio hardware needed to write; needs it to verify)
+## PHASE 4 — Monitoring from nixos-infra — WRITTEN 2026-10-31, pending deploy; see docs/studio/phase-4.md
 
 ```
 GOAL: nixos-infra watches studio the same way it watches the mini.

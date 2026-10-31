@@ -154,6 +154,43 @@ in {
                 }
               ];
             })
+          # The Mac Studio AI server. Two checks on purpose, because they
+          # answer different questions and the difference is the whole
+          # point: ping says the box is alive, the HTTP check says Ollama
+          # is actually serving. Every studio failure so far (three in
+          # one evening, docs/studio/phase-2.md) was "box fine, not
+          # serving" — invisible to a ping and invisible from outside
+          # until someone happened to try it.
+          #
+          # failure-threshold 5 on the ping for the same reason as the
+          # mini's: reachability-only over the tailnet, where a path
+          # relayed through DERP can blip. The HTTP check keeps the
+          # default 3, so on a real outage it pages first (~3 min) and
+          # the ping follows (~5 min) — and which ones are red tells you
+          # which half is broken without logging in.
+          ((icmp "studio" "ping" "100.126.144.70")
+            // {
+              alerts = [
+                {
+                  type = "ntfy";
+                  failure-threshold = 5;
+                }
+              ];
+            })
+          # Plain HTTP on :11434, like the Home Assistant check above and
+          # for the same reason: the tailnet is WireGuard-encrypted end to
+          # end, and there is no `tailscale serve` in front of Ollama (it
+          # validates the Host header, which the proxy rewrites — see
+          # docs/studio/phase-3.md). The URL must stay the MagicDNS name:
+          # Ollama answers 403 to any Host it does not recognise, so
+          # polling the 100.x address directly would page on a healthy box.
+          #
+          # /api/version is deliberately the cheapest possible route — it
+          # loads no model and holds no RAM. len([BODY].version) proves
+          # Ollama itself answered with JSON rather than something
+          # returning 200 in its place.
+          (http "studio" "ollama" "http://studio.jaguar-duckbill.ts.net:11434/api/version" ["len([BODY].version) > 0"])
+
           # UNAS Pro 8 on the LAN — backup and Data share target.
           (icmp "nas" "ping" "192.168.1.142")
           # Home Assistant Yellow — the house. A separate box, so unlike the
