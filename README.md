@@ -169,11 +169,18 @@ Unlike the mini, FileVault is deliberately **off** here (decided
 2026-10-30): the box is physically secure, has no Apple ID and holds no
 personal data beyond re-downloadable model weights, and availability is
 the point. Apple silicon still encrypts the SSD in hardware. So it boots
-back to loginwindow on its own after a reboot or power cut, with no
-pre-boot unlock to perform — which is what lets the serving daemon start
-with nobody logged in. Whether the *tailnet* also comes up without a GUI
-session is still untested (Phase 2); if it doesn't, the box is
-unreachable after an unattended reboot however well Ollama is configured.
+back on its own after a reboot or power cut, with no pre-boot unlock to
+perform.
+
+That turned out to be necessary but not sufficient: tested 2026-10-31,
+an unattended reboot came back with **no tailnet**. Tailscale's macOS GUI
+app launches at boot but can't establish the tunnel without a login
+session, so Ollama couldn't bind its MagicDNS name and the box was
+reachable only on the LAN. The fix is auto-login — available precisely
+because FileVault is off — which costs an unlocked desktop and is
+deliberately *not* copied to the mini. See
+[`docs/studio/phase-2.md`](docs/studio/phase-2.md) for the diagnosis and
+the `tailscaled`-as-system-daemon alternative.
 
 ## 🐧 NixOS Homelab (`nixos-infra`)
 

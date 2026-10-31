@@ -105,6 +105,36 @@ in {
   # Remote Login remains load-bearing — it is how this box is administered
   # headlessly over the tailnet — just no longer for pre-boot unlock.
 
+  # Auto-login, and it is load-bearing rather than a convenience.
+  #
+  # Measured 2026-10-31 (docs/studio/phase-2.md): after an unattended
+  # reboot this box came back with NO tailnet. Tailscale's macOS GUI app
+  # launches at boot but cannot establish the tunnel without a login
+  # session — no `utun` interface exists at all, and its CLI hangs
+  # (exit 124) because the backend lives in the GUI session. Ollama then
+  # cannot bind its MagicDNS name and sits in `spawn scheduled` with
+  # `last exit code = 78: EX_CONFIG`, retrying forever against a
+  # prerequisite that never arrives. The machine was only reachable on
+  # the LAN.
+  #
+  # So a session has to exist from boot. This is available only because
+  # FileVault is off, and the cost is an unlocked desktop — acceptable
+  # here (physically secure, no Apple ID, no personal data, only
+  # re-downloadable weights) and NOT acceptable on the mini, which holds
+  # an iCloud session. Do not copy this there.
+  #
+  # INCOMPLETE ON ITS OWN: macOS also needs the obfuscated password in
+  # /etc/kcpassword, which this option does not write — without it the
+  # user is merely preselected at loginwindow. That step is manual
+  # (System Settings > Users & Groups > "Automatically log in as"),
+  # deliberately, because the declarative alternative is storing the
+  # login password in sops to be written back out in a trivially
+  # reversible format. Declared here anyway so the intent is in git.
+  #
+  # One-line disable: drop this and turn auto-login off in System
+  # Settings — then accept LAN-only access after a reboot.
+  system.defaults.loginwindow.autoLoginUser = username;
+
   # No desktop, so no wallpaper. modules/wallpaper.nix is on by default for
   # every Mac and warns on every activation here that
   # ~/Documents/Wallpapers does not exist. Harmless (it skips and the
@@ -126,9 +156,10 @@ in {
     };
   };
 
-  # Three things this box depends on are NOT expressible in nix-darwin
+  # Four things this box depends on are NOT expressible in nix-darwin
   # 26.05, so they are bootstrap steps recorded in docs/studio/phase-1.md
-  # rather than silently omitted:
+  # rather than silently omitted (the fourth, auto-login's
+  # /etc/kcpassword, is covered at the autoLoginUser block below):
   #   - Remote Login (SSH). `services.openssh` here only runs ssh-keygen
   #     for host keys — its activation script does nothing else, so
   #     enabling it would not turn Remote Login on. `systemsetup
