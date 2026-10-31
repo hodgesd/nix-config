@@ -32,7 +32,7 @@ role, chip, user).
 | `mbp`         | 🍏 | MacBook Pro M3 Pro 14"   | laptop, development     | `hodgesd`       | 18GB / 1TB    | 12 / 18         |
 | `mini`        | 🍏 | Mac Mini M2 Pro          | desktop, always-on server (Hermes bridges) | `derrickhodges` | — | —     |
 | `air`         | 🍏 | MacBook Air M1 13"       | laptop, development     | `hodgesd`       | 16GB / 500GB  | 8 / 7           |
-| `studio`      | 🍏 | Mac Studio M5 Ultra      | desktop, always-on AI inference server | `hodgesd` | 96GB / —  | —               |
+| `studio`      | 🍏 | Mac Studio M5 Ultra      | desktop, always-on AI inference server | `hodgesd` | 96GB / 2TB    | 30 / 64         |
 | `nixos-infra` | 🐧 | Proxmox VM (QEMU guest on the HP mini PC) | vm, homelab | `hodgesd`  | — / 39GB disk | 2 vCPU          |
 
 ## 🍎 Mac Installation
