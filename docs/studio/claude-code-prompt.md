@@ -81,10 +81,24 @@ ENVIRONMENT
 - Model storage decision (made): internal SSD, default ~/.ollama.
   Models are re-downloadable — exclude from Time Machine and Spotlight,
   never back them up.
-- Hardware facts (from me, 2026-10-30): 96GB unified memory. CPU/GPU
-  core counts: verify on the machine in Phase 2 (`sysctl hw.ncpu`,
-  `system_profiler SPDisplaysDataType`) — do not infer from the model
-  name.
+- Hardware facts, read off the machine 2026-10-30 (settled, do not
+  re-derive): 96GB unified memory (hw.memsize 103079215104 = 98,304
+  MB), 30 CPU cores (perflevel0 10 / perflevel1 20), 64 GPU cores, 2TB
+  internal SSD, and `iogpu.wired_limit_mb` currently 0 — i.e. unset,
+  running the implicit macOS default.
+- macOS version: **27.2 (build 26B123)** — the Studio shipped newer
+  than the 26.x this plan was drafted against. Consequences to carry
+  into every phase:
+    * Both recovery features are available (SSH FileVault unlock needs
+      26+, "start up when power is connected" needs 26.5+).
+    * `hosts/common/darwin/homebrew.nix` already handles macOS > 26:
+      its activation script injects HOMEBREW_FAKE_MACOS=26.0 so `brew
+      bundle` does not abort. That path WILL be exercised on first
+      activation — expect it, and do not "fix" it.
+    * nix-darwin 26.05 and the pinned brew predate macOS 27, so treat
+      first-activation oddities as version skew before suspecting the
+      studio config. CLAUDE.md already records one macOS 27 bug
+      (calendr/remindd, 2026-09-16).
 - Availability target: best-effort, not production. My $100/mo Claude
   subscription continues — local inference is a complement, never the
   only path. A studio outage is inconvenient, not critical. When a
@@ -209,12 +223,13 @@ TASKS
 3. GPU wired-memory ceiling: a launchd DAEMON (root; not a user agent)
    that runs at load:
      sysctl iogpu.wired_limit_mb=83500
-   (85% of the confirmed 96GB = 98,304 MB; the macOS default of
-   ~65–75% would strand roughly 10–20GB of model headroom). The sysctl
-   does not persist across reboots, hence launchd. Sanity-check the
-   live default on the machine before assuming the gain, and leave
-   ~15% for the OS and the serving process itself. One-line disable:
-   comment out the daemon, rebuild.
+   (85% of the confirmed 96GB = 98,304 MB, leaving ~14.5GB for the OS
+   and the serving process). The live value reads 0, which means
+   "unset — use the implicit default" rather than "no limit", so the
+   gain over the ~65–75% default is real but bounded: roughly 9–20GB
+   of extra model headroom. The sysctl does not persist across
+   reboots, hence launchd. One-line disable: comment out the daemon,
+   rebuild.
 4. Backup/indexing hygiene for the future model/cache dirs,
    declaratively where possible. Cover BOTH engines' storage now so
    Phase 3b doesn't need a second mechanism: ~/.ollama (Ollama blobs)
@@ -760,5 +775,5 @@ ACCEPTANCE
 | 4 | Remote builder (Phase 5) | **Decided: yes** |
 | 5 | Cask role split (Phase 6) | Pending — needs mini-removal list approval |
 | 6 | Public access (Phase 7) + chat-vs-API shape | Deferred — needs workplace-policy check + explicit go |
-| 7 | Studio RAM: **96GB confirmed** (sysctl N = 83,500). Core counts: verify on the machine in Phase 2, then size Phase 5 maxJobs | **Resolved (RAM)** / cores at Phase 2 |
+| 7 | Studio hardware: **96GB / 30 CPU / 64 GPU / 2TB, macOS 27.2** — sysctl N = 83,500; Phase 5 maxJobs sized off 30 cores | **Resolved 2026-10-30** |
 | 8 | UPS for studio + network gear + Proxmox host (graceful-shutdown signaling; macOS supports UPS shutdown policies in Energy settings) | Pending — hardware purchase, my call; plan assumes none until then |
