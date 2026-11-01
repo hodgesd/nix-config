@@ -170,14 +170,38 @@ no business in a binary cache.
 |---|---|---|
 | — | — | **None added.** `stt.openai.api_key` is the literal placeholder `unused-local-endpoint`; no secret exists for this path and none should be created. |
 
-## Deploy
+## Deploy — MINI FIRST, then the VM
+
+The order is load-bearing and the first draft of this doc had it
+backwards. `just deploy` flips `stt.provider` to `openai`, which points
+Hermes at `mini:8323`. Do that before the mini is serving and **every
+voice note fails** until the second deploy lands. Mini first means the
+endpoint exists before anything is told to use it, and leaves the
+in-container model serving the whole time — so a bad mini deploy costs
+nothing.
+
+**1. On the mini** (Macs deploy themselves; `just deploy` is only for the
+NixOS VMs). Expect a ~2.9GiB model fetch, from Cachix if CI's push
+covered it:
 
 ```bash
-just deploy-check && just deploy        # the VM side
-# then, on the mini:
 darwin-rebuild switch --flake .
 tailscale serve --bg --https=8323 http://127.0.0.1:9104   # ONE TIME
 ```
+
+**2. Verify the endpoint before touching the VM** — items 1 and 2 of the
+manual test script below. If either fails, stop: Hermes is still on the
+in-container model and nothing is broken yet.
+
+**3. Only then, the VM:**
+
+```bash
+just deploy-check && just deploy
+```
+
+**Rollback** is the same order reversed: revert `stt.provider` to
+`"local"` and `just deploy` the VM first, which restores transcription
+immediately; the mini daemon can stay running harmlessly.
 
 The `tailscale serve` mapping persists in tailscaled state and is not
 managed by nix — same as 8321 and 8322.
