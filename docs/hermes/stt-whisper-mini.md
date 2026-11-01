@@ -170,14 +170,69 @@ no business in a binary cache.
 |---|---|---|
 | — | — | **None added.** `stt.openai.api_key` is the literal placeholder `unused-local-endpoint`; no secret exists for this path and none should be created. |
 
-## Deploy
+## Deploy — MINI FIRST, then the VM
+
+The order is load-bearing and the first draft of this doc had it
+backwards. `just deploy` flips `stt.provider` to `openai`, which points
+Hermes at `mini:8323`. Do that before the mini is serving and **every
+voice note fails** until the second deploy lands. Mini first means the
+endpoint exists before anything is told to use it, and leaves the
+in-container model serving the whole time — so a bad mini deploy costs
+nothing.
+
+**1. On the mini** (Macs deploy themselves; `just deploy` is only for the
+NixOS VMs). Expect a ~2.9GiB model fetch, from Cachix if CI's push
+covered it:
 
 ```bash
-just deploy-check && just deploy        # the VM side
-# then, on the mini:
 darwin-rebuild switch --flake .
 tailscale serve --bg --https=8323 http://127.0.0.1:9104   # ONE TIME
 ```
+
+**2. Verify the endpoint before touching the VM** — items 1 and 2 of the
+manual test script below. Transcription is still served by the
+in-container model at this point, so a failure here breaks nothing.
+
+If either check fails, **close the endpoint before you walk away.**
+Stopping is not enough: the daemon keeps serving, unauthenticated, with
+no consumer at all — the same zero-benefit exposure described under
+Rollback, and the most likely moment to leave it behind, because this is
+the branch where you are debugging rather than finishing. On the mini:
+
+```bash
+tailscale serve --https=8323 off
+sudo launchctl bootout system/org.nixos.whisper-stt
+```
+
+Both are safe to re-run; redo step 1's `tailscale serve` and
+`darwin-rebuild switch` when you come back to it.
+
+**3. Only then, the VM:**
+
+```bash
+just deploy-check && just deploy
+```
+
+**Rollback** is the same order reversed: revert `stt.provider` to
+`"local"` and `just deploy` the VM first, which restores transcription
+immediately.
+
+Then close the endpoint — do **not** leave the mini half-deployed. With
+Hermes back on the in-container model the daemon has no consumer, but
+`tailscale serve` keeps the `8323` mapping live, and that endpoint has no
+authentication and leaks a scratch file on every failed upload (the
+reaper bounds it hourly; it is not a quota). A rolled-back service is
+therefore pure attack surface with zero benefit — anyone on the tailnet
+can still flood it. On the mini:
+
+```bash
+tailscale serve --https=8323 off
+sudo launchctl bootout system/org.nixos.whisper-stt
+```
+
+Make it permanent by dropping `./whisper-stt.nix` from the mini's
+imports and the `8323` line from `hermes-egress.nix` (see How to disable
+below).
 
 The `tailscale serve` mapping persists in tailscaled state and is not
 managed by nix — same as 8321 and 8322.
@@ -186,7 +241,7 @@ managed by nix — same as 8321 and 8322.
 
 | To undo | Do this |
 |---|---|
-| the whole move | revert `stt.provider` to `"local"` in `hermes.nix`, deploy the VM. The in-container model returns immediately; the mini daemon becomes harmless. |
+| the whole move | revert `stt.provider` to `"local"` in `hermes.nix`, deploy the VM. The in-container model returns immediately. The mini daemon then has no consumer but **keeps serving** — unauthenticated, still leaking a scratch file per failed upload — so finish with the three rows below rather than stopping here. |
 | the mini service too | drop `./whisper-stt.nix` from `hosts/darwin/mini/default.nix` imports, `darwin-rebuild switch` |
 | the network path | remove the `8323` line from `hermes-egress.nix`, deploy |
 | the serve mapping | `tailscale serve --https=8323 off` on the mini |
