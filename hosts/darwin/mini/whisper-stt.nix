@@ -24,7 +24,6 @@
 # Disable: drop this file from default.nix's imports, revert hermes.nix's
 # `stt.provider` to "local", deploy both. The in-container model returns.
 {
-  username,
   pkgs,
   lib,
   ...
@@ -171,8 +170,20 @@ in {
       # rather than a bind retry.
       KeepAlive = true;
       ThrottleInterval = 15;
-      StandardOutPath = "/Users/${username}/Library/Logs/whisper-stt.log";
-      StandardErrorPath = "/Users/${username}/Library/Logs/whisper-stt.log";
+      # /var/log, NOT ~/Library/Logs. These are SYSTEM daemons: they run
+      # as root, and launchd opens these paths with O_CREAT|O_APPEND and
+      # no O_NOFOLLOW. A log inside a user-writable directory therefore
+      # lets any process running as that user swap the file for a
+      # symlink and have ROOT append to the target. CWE-59, raised in
+      # review on PR #115.
+      #
+      # The two bridges in default.nix do write to ~/Library/Logs, and
+      # that is fine for them -- they are launchd.user.agents running AS
+      # the user, so no privilege boundary is crossed. I copied their
+      # path without noticing that this service crosses one. /var/log is
+      # root-owned, matching studio's gpu-wired-limit daemon.
+      StandardOutPath = "/var/log/whisper-stt.log";
+      StandardErrorPath = "/var/log/whisper-stt.log";
     };
   };
 
@@ -209,7 +220,8 @@ in {
       # One-shot per fire: it prunes and exits. KeepAlive would respawn
       # it in a loop (the lesson from studio's gpu-wired-limit daemon).
       KeepAlive = false;
-      StandardErrorPath = "/Users/${username}/Library/Logs/whisper-stt.log";
+      # Root daemon, root-owned log — same reasoning as above.
+      StandardErrorPath = "/var/log/whisper-stt.log";
     };
   };
 

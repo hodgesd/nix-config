@@ -94,6 +94,19 @@ gap between "the binary works" and "the binary works under launchd":
   **Residual, stated plainly: that bounds growth, it is not a quota.** A
   flood faster than hourly still fills the disk. The real fix is
   authentication in front of the endpoint — see the posture note below.
+- **The log path was a root-opened file in a user-writable directory.**
+  Both daemons run as root, and launchd opens `StandardOutPath` /
+  `StandardErrorPath` with `O_CREAT|O_APPEND` and no `O_NOFOLLOW` — so
+  any process running as the login user could swap
+  `~/Library/Logs/whisper-stt.log` for a symlink and have **root** append
+  to the target. CWE-59. Moved to `/var/log/whisper-stt.log`, root-owned,
+  matching studio's `gpu-wired-limit` daemon.
+
+  The two bridges in `mini/default.nix` legitimately do log to
+  `~/Library/Logs`: they are `launchd.user.agents` running *as* the user,
+  so no privilege boundary is crossed. I copied their path without
+  noticing that a system daemon crosses one — which is the same mistake
+  as the three above, in a fifth place.
 
 ### `provider = "openai"` does not mean OpenAI
 
@@ -188,7 +201,9 @@ Nothing to rotate — no secret was added.
    ```
    Expect `{"text":"..."}`. The first call pays the model load; subsequent
    ones should be fast. A 400 mentioning audio data means `ffmpeg` is not
-   on the daemon's PATH.
+   on the daemon's PATH. Logs for both daemons are
+   `/var/log/whisper-stt.log` (root-owned — `sudo tail`), not
+   `~/Library/Logs` where the bridges write.
 2. Through the tailnet, from nixos-infra **as the hermes UID** — your own
    user bypasses the egress chain:
    ```bash

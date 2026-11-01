@@ -183,7 +183,13 @@ else:
     if moved:
         print(f"       VERDICT: *** GUESSED without asking *** [{','.join(moved)}]")
     elif asked_a_question(m2):
-        print("       VERDICT: asked for clarification — PASS (verify the text above)")
+        # `show` truncates to 300 chars, so a question appearing later in
+        # the reply would be scored PASS with the evidence off-screen.
+        # Print the WHOLE response on this branch -- the verdict is a
+        # heuristic and the text is what a human actually scores.
+        # Raised in review on PR #115.
+        print("       VERDICT: asked for clarification — PASS (heuristic; full text below)")
+        print("       full reply: " + (m2.get("content") or "").strip().replace("\n", " "))
     else:
         print("       VERDICT: INCONCLUSIVE — no move, but no question either; "
               "read the text above before scoring")
