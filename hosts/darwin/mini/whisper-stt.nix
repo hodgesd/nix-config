@@ -121,7 +121,15 @@ in {
           # reasoning as wait4path above — these run BEFORE the store is
           # guaranteed, and /bin is always there. mkdir -m only applies on
           # creation, hence the explicit chmod for a pre-existing dir.
-          "/bin/mkdir -p ${tmpDir} && /bin/chmod 700 ${tmpDir} &&"
+          # `cd` is a shell builtin and runs AFTER mkdir, which is the
+          # only safe place for it. A launchd `WorkingDirectory = tmpDir`
+          # looks equivalent and is not: launchd chdir()s before exec, so
+          # on a first deploy -- the mini's actual state -- it would fail
+          # to enter a directory this line has not created yet, and the
+          # job would die before /bin/sh ever ran. Caught in review on
+          # PR #115 after I added it as "insurance"; it was a bootstrap
+          # deadlock. --tmp-dir is absolute and does the real work.
+          "/bin/mkdir -p ${tmpDir} && /bin/chmod 700 ${tmpDir} && cd ${tmpDir} &&"
           "exec ${whisper}/bin/whisper-server"
           "--model ${model}"
           "--tmp-dir ${tmpDir}"
@@ -141,9 +149,6 @@ in {
         ])
       ];
       RunAtLoad = true;
-      # Insurance for anything else that resolves a relative path; the
-      # transcode path is already absolute via --tmp-dir above.
-      WorkingDirectory = tmpDir;
       # A crash relaunches. Unlike studio's Ollama there is no address to
       # race for (loopback is always up), so this is plain crash-restart
       # rather than a bind retry.
