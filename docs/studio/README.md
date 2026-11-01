@@ -2,10 +2,12 @@
 
 **Status: Phases 0–4 done — serving models over the tailnet, watched from
 nixos-infra.** Phase 5 (remote Nix builder) was declined on a
-measurement; 6 and 7 are decision-gated. Phase 8 — letting Hermes use the
-local model — is planned but **not started**; see
-[`phase-8.md`](phase-8.md), which records why Hermes cannot reach studio
-yet.
+measurement; 6 and 7 are decision-gated. Phase 8 — letting Hermes use
+the local model — has its **repo-side wiring landed** (the egress line
+and a named `providers.studio` provider) but is **not deployed or
+verified**, and `model.default` still routes every turn to Sonnet. See
+[`phase-8.md`](phase-8.md) for the four prerequisites it had to resolve
+first.
 
 The Mac Studio (M5 Ultra, 96GB) is a dedicated local-inference box: model
 serving only, deliberately nothing else. `nixos-infra` stays the monitoring

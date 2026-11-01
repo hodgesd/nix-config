@@ -50,6 +50,19 @@
   };
 
   port = 9104; # loopback; 9102 = vault-mcp, 9103 = apple-mcp
+
+  # --convert's scratch space. NOT optional: whisper-server v1.8.4
+  # defaults `tmp_dir` to "." and builds the transcode path as
+  # tmp_dir + "/whisper-server-<ts>-<rand>.wav" (generate_temp_filename),
+  # while a launchd daemon starts with cwd = "/" — which is not writable.
+  # Every OGG upload would therefore fail its ffmpeg step, i.e. every
+  # Telegram voice note, which is the one thing this service exists to
+  # do. Caught in review on PR #115 before it ever ran.
+  #
+  # Root-owned 0700 rather than bare /tmp: the daemon runs as root (no
+  # UserName), so a private directory avoids any shared-/tmp race on a
+  # filename this server chooses, not us.
+  tmpDir = "/var/tmp/whisper-stt";
 in {
   # Model weights held resident: ~3GiB plus Metal working set. The mini
   # is an M2 Pro also running both MCP bridges — check `vm_stat` after
@@ -104,8 +117,14 @@ in {
         # provider is ever reverted to "local". Keep them in sync.
         (lib.concatStringsSep " " [
           "/bin/wait4path ${whisper}/bin/whisper-server &&"
+          # /bin/mkdir and /bin/chmod, not coreutils from the store: same
+          # reasoning as wait4path above — these run BEFORE the store is
+          # guaranteed, and /bin is always there. mkdir -m only applies on
+          # creation, hence the explicit chmod for a pre-existing dir.
+          "/bin/mkdir -p ${tmpDir} && /bin/chmod 700 ${tmpDir} &&"
           "exec ${whisper}/bin/whisper-server"
           "--model ${model}"
+          "--tmp-dir ${tmpDir}"
           "--host 127.0.0.1"
           "--port ${toString port}"
           "--request-path /v1/audio"
@@ -122,6 +141,9 @@ in {
         ])
       ];
       RunAtLoad = true;
+      # Insurance for anything else that resolves a relative path; the
+      # transcode path is already absolute via --tmp-dir above.
+      WorkingDirectory = tmpDir;
       # A crash relaunches. Unlike studio's Ollama there is no address to
       # race for (loopback is always up), so this is plain crash-restart
       # rather than a bind retry.

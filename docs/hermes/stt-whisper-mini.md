@@ -50,6 +50,22 @@ Read out of whisper.cpp v1.8.4's own `examples/server/server.cpp`:
 Also confirmed: `metalSupport ? isDarwin && isAarch64` in nixpkgs, so
 Metal is on by default and no override is needed.
 
+### The bug review caught before it ran
+
+`whisper-server` defaults `tmp_dir` to `"."` and builds its transcode
+path as `tmp_dir + "/whisper-server-<ts>-<rand>.wav"`. A launchd daemon
+starts with cwd `/`, which is not writable — so **every** OGG upload
+would have failed its ffmpeg step, i.e. every Telegram voice note, which
+is the single thing this service exists to do. The `--convert` discovery
+above was necessary but not sufficient.
+
+Fixed with an explicit `--tmp-dir /var/tmp/whisper-stt`, created and
+chmod-ed 0700 at launch via `/bin/mkdir` and `/bin/chmod` (outside the
+store, same reasoning as `wait4path`), plus `WorkingDirectory` as
+insurance for anything else resolving a relative path. Root-owned rather
+than bare `/tmp` because the daemon runs as root and the server, not us,
+chooses the filename.
+
 ### `provider = "openai"` does not mean OpenAI
 
 It selects the openai-multipart *wire* and points it at the mini. **Audio

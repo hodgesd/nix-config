@@ -249,9 +249,13 @@ pair.
   shows the request. Not inferred from Hermes's side.
 - With studio down, Hermes degrades per its config and recovers when
   studio returns.
-- `sudo -u hermes curl` reaches studio; the LAN and the public internet
-  remain unreachable from that UID (`10/8`, `192.168/16`, the rest of
-  CGNAT still rejected).
+- `sudo -u hermes curl` reaches studio, and the **private** ranges stay
+  blocked from that UID (`10/8`, `172.16/12`, `192.168/16`, link-local,
+  and the rest of CGNAT). Public HTTPS stays **allowed** — the jail's
+  model is "no east-west, https-only north-south", so `tcp/443` to the
+  internet is deliberate and must keep working (Telegram long-poll and
+  OpenRouter depend on it). Adding studio narrows nothing; it opens one
+  host and port inside CGNAT.
 
 ## The trial protocol
 

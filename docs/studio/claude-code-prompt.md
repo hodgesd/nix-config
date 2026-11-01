@@ -772,11 +772,14 @@ ACCEPTANCE
 > 403s on Host validation; (3) these Qwen builds think by default and
 > reasoning counts against `max_tokens`, so a capped `/v1` request
 > returns **empty content** — `reasoning_effort: "none"` is the lever,
-> `chat_template_kwargs` is ignored; (4) task 2 below is the real
-> unknown — hermes-agent resolves the provider from `.env` credentials
-> and has ignored a disagreeing `model.base_url` before (hermes.nix:111),
-> so the named-endpoint form is required, and its syntax must be read
-> from the deployed version on the VM.
+> `chat_template_kwargs` is ignored; (4) **task 2 below is RESOLVED and
+> already landed** — do NOT repeat the `model.base_url` investigation.
+> hermes-agent resolves the provider from `.env` credentials and ignored
+> a disagreeing `model.base_url` for three weeks in 2026-09
+> (hermes.nix:111); the fix is the NAMED `providers.studio` form, read
+> out of the pinned rev's `runtime_provider.py`, and it is in hermes.nix
+> now. The only open CLI question is whether `hermes cron edit --model`
+> accepts a provider-qualified id that selects that entry.
 
 ```
 GOAL: hermes-agent on nixos-infra can route requests to studio's
