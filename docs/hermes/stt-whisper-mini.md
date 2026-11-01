@@ -190,8 +190,22 @@ tailscale serve --bg --https=8323 http://127.0.0.1:9104   # ONE TIME
 ```
 
 **2. Verify the endpoint before touching the VM** — items 1 and 2 of the
-manual test script below. If either fails, stop: Hermes is still on the
-in-container model and nothing is broken yet.
+manual test script below. Transcription is still served by the
+in-container model at this point, so a failure here breaks nothing.
+
+If either check fails, **close the endpoint before you walk away.**
+Stopping is not enough: the daemon keeps serving, unauthenticated, with
+no consumer at all — the same zero-benefit exposure described under
+Rollback, and the most likely moment to leave it behind, because this is
+the branch where you are debugging rather than finishing. On the mini:
+
+```bash
+tailscale serve --https=8323 off
+sudo launchctl bootout system/org.nixos.whisper-stt
+```
+
+Both are safe to re-run; redo step 1's `tailscale serve` and
+`darwin-rebuild switch` when you come back to it.
 
 **3. Only then, the VM:**
 
