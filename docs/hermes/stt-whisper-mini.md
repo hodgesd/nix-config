@@ -201,7 +201,24 @@ just deploy-check && just deploy
 
 **Rollback** is the same order reversed: revert `stt.provider` to
 `"local"` and `just deploy` the VM first, which restores transcription
-immediately; the mini daemon can stay running harmlessly.
+immediately.
+
+Then close the endpoint — do **not** leave the mini half-deployed. With
+Hermes back on the in-container model the daemon has no consumer, but
+`tailscale serve` keeps the `8323` mapping live, and that endpoint has no
+authentication and leaks a scratch file on every failed upload (the
+reaper bounds it hourly; it is not a quota). A rolled-back service is
+therefore pure attack surface with zero benefit — anyone on the tailnet
+can still flood it. On the mini:
+
+```bash
+tailscale serve --https=8323 off
+sudo launchctl bootout system/org.nixos.whisper-stt
+```
+
+Make it permanent by dropping `./whisper-stt.nix` from the mini's
+imports and the `8323` line from `hermes-egress.nix` (see How to disable
+below).
 
 The `tailscale serve` mapping persists in tailscaled state and is not
 managed by nix — same as 8321 and 8322.
@@ -210,7 +227,7 @@ managed by nix — same as 8321 and 8322.
 
 | To undo | Do this |
 |---|---|
-| the whole move | revert `stt.provider` to `"local"` in `hermes.nix`, deploy the VM. The in-container model returns immediately; the mini daemon becomes harmless. |
+| the whole move | revert `stt.provider` to `"local"` in `hermes.nix`, deploy the VM. The in-container model returns immediately. The mini daemon then has no consumer but **keeps serving** — unauthenticated, still leaking a scratch file per failed upload — so finish with the three rows below rather than stopping here. |
 | the mini service too | drop `./whisper-stt.nix` from `hosts/darwin/mini/default.nix` imports, `darwin-rebuild switch` |
 | the network path | remove the `8323` line from `hermes-egress.nix`, deploy |
 | the serve mapping | `tailscale serve --https=8323 off` on the mini |
