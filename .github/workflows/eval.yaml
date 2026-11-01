@@ -33,6 +33,11 @@ jobs:
             attr: nixosConfigurations.t3-code.config.system.build.toplevel
     steps:
       - uses: actions/checkout@v4
+      # flake.nix has a private input; nix cannot evaluate a darwin host
+      # without being able to read it.
+      - uses: ./.github/actions/private-flake-key
+        with:
+          key: ${{ secrets.BILLFILER_DEPLOY_KEY }}
       - uses: DeterminateSystems/nix-installer-action@v16
       - name: Evaluate ${{ matrix.host }}
         # Forcing .drvPath instantiates the whole config without building it.

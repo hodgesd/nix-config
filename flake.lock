@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "billfiler": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793575483,
+        "narHash": "sha256-uqntgbN6ON8HpBQCOf38rL5w8T3I8gzlfXiGyhwO0mo=",
+        "ref": "main",
+        "rev": "3902f41fe623883f619734d7e2c0ed210269552b",
+        "revCount": 10,
+        "type": "git",
+        "url": "ssh://git@github.com/hodgesd/billfiler"
+      },
+      "original": {
+        "ref": "main",
+        "type": "git",
+        "url": "ssh://git@github.com/hodgesd/billfiler"
+      }
+    },
     "bj-drill": {
       "flake": false,
       "locked": {
@@ -373,6 +390,7 @@
     },
     "root": {
       "inputs": {
+        "billfiler": "billfiler",
         "bj-drill": "bj-drill",
         "hermes-agent": "hermes-agent",
         "home-manager": "home-manager_2",

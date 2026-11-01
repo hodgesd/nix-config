@@ -10,6 +10,7 @@
     ./darwin/system-defaults.nix
     ./darwin/fonts.nix
     ./darwin/packages.nix
+    ./darwin/billfiler
     ./darwin/laptop-defaults.nix
     ./darwin/tailscale.nix
     # herdr client for the VM agent workbench; workstations only (gated inside)
