@@ -59,10 +59,20 @@
   # Telegram voice note, which is the one thing this service exists to
   # do. Caught in review on PR #115 before it ever ran.
   #
-  # Root-owned 0700 rather than bare /tmp: the daemon runs as root (no
-  # UserName), so a private directory avoids any shared-/tmp race on a
-  # filename this server chooses, not us.
-  tmpDir = "/var/tmp/whisper-stt";
+  # /var/run, NOT /var/tmp. The parent must not be world-writable, or an
+  # unprivileged local user can pre-create this path as a SYMLINK: a
+  # root `mkdir -p` accepts an existing symlink-to-dir, and the root
+  # `chmod 700` below then follows it and applies 0700 to the target.
+  # Pointed at /Users that locks every account out of its own home.
+  # CWE-59, raised in review on PR #115; /var/tmp is mode 1777, so the
+  # first version of this was genuinely exposed.
+  #
+  # /var/run is root-owned and not world-writable, which removes the
+  # pre-creation step entirely. The launch command still refuses to
+  # proceed if the path is a symlink — belt and braces, because this
+  # assumes a permission bit on a host nobody can inspect from CI, and
+  # failing closed is the cheap side of that bet.
+  tmpDir = "/var/run/whisper-stt";
 in {
   # Model weights held resident: ~3GiB plus Metal working set. The mini
   # is an M2 Pro also running both MCP bridges — check `vm_stat` after
@@ -129,7 +139,14 @@ in {
           # job would die before /bin/sh ever ran. Caught in review on
           # PR #115 after I added it as "insurance"; it was a bootstrap
           # deadlock. --tmp-dir is absolute and does the real work.
-          "/bin/mkdir -p ${tmpDir} && /bin/chmod 700 ${tmpDir} && cd ${tmpDir} &&"
+          # Order matters: reject a symlink BEFORE the chmod that would
+          # follow one. `!` keeps this inside the && chain -- not a
+          # symlink, carry on; symlink, the chain stops, sh exits
+          # non-zero and KeepAlive retries every 15s rather than
+          # chmod'ing an attacker's target. Fail closed, loudly, in the
+          # log. The residual TOCTOU between test and chmod is not
+          # exploitable with a root-owned parent.
+          "! [ -L ${tmpDir} ] && /bin/mkdir -p ${tmpDir} && /bin/chmod 700 ${tmpDir} && cd ${tmpDir} &&"
           "exec ${whisper}/bin/whisper-server"
           "--model ${model}"
           "--tmp-dir ${tmpDir}"
@@ -155,6 +172,43 @@ in {
       KeepAlive = true;
       ThrottleInterval = 15;
       StandardOutPath = "/Users/${username}/Library/Logs/whisper-stt.log";
+      StandardErrorPath = "/Users/${username}/Library/Logs/whisper-stt.log";
+    };
+  };
+
+  # Bound the scratch directory. whisper-server LEAKS on failure, which
+  # is confirmed in v1.8.4's source rather than suspected: when ffmpeg
+  # exits non-zero, `convert_to_wav` returns false without unlinking
+  # either the upload or the partial `<name>_temp.wav`, and the handler
+  # just returns 500. The `read_audio_data` failure path leaks the same
+  # way. So every rejected upload costs disk permanently.
+  #
+  # That matters here specifically because the endpoint has NO
+  # authentication (see the serve note below): anyone who can reach it
+  # on the tailnet can repeat a malformed upload and fill the mini's
+  # disk, taking the vault and Apple bridges down with it. CWE-459,
+  # raised in review on PR #115.
+  #
+  # Transcodes finish in seconds, so anything older than an hour is
+  # garbage by definition. /usr/bin/find is a system binary, outside the
+  # store, so this job has no /nix dependency and needs no wait4path.
+  #
+  # HONEST RESIDUAL: this bounds growth, it does not impose a quota. A
+  # flood faster than hourly still fills the disk. The actual fix is
+  # authentication in front of the endpoint; this is the cheap mitigation
+  # that makes the slow version harmless.
+  launchd.daemons.whisper-stt-reap = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/sh"
+        "-c"
+        "/usr/bin/find ${tmpDir} -type f -mmin +60 -delete 2>/dev/null || true"
+      ];
+      RunAtLoad = true;
+      StartInterval = 3600;
+      # One-shot per fire: it prunes and exits. KeepAlive would respawn
+      # it in a loop (the lesson from studio's gpu-wired-limit daemon).
+      KeepAlive = false;
       StandardErrorPath = "/Users/${username}/Library/Logs/whisper-stt.log";
     };
   };

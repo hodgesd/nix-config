@@ -59,12 +59,41 @@ would have failed its ffmpeg step, i.e. every Telegram voice note, which
 is the single thing this service exists to do. The `--convert` discovery
 above was necessary but not sufficient.
 
-Fixed with an explicit `--tmp-dir /var/tmp/whisper-stt`, created and
+Fixed with an explicit `--tmp-dir /var/run/whisper-stt`, created and
 chmod-ed 0700 at launch via `/bin/mkdir` and `/bin/chmod` (outside the
-store, same reasoning as `wait4path`), plus `WorkingDirectory` as
-insurance for anything else resolving a relative path. Root-owned rather
-than bare `/tmp` because the daemon runs as root and the server, not us,
-chooses the filename.
+store, same reasoning as `wait4path`), then `cd` into it inside the
+shell.
+
+Three follow-on corrections, all from review on the same file, all in the
+gap between "the binary works" and "the binary works under launchd":
+
+- **`WorkingDirectory` was a bootstrap deadlock** and is gone. launchd
+  applies it with `chdir(2)` *before* exec, so it cannot point at a
+  directory the shell creates after starting. On a first deploy the job
+  would have died before `/bin/mkdir` ever ran — the guard firing on the
+  one path it was meant to protect. `cd` after `mkdir` gives the same
+  property safely.
+- **`/var/tmp` was the wrong parent** (mode 1777). An unprivileged local
+  user could pre-create the path as a symlink; root's `mkdir -p` accepts
+  an existing symlink-to-dir and root's `chmod 700` then follows it,
+  applying 0700 to the target — pointed at `/Users`, that locks every
+  account out of its home. CWE-59. `/var/run` is root-owned and not
+  world-writable, which removes the pre-creation step; the launch
+  command additionally refuses to start if the path is a symlink, since
+  that permission assumption can't be checked from CI.
+- **The scratch directory needed a bound.** Confirmed in v1.8.4's
+  source: when ffmpeg exits non-zero, `convert_to_wav` returns false
+  without unlinking either the upload or the partial `_temp.wav`, and
+  the handler just returns 500; `read_audio_data` failures leak the same
+  way. Combined with an unauthenticated endpoint, anyone on the tailnet
+  can repeat a malformed upload and fill the disk — taking the vault and
+  Apple bridges with it. CWE-459. A second launchd job
+  (`whisper-stt-reap`, `StartInterval = 3600`) prunes files older than
+  an hour via `/usr/bin/find`.
+
+  **Residual, stated plainly: that bounds growth, it is not a quota.** A
+  flood faster than hourly still fills the disk. The real fix is
+  authentication in front of the endpoint — see the posture note below.
 
 ### `provider = "openai"` does not mean OpenAI
 
