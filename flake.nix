@@ -30,6 +30,16 @@
       url = "github:hodgesd/swiftbar_plugins";
       flake = false; # repo has no flake.nix; treat as raw files
     };
+    # Bill Filer, the household statement filer
+    # (hosts/common/darwin/billfiler.nix builds it and takes the SwiftBar
+    # plugin out of the same tree, so the plugin and the CLI it shells out to
+    # can never drift apart). Private repo, so git+ssh and not github: --
+    # the github: fetcher uses the anonymous API and 404s on it. Update with:
+    #   nix flake update billfiler
+    billfiler = {
+      url = "git+ssh://git@github.com/hodgesd/billfiler?ref=main";
+      flake = false; # a plain Python project; the derivation lives here
+    };
   };
 
   outputs = {self, ...} @ inputs:
