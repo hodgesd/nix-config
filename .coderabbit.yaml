@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit PR review config. Anything not set here uses CodeRabbit's defaults.
+reviews:
+  path_filters:
+    - "!flake.lock"      # Renovate bumps; nothing useful to review
+    - "!secrets/**"      # sops-encrypted; reviewer sees only ciphertext
+    - "!.idea/**"
+  path_instructions:
+    - path: "**/*.nix"
+      instructions: |
+        Flag any change to system.stateVersion or home.stateVersion.
+        Flag secrets written inline; they must come from sops-nix by path.
+        Services must bind to localhost or the tailnet, never 0.0.0.0 or the LAN.
+    - path: "home/**"
+      instructions: |
+        Home Manager config must stay Linux-portable. Flag darwin-only code
+        not guarded by pkgs.stdenv.isDarwin.
+    - path: "hosts/nixos/nixos-infra/**"
+      instructions: |
+        Production homelab host. Flag opened firewall ports, new public
+        listeners, and anything that would restart a household-facing service.
+    - path: "**/*.py"
+      instructions: Expect type hints, standard library first, ruff-clean code.
