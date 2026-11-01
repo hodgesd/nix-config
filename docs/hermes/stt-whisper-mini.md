@@ -135,9 +135,21 @@ a flag on this server.
 **Memory.** ~3GiB of weights held resident plus the Metal working set, on
 an M2 Pro that also runs both bridges. Check `vm_stat` after deploying.
 
-**CI.** The mini's closure now includes `whisper-cpp` built with Metal
-and CoreML. If nixpkgs' aarch64-darwin cache does not already have that
-variant, the mini's build job compiles it — expect a slow first run.
+**CI — measured, 2026-11-01.** The mini's closure now includes
+`whisper-cpp` with Metal and CoreML plus a 2.9GiB model. `Build mini`
+**passed** on the first attempt, so the aarch64-darwin cache covers that
+whisper-cpp variant and nothing had to be compiled.
+
+What did fail, once, was the *post-run Cachix push* — `Push manager
+drain timed out`, `Remaining store paths: 5`, exit 3 — after the system
+closure itself had already uploaded. It passed on re-run with no code
+change, which makes it a transient upload timeout rather than a
+structural problem, so **no `pushFilter` is needed**. Worth knowing
+because the red looked like a build failure and was not: check the
+step-level conclusions (`gh api .../actions/jobs/<id> --jq '.steps[]'`)
+before assuming the build broke. If it recurs, the fix is a `pushFilter`
+excluding the model — a fixed-output derivation refetchable by URL has
+no business in a binary cache.
 
 ## Credential inventory
 
