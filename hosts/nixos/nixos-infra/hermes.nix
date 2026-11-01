@@ -148,6 +148,57 @@ in {
       model.default = "anthropic/claude-sonnet-5.5";
       model.base_url = "https://openrouter.ai/api/v1";
 
+      # Phase 8: studio's local models, declared but NOT the default. This
+      # makes local inference *available* (to `hermes cron edit --model`,
+      # `/model`, and auxiliary tasks) while every interactive turn keeps
+      # going to Sonnet. Nothing above changes, so the sentinel's
+      # provider/model comparison is untouched by this block alone.
+      #
+      # WHY A NAMED PROVIDER rather than just pointing model.base_url at
+      # studio: the resolver ignores a base_url it does not trust and
+      # walks its ladder to OpenRouter — that IS the 2026-09 bug above.
+      # Read at the pinned rev (3cf2eb1c), hermes_cli/runtime_provider.py
+      # skips that override "unless the YAML provider is already custom or
+      # a local-server alias (ollama/vllm/llamacpp — else a legit LAN
+      # ollama endpoint falls through to OpenRouter)". So NAMING the
+      # provider is precisely what prevents a local request from spending
+      # the OpenRouter key. `_raise_if_local_alias_missing_endpoint` is
+      # the matching guard: a `providers.<alias>` block carrying a
+      # base_url is a recognised endpoint source (upstream #113703).
+      #
+      # "ollama" is a registered ALIAS of the bundled `custom` profile
+      # (plugins/model-providers/custom: aliases ollama/local/vllm/
+      # llamacpp), so it gets Ollama-specific handling for free — the
+      # profile sniffs port 11434 and may send Ollama-native fields.
+      #
+      # No api_key: the custom profile declares no env var, Ollama has no
+      # auth, and upstream notes an explicit key "does not lift the
+      # guard". The bind address is the access control (studio's daemon
+      # listens on the tailscale interface alone) — so there is no secret
+      # here to create, rotate, or leak.
+      providers.studio = {
+        base_url = "http://studio.jaguar-duckbill.ts.net:11434/v1";
+        api_mode = "chat_completions";
+      };
+
+      # REQUIRED, not cosmetic. The custom profile's
+      # default_reasoning_config returns effort "medium" when nothing is
+      # set, these Qwen builds think by default, and reasoning counts
+      # against max_tokens — so a capped request returns EMPTY content,
+      # not truncated. Measured on studio 2026-10-31: a 400-token cap
+      # yielded '' with finish_reason=length; uncapped, 635 of 692
+      # completion tokens were reasoning. "none" makes the profile emit
+      # top-level reasoning_effort="none" plus think=false on
+      # port-11434 URLs, which is what actually silences it. See
+      # docs/studio/phase-8.md § prerequisite 3.
+      #
+      # Scope note: this is the agent-wide effort. Sonnet 5.5 currently
+      # runs at the API default (high) with nothing set, so changing it
+      # here would ALSO reshape the Sonnet path — hence it is deliberately
+      # left commented until the brief is actually pinned, and belongs on
+      # the cron entry rather than globally if upstream allows it.
+      # agent.reasoning_effort = "none";
+
       # Prompt-cache TTL. Upstream default is "5m"; the only other
       # Anthropic-supported tier is "1h" (hermes_cli/config_defaults.py,
       # `prompt_caching.cache_ttl` — and it applies on the OpenRouter path

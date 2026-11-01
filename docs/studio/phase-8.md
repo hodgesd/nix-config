@@ -1,8 +1,14 @@
 # Phase 8 — Hermes can use the local model
 
-**Status: NOT STARTED.** This doc is the plan and the measured
-prerequisites, written 2026-10-31. Nothing in `hermes.nix`,
-`hermes-egress.nix` or the running agent has been changed.
+**Status: repo-side landed 2026-11-01, NOT YET DEPLOYED OR VERIFIED.**
+The egress line and the `providers.studio` declaration are in the config
+and `nix eval` passes for nixos-infra. Nothing has been deployed, no
+Telegram round-trip has been served locally, and the degradation test has
+not been run — all three need a Mac and the VM.
+
+**`model.default` is unchanged.** Interactive Hermes still goes to
+Sonnet 5.5 through OpenRouter. This phase only makes local inference
+*available*; it does not route anything to it.
 
 Cross-references `docs/hermes/phase-local-model.md` (the scoring sheet and
 the Phase-2 items it deferred), `docs/hermes/runtime.md` (how the provider
@@ -107,19 +113,32 @@ These Qwen builds think by default, reasoning counts against
 field. So a token-capped brief comes back **blank** — not truncated,
 blank — and `chat_template_kwargs` does not help.
 
-Two working levers: send **no** `max_tokens`, or send
-`reasoning_effort: "none"`. The latter is better (0.1s vs 2.7s for the
-same answer). `hermes.nix:146` already documents `agent.reasoning_effort`
-as a real config key, so the knob probably exists — **verify that
-hermes-agent forwards it on the OpenAI-compatible route**, because the
-native Anthropic path is known to drop the effort setting for some models
-(see the Haiku note in phase-local-model.md).
+**RESOLVED 2026-11-01**, by reading the pinned rev. The bundled `custom`
+profile (`plugins/model-providers/custom/__init__.py`) handles this
+explicitly: `reasoning_effort: "none"` makes it emit top-level
+`reasoning_effort = "none"` **and** `extra_body.think = false`, the
+latter gated on `_looks_like_ollama_endpoint(base_url)` — which matches
+on **port 11434**, so studio qualifies. Upstream's own comment notes
+Ollama's `/v1` ignores `extra_body.think`, so the top-level field is what
+does the work there; both are sent.
+
+The trap is that this is **required, not optional**: the same profile's
+`default_reasoning_config` returns `{"enabled": true, "effort":
+"medium"}` when nothing is set. Leave the effort unset and you get
+thinking, and with any output cap you get an empty reply.
+
+Scope caveat, which is why `agent.reasoning_effort` is left **commented
+out** in `hermes.nix`: it is agent-wide. Sonnet 5.5 currently runs at the
+API default (`high`) with nothing declared, so setting it globally would
+reshape the Sonnet path too. It belongs on the cron entry if upstream
+allows a per-job effort; otherwise the trial must accept the global
+change and watch for a wordier or slower interactive agent.
 
 The native `/api/chat` route takes `"think": false` and behaves
 correctly. Hermes uses the OpenAI shape, so that is a diagnostic
 convenience, not the fix.
 
-### 4. The real unknown: hermes-agent may ignore `model.base_url`
+### 4. Provider resolution — RESOLVED, and the fix is to name the provider
 
 This repo already learned this the expensive way. From `hermes.nix:111`:
 
@@ -131,47 +150,89 @@ Every session from 2026-08-30 to 2026-09-17 recorded
 `config.yaml` claimed Anthropic. `hermes-sentinel.nix` exists to catch
 exactly that drift.
 
-So **setting `model.base_url` to studio is not expected to work** — with
-`OPENROUTER_API_KEY` present the resolver is likely to route to
-OpenRouter regardless, silently. The named-endpoint form that
-phase-local-model.md deferred (*"the named `providers.studio` endpoint"*)
-is the shape to use, and its exact syntax must be read from the deployed
-version's own docs rather than guessed.
+That made "point `model.base_url` at studio" the expected-to-fail
+approach, and the question was what shape works instead. Answered by
+reading the source at the pinned rev (`3cf2eb1c`, fetched from the public
+repo — no VM access needed after all):
 
-**This step needs the VM and cannot be done from the t3-code sandbox** —
-both the Tailscale-SSH and `root@` paths need interactive auth there.
-From a Mac:
+`hermes_cli/runtime_provider.py` skips an untrusted base_url override
+*"unless the YAML provider is already `custom` or a local-server alias
+(ollama/vllm/llamacpp — **else a legit LAN ollama endpoint falls through
+to OpenRouter**)"*. That parenthetical is this exact failure, named
+upstream. So **naming the provider is what prevents a local request from
+spending the OpenRouter key.**
 
-```bash
-ssh nixos-infra-1 'hermes --version'
-ssh nixos-infra-1 'docker exec hermes-agent python -c \
-  "import hermes_cli, pathlib; print(pathlib.Path(hermes_cli.__file__).parent)"'
-# then read config_defaults.py for the providers/* keys
-ssh nixos-infra-1 'hermes cron edit --help'   # does --model take a provider-qualified id?
+Three supporting facts:
+
+- `"ollama"` is a registered **alias** of the bundled `custom` profile
+  (`aliases = ("ollama", "local", "vllm", "llamacpp", …)`), so the alias
+  gets Ollama-aware handling rather than generic OpenAI treatment.
+- `_raise_if_local_alias_missing_endpoint` is the matching guard, added
+  for upstream #113703 — *"a local-server alias with NO endpoint
+  configured anywhere would otherwise walk the whole ladder to the
+  OpenRouter fallback and spend an unrelated cloud key there."* A
+  `providers.<name>` block carrying a `base_url` is an accepted endpoint
+  source, which is the shape used here.
+- **No API key is needed or wanted.** The `custom` profile declares
+  `env_vars = ()`, Ollama has no auth, and upstream notes an explicit key
+  *"does not lift the guard — that key was meant for the alias's own
+  server."* The bind address is the access control. Nothing to create,
+  rotate, or leak.
+
+What landed in `hermes.nix`, additive and leaving the Sonnet route
+untouched:
+
+```nix
+providers.studio = {
+  base_url = "http://studio.jaguar-duckbill.ts.net:11434/v1";
+  api_mode = "chat_completions";
+};
 ```
 
-If a custom OpenAI-compatible provider cannot be named in the deployed
-version, **stop and report** — do not work around it by removing
-`OPENROUTER_API_KEY` to coerce the resolver. That would take interactive
-Hermes down with it.
+Verified rendered:
+`nix eval .#nixosConfigurations.nixos-infra.config.services.hermes-agent.settings.providers`
+returns exactly that block.
+
+Still unverified and needing the VM: whether `hermes cron edit --model`
+accepts a provider-qualified id that selects this entry. Check
+`hermes cron edit --help` before the trial. Do **not** work around a
+resolver problem by removing `OPENROUTER_API_KEY` — that takes
+interactive Hermes down with it.
+
+### 5. The sentinel will page when the brief is pinned
+
+`hermes-sentinel.nix` reads `model.base_url` and `model.default` from
+this file and compares them against the **newest** row of
+`session_model_usage`. Adding `providers.studio` alone is invisible to
+it, because neither declared value changed — confirmed by inspection.
+
+But the moment the brief runs on the local model, the newest row names
+studio while `hermes.nix` still declares Sonnet, and the sentinel reports
+`model fail` on its next pass. **That is correct behaviour, not a bug**
+— it is exactly the drift detection added on 2026-09-17. Expect it,
+and do not silence it; it will clear as soon as an interactive Sonnet
+turn writes a newer row, which makes it flap during the trial. Decide
+before starting whether to accept the flapping or teach the sentinel the
+pair.
 
 ## The wiring, in order
 
-1. Add the egress line (item 1). Deploy. Verify from the VM as the
-   hermes UID — not as your own user, which bypasses the chain:
+**Steps 1–2 are in the repo as of 2026-11-01; `nix eval` passes. Steps
+3–4 and every verification below are outstanding and need your Mac.**
+
+1. ✅ Add the egress line (item 1). **Deploy**, then verify from the VM
+   as the hermes UID — not as your own user, which bypasses the chain:
    ```bash
    sudo -u hermes curl -sS -m 10 \
      http://studio.jaguar-duckbill.ts.net:11434/api/version
    ```
    Expect Ollama's JSON. Before the line lands, expect a reject and a
    `hermes-egress-drop:` line in the journal.
-2. Declare the provider by its named form (item 4), with
-   `reasoning_effort` handled per item 3. API key: whatever placeholder
-   the OpenAI-compatible provider requires — **no real secret exists for
-   this path and none should be created.** Nothing leaves the tailnet.
-3. Extend `hermes-sentinel.nix`'s endpoint comparison to accept the new
-   pair, or the sentinel pages on the first local call. This is the
-   "sentinel endpoint check" phase-local-model.md deferred.
+2. ✅ Declare the provider by its named form (item 4). No API key —
+   see item 4 for why none is needed and none should be created.
+3. Decide the sentinel question (item 5) **before** pinning the brief —
+   accept the flapping, or teach it the pair. Not needed for the wiring
+   itself.
 4. Honest-degradation test, which is an acceptance criterion and not
    optional. On studio:
    ```bash
