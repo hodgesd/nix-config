@@ -20,6 +20,13 @@
   # there is no vault named "Derrick", and "Pro Pilot" is a stale husk).
   vaultPath = "/Users/${username}/Library/Mobile Documents/iCloud~md~obsidian/Documents/Pro Pilot 2";
 in {
+  # Whisper STT for Hermes' voice path — large-v3 on Metal, loopback
+  # only, reached over the tailnet like the two bridges below. Moved off
+  # the 8GB CPU-only VM for transcription ACCURACY, not speed. Read that
+  # file's header before rebooting this box: it adds a voice-path
+  # dependency on the mini being unlocked.
+  imports = [./whisper-stt.nix];
+
   # NO auto-login here, deliberately. The bridges are *user* LaunchAgents
   # (they live in the user's iCloud session), so they only start once a GUI
   # session exists — and FileVault is on, which means macOS gates boot at

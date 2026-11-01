@@ -40,6 +40,17 @@
     "-d 100.122.244.86 -p tcp --dport 8321 -j ACCEPT"
     # Phase 4: the mini's Apple bridge (Reminders/Calendar).
     "-d 100.122.244.86 -p tcp --dport 8322 -j ACCEPT"
+    # The mini's Whisper STT endpoint (large-v3 on Metal), behind
+    # `tailscale serve --https=8323`. Replaces the in-container
+    # faster-whisper; see hosts/darwin/mini/whisper-stt.nix.
+    "-d 100.122.244.86 -p tcp --dport 8323 -j ACCEPT"
+    # Phase 8: studio's Ollama endpoint — local inference, tailnet only.
+    # Rule is by IP (like the two above) but the base_url MUST stay the
+    # MagicDNS name: Ollama validates the Host header against OLLAMA_HOST
+    # and 403s anything else. DNS is already allowed above, so the agent
+    # resolves the name and connects to this address. Same trap as the
+    # Gatus check in gatus.nix (see docs/studio/phase-8.md).
+    "-d 100.126.144.70 -p tcp --dport 11434 -j ACCEPT"
     "-d 10.0.0.0/8 -j REJECT"
     "-d 172.16.0.0/12 -j REJECT"
     "-d 192.168.0.0/16 -j REJECT"

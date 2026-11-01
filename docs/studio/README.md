@@ -1,6 +1,13 @@
 # studio
 
-**Status: Phase 3 of 8 done — serving models over the tailnet.**
+**Status: Phases 0–4 done — serving models over the tailnet, watched from
+nixos-infra.** Phase 5 (remote Nix builder) was declined on a
+measurement; 6 and 7 are decision-gated. Phase 8 — letting Hermes use
+the local model — has its **repo-side wiring landed** (the egress line
+and a named `providers.studio` provider) but is **not deployed or
+verified**, and `model.default` still routes every turn to Sonnet. See
+[`phase-8.md`](phase-8.md) for the four prerequisites it had to resolve
+first.
 
 The Mac Studio (M5 Ultra, 96GB) is a dedicated local-inference box: model
 serving only, deliberately nothing else. `nixos-infra` stays the monitoring
@@ -54,5 +61,7 @@ the `tailscaled`-as-system-daemon alternative.
 ## Files
 
 - [claude-code-prompt.md](claude-code-prompt.md): the phased plan and per-phase execution prompt.
-- [phase-0.md](phase-0.md) to [phase-3.md](phase-3.md): what each phase changed, verified, and decided.
+- [phase-0.md](phase-0.md) to [phase-4.md](phase-4.md): what each phase changed, verified, and decided.
+- [phase-8.md](phase-8.md): the Hermes integration — measured prerequisites, the brief-only trial protocol, and the local-model probe results.
+- [scoring-probe.py](scoring-probe.py), [scoring-multiturn.py](scoring-multiturn.py): the tool-use probes behind phase-8.md's results.
 - Host config: `hosts/darwin/studio/default.nix`.
