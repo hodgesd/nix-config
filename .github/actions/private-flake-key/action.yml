@@ -1,0 +1,53 @@
+# .github/actions/private-flake-key/action.yml
+# Authorise nix to fetch the private flake inputs declared in flake.nix.
+#
+# The `billfiler` input is a private repo, so every job that evaluates or
+# builds a darwin host needs to read it. A read-only deploy key scoped to that
+# one repo is the least privilege that works -- a PAT would hand the runner
+# read access to every repo on the account.
+#
+# Why not nix's own `access-tokens`: that applies to the `github:` fetcher
+# only. The input is git+ssh so that the Macs need no credential beyond the
+# SSH key they already have, which is the case worth optimising for.
+name: Authorise private flake inputs
+description: Install a read-only SSH deploy key so nix can fetch private git+ssh flake inputs.
+
+inputs:
+  key:
+    description: Private half of a read-only deploy key, from a repo secret.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        DEPLOY_KEY: ${{ inputs.key }}
+      run: |
+        set -euo pipefail
+
+        # Fail loudly here rather than 40 lines into a nix eval whose error is
+        # an opaque "could not read Username for 'https://github.com'".
+        if [ -z "${DEPLOY_KEY:-}" ]; then
+          echo "::error::BILLFILER_DEPLOY_KEY is empty or unset -- see .github/workflows/README.md"
+          exit 1
+        fi
+
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+
+        # Create the file 0600 *before* writing, so the key is never briefly
+        # world-readable on a shared runner.
+        install -m 600 /dev/null ~/.ssh/flake_input
+        printf '%s\n' "$DEPLOY_KEY" >~/.ssh/flake_input
+
+        # Pin the host key instead of trusting on first use.
+        ssh-keyscan -t ed25519 github.com >>~/.ssh/known_hosts 2>/dev/null
+
+        # IdentitiesOnly: don't let a runner-provided identity shadow this one.
+        cat >>~/.ssh/config <<'CONF'
+        Host github.com
+          User git
+          IdentityFile ~/.ssh/flake_input
+          IdentitiesOnly yes
+        CONF
