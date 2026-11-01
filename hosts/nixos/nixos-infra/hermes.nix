@@ -229,11 +229,54 @@ in {
       # the model from HuggingFace (public 443 — allowed by the egress
       # jail) into /data. "small" trades a few seconds of CPU for
       # noticeably better accuracy than "base" on an 8GB VM.
+      #
+      # initial_prompt biases faster-whisper's decoder toward a vocabulary
+      # rather than changing the model. Whisper mangles exactly the words
+      # this homelab is made of — observed: "Knicks OS" for nixos, "QUIN
+      # 3.8" for Qwen3.8 — because they are rare tokens that sound like
+      # common ones. One line, no new service, no latency cost. Keep it a
+      # plausible SENTENCE: Whisper conditions on it as preceding text, so
+      # a bare keyword dump biases toward transcribing lists. Add terms as
+      # they get mangled; this is a living list, not a fixed one.
+      #
+      # provider = "openai" does NOT mean OpenAI. It selects the
+      # openai-multipart WIRE (POST {base_url}/audio/transcriptions,
+      # multipart field `file`, Bearer header) and points it at the
+      # mini's whisper.cpp server. Audio still never leaves the homelab —
+      # the hard boundary this comment block has always claimed is
+      # intact, it just moved from the container to the mini's GPU.
+      # Upstream anticipates this: stt.openai's own default carries
+      # `timeout: 60  # allow self-hosted backends time to cold-start`.
+      #
+      # api_key is a placeholder. whisper-server has no authentication to
+      # check, the field is required by the OpenAI SDK client, and no
+      # real secret exists for this path — do not create one. The
+      # tailnet is the boundary (see whisper-stt.nix on the weaker
+      # posture versus the token-checked vault/apple bridges).
+      #
+      # The `local.*` block below is now the FALLBACK path, live only if
+      # provider is reverted to "local". Keep its initial_prompt in sync
+      # with the mini's --prompt.
       stt = {
         enabled = true;
-        provider = "local";
+        provider = "openai";
         language = "en";
+        openai = {
+          base_url = "https://mini.jaguar-duckbill.ts.net:8323/v1";
+          api_key = "unused-local-endpoint";
+          model = "whisper-1";
+          # Generous: large-v3 pays a one-time model load on the first
+          # request after a mini reboot, and upstream's own comment on
+          # this field is about exactly that cold start.
+          timeout = 120;
+        };
         local.model = "small";
+        local.initial_prompt =
+          "Notes on the homelab: NixOS, nix-darwin, Nix flakes, sops-nix, "
+          + "Proxmox, Tailscale and MagicDNS, Gatus, Obsidian, Ollama, MLX, "
+          + "Qwen, Hermes, OpenRouter, Fastmail, UniFi, Synology. "
+          + "Flight department notes: Gulfstream, Challenger, FOQA, ASAP, "
+          + "IS-BAO, Teterboro, Part 91, MEL, recurrent training.";
       };
       terminal = {
         backend = "local";
