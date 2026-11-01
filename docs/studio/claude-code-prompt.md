@@ -762,7 +762,21 @@ ACCEPTANCE
 
 ---
 
-## PHASE 8 — Hermes uses the local model (optional)
+## PHASE 8 — Hermes uses the local model (optional) — PLANNED, NOT STARTED; see docs/studio/phase-8.md
+
+> Prerequisites were measured 2026-10-31 and the plan below understates
+> the work. Four findings, in phase-8.md: (1) `hermes-egress.nix:46`
+> rejects the whole tailnet CGNAT range for the hermes UID, so Hermes
+> cannot reach studio at all — Gatus going green proved nothing, it runs
+> as a different UID; (2) the URL must be the MagicDNS name or Ollama
+> 403s on Host validation; (3) these Qwen builds think by default and
+> reasoning counts against `max_tokens`, so a capped `/v1` request
+> returns **empty content** — `reasoning_effort: "none"` is the lever,
+> `chat_template_kwargs` is ignored; (4) task 2 below is the real
+> unknown — hermes-agent resolves the provider from `.env` credentials
+> and has ignored a disagreeing `model.base_url` before (hermes.nix:111),
+> so the named-endpoint form is required, and its syntax must be read
+> from the deployed version on the VM.
 
 ```
 GOAL: hermes-agent on nixos-infra can route requests to studio's
@@ -814,6 +828,7 @@ ACCEPTANCE
 | 6 | Public access (Phase 7) + chat-vs-API shape | Deferred — needs workplace-policy check + explicit go |
 | 7 | Studio hardware: **96GB / 30 CPU / 64 GPU / 2TB, macOS 27.2** — sysctl N = 83,500; Phase 5 maxJobs sized off 30 cores | **Resolved 2026-10-30** |
 | 8 | UPS for studio + network gear + Proxmox host (graceful-shutdown signaling; macOS supports UPS shutdown policies in Energy settings) | Pending — hardware purchase, my call; plan assumes none until then |
+| 10 | **Which document wins on the local-model design, and which model Hermes gets.** `docs/hermes/phase-local-model.md` specifies **LM Studio** + **Qwen3.8-27B**; studio runs **Ollama** + both models, with ledger item 1d assigning `qwen3.6:35b-a3b-nvfp4` to tool calling on throughput (239 vs 108 tok/s). Ollama wins on serving stack for reasons item 1e records (one nix-managed daemon, no Homebrew, no Xcode, no login session — LM Studio can match none of them). The *model* choice is genuinely open: probes on 2026-10-31 found the two **behaviourally indistinguishable** on Hermes-shaped tool use, including failing disambiguation identically — both moved a reminder without asking when two matched, the 27B rationalising it aloud. If they are equivalent, keeping one design beats two, which argues for the plan's 27B. Presented, not chosen, per Phase 8 task 1. Whichever way it goes, update the losing doc. Separately: task 15 is not in the documented pass bar (`1, 3, 5, 6, 7, 9`) and so does not formally block the brief trial, but it is an argument for keeping *interactive* Hermes — the surface with a shell and reminder writes — on Sonnet regardless. | Pending — needs a decision; see docs/studio/phase-8.md |
 | 9 | **Nix flavour / installer.** The whole fleet runs **upstream Nix**, and `nix.enable` stays `true` so `lib/helpers.nix` keeps managing `trusted-users` and `experimental-features` declaratively. `scripts/bootstrap.sh` pins this with `--prefer-upstream-nix` and aborts if `/usr/local/bin/determinate-nixd` exists. | **Decided: upstream, fleet-wide** — but see the standing liability below |
 
 ### Standing liability — item 9 (review on trigger, not on a schedule)
