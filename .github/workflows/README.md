@@ -64,17 +64,35 @@ just the Macs.
 Use a read-only deploy key scoped to that one repo, not a PAT: a PAT would
 give the runner read access to every repo on the account.
 
+Run it wherever `gh` is already authenticated — neither half of the key needs
+to persist anywhere, it only has to reach the two endpoints.
+
 ```bash
+# mktemp -d is 0700 on both macOS and Linux, unlike a guessable /tmp path.
+d=$(mktemp -d)
+
 # A throwaway keypair that exists only for CI.
-ssh-keygen -t ed25519 -N "" -C "nix-config CI" -f /tmp/billfiler-ci
+ssh-keygen -t ed25519 -N "" -C "nix-config CI" -f "$d/key"
 
 # Public half -> the billfiler repo, read-only (no --allow-write).
-gh repo deploy-key add /tmp/billfiler-ci.pub \
-  --repo hodgesd/billfiler --title "nix-config CI"
+gh repo deploy-key add "$d/key.pub" --repo hodgesd/billfiler --title "nix-config CI"
 
 # Private half -> this repo's secrets.
-gh secret set BILLFILER_DEPLOY_KEY < /tmp/billfiler-ci
-shred -u /tmp/billfiler-ci /tmp/billfiler-ci.pub
+gh secret set BILLFILER_DEPLOY_KEY < "$d/key"
+rm -rf "$d"
+```
+
+Plain `rm`, not `shred`: `shred` is GNU coreutils and macOS does not ship it,
+so on a Mac that line would fail and leave the private key on disk — the
+opposite of the intent. `rm -P` is no better on APFS by Apple's own
+documentation. It is a read-only key scoped to one repo; if in doubt,
+`gh repo deploy-key delete` and run this again.
+
+Verify:
+
+```bash
+gh repo deploy-key list --repo hodgesd/billfiler
+gh secret list | grep BILLFILER
 ```
 
 `.github/actions/private-flake-key` installs it before nix runs. It fails with
