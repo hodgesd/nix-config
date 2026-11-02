@@ -46,13 +46,20 @@ in {
 
   # The mover, on the mini only -- see the header for why that is structural.
   #
+  # Keyed on the hostname, NOT on `primaryUse == "server"`: studio is a server
+  # too, so the role gate would have installed a second mover on a box with no
+  # Apple ID, no inbox and no share -- the exact double-filing race the header
+  # argues against. lib/machines.nix names this pattern for studio-only
+  # behavior; "the Mac holding the iCloud inbox and the UNAS mount" is not a
+  # role that exists, it is this one machine.
+  #
   # These are USER agents, with the same consequence as this host's Hermes
   # bridges: the inbox lives in the user's iCloud session and the UNAS share
   # is mounted in the user's GUI session, so nothing files until someone is
   # logged in. FileVault with no auto-login means an unexpected power cut
   # leaves the mover down at the unlock screen. Nothing is lost -- the PDFs
   # sit in the inbox and the next run takes them.
-  launchd.user.agents = lib.mkIf (machine.primaryUse == "server") {
+  launchd.user.agents = lib.mkIf (machine.hostname == "mini") {
     billfiler = {
       serviceConfig = {
         ProgramArguments = ["${billfiler}/bin/billfiler" "run"];
