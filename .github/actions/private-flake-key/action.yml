@@ -41,13 +41,24 @@ runs:
         install -m 600 /dev/null ~/.ssh/flake_input
         printf '%s\n' "$DEPLOY_KEY" >~/.ssh/flake_input
 
-        # Pin the host key instead of trusting on first use.
-        ssh-keyscan -t ed25519 github.com >>~/.ssh/known_hosts 2>/dev/null
+        # GitHub's published Ed25519 host key, from https://api.github.com/meta
+        # (`gh api meta --jq '.ssh_keys[]'`). Pinned, not discovered: an earlier
+        # version of this ran `ssh-keyscan`, which trusts whatever answers --
+        # on a tampered egress path that is the attacker's key, saved as
+        # trusted, and the fetch that follows talks to the impersonator. Refresh
+        # from that endpoint if GitHub rotates it, as they did the RSA key in
+        # March 2023.
+        printf '%s\n' \
+          'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' \
+          >>~/.ssh/known_hosts
 
         # IdentitiesOnly: don't let a runner-provided identity shadow this one.
+        # StrictHostKeyChecking: refuse outright if the host key ever fails to
+        # match the pin above, rather than prompting (and hanging) or accepting.
         cat >>~/.ssh/config <<'CONF'
         Host github.com
           User git
           IdentityFile ~/.ssh/flake_input
           IdentitiesOnly yes
+          StrictHostKeyChecking yes
         CONF
