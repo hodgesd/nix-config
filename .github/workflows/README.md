@@ -78,7 +78,10 @@ ssh-keygen -t ed25519 -N "" -C "nix-config CI" -f "$d/key"
 gh repo deploy-key add "$d/key.pub" --repo hodgesd/billfiler --title "nix-config CI"
 
 # Private half -> this repo's secrets.
-gh secret set BILLFILER_DEPLOY_KEY < "$d/key"
+# --repo, not the cwd's remote: run from the wrong checkout and this would
+# store the private key as a secret on THAT repo, where its workflows can read
+# it -- while CI here still has nothing.
+gh secret set BILLFILER_DEPLOY_KEY --repo hodgesd/nix-config < "$d/key"
 rm -rf "$d"
 ```
 
@@ -92,7 +95,7 @@ Verify:
 
 ```bash
 gh repo deploy-key list --repo hodgesd/billfiler
-gh secret list | grep BILLFILER
+gh secret list --repo hodgesd/nix-config | grep BILLFILER
 ```
 
 `.github/actions/private-flake-key` installs it before nix runs. It fails with
