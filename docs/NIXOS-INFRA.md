@@ -31,7 +31,7 @@ with `just deploy` (see [Deploying](#deploying)).
 | `notify-failure@<unit>` | `gatus.nix` | `OnFailure=` target: pages ntfy (`gatus` topic) with the failed unit's last error lines. Used by `easy-afd-refresh` | when a unit that opts in fails |
 | `hc-heartbeat` | `healthchecks.nix` | Checks in with healthchecks.io (off-site dead-man for this VM) | every 5 min |
 | `hc-ntfy` | `healthchecks.nix` | Checks in with a second healthchecks.io check only while ntfy's `/v1/health` is healthy (alerts when the alerter is down) | every 5 min |
-| `samsclub-popcorn` | `samsclub-popcorn.nix` | **Temporary, expires 2026-12-12.** Curls a Sam's Club product page, alerts via ntfy (`changes` topic) when delivery from the O'Fallon club comes back in stock; after expiry it only reminds you to remove it. Manual test: `samsclub-popcorn-check --test` | every 2 h, 06–22 |
+| `samsclub-popcorn` | `samsclub-popcorn.nix` | **Temporary, expires 2026-12-12.** Curls a Sam's Club product page, alerts via ntfy (`changes` topic) when delivery from the local club comes back in stock; after expiry it only reminds you to remove it. Manual test: `samsclub-popcorn-check --test` | every 2 h, 06–22 |
 | (user `agent`) | `agent-workbench.nix` | Agent workbench: herdr multiplexer + OpenCode + pi for the unprivileged `agent` user. Tailscale SSH only, no listeners, one credit-limited OpenRouter key. See [Agent workbench](#agent-workbench-agent-workbenchnix) | on demand |
 
 Shared server baseline (tailscale from locked unstable, docker_29,

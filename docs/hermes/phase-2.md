@@ -38,7 +38,9 @@ Built and deployed 2026-08-30.
 
 1. **Tool layer:** MCP client sees exactly the five tools; live
    `wan_health`/`network_stats` returned real data (WAN ok, Spectrum,
-   24.107.114.39; 55 clients).
+   WAN address and client count both reported). The values are deliberately
+   not recorded here: this repo is public, and it already documents what runs
+   behind that address.
 2. **Account layer:** config mutation with the raw credentials
    (create WLAN) → **403 `api.err.NoPermission`**. Nuance found and
    accepted: UniFi permits *diagnostic commands* to viewers —
