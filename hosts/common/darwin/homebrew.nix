@@ -146,6 +146,7 @@
         "chatgpt"
         "citrix-workspace"
         "claude"
+        "cmux" # Ghostty-based terminal with agent tabs/notifications
         "codexbar"
         "cursor"
         "default-folder-x"
