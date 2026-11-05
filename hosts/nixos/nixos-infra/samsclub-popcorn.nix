@@ -1,6 +1,6 @@
 # TEMPORARY (expires 2026-12-12): alert when Member's Mark Organic Popcorn
-# (EVOO + sea salt, 14 oz) can be delivered from the O'Fallon, IL Sam's
-# Club. Added 2026-09-13.
+# (EVOO + sea salt, 14 oz) can be delivered from the local Sam's Club
+# (club number below; the town is left out because this repo is public). Added 2026-09-13.
 #
 # Why not changedetection.io: Sam's Club answers both of its fetchers
 # (Python requests and the sockpuppetbrowser Chrome) with a "Let us know
@@ -37,7 +37,7 @@
   ...
 }: let
   itemUrl = "https://www.samsclub.com/ip/Member-s-Mark-Organic-Popcorn-with-Extra-Virgin-Olive-Oil-and-Sea-Salt-14-oz/17797355238?classType=REGULAR";
-  club = "8285"; # O'Fallon Sam's Club
+  club = "8285"; # the local club; a bare store number names no town
   expires = "2026-12-12";
   # Tailnet-only ntfy; publishing needs no credentials (same as Gatus and
   # wan-watch), so there is no secret here.
@@ -158,7 +158,7 @@
       # status alerts too; a rare false alarm beats a missed restock.
       prev=$(cat "$state_dir/state" 2>/dev/null || echo OUT_OF_STOCK)
       if [ "$prev" = OUT_OF_STOCK ] && [ "$status" != OUT_OF_STOCK ]; then
-        notify "Popcorn: delivery in stock at O'Fallon Sam's Club" high popcorn \
+        notify "Popcorn: delivery in stock at Sam's Club" high popcorn \
           "Member's Mark Organic Popcorn (EVOO + sea salt, 14 oz): delivery is $status. Temporary check, expires $expires - remove samsclub-popcorn.nix when done." \
           -H "Click: $url"
       fi

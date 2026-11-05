@@ -163,12 +163,13 @@ Reviewed end to end on 2026-10-03 through the REST and WebSocket APIs;
 the box was otherwise healthy (`supported`, `healthy`, 5.1 of 13.6 GB
 used).
 
-- **Cameras:** four Reolink entries (see Known issues for Front Right).
+- **Cameras:** four Reolink entries (one is offline — see Known issues).
 - **HomeKit:** `HASS Bridge:21064` is the one real bridge — include mode,
   exposing `climate.daikinap69200`; paired with Apple Home 2026-10-03.
-  Each camera stream is its own accessory-mode entry (`Front sub`,
-  `Back Left sub`, `Rear Right sub`, `Front Right sub`, `Front main`),
-  paired separately. **Never delete or re-pair those.**
+  Each camera stream is its own accessory-mode entry, paired separately --
+  five of them, one per sub stream plus one main. **Never delete or re-pair
+  those.** (Their names map the cameras to the house, so they are not listed
+  here; read them off the HomeKit integration page.)
 - **Garage mini-split:** Daikin FTXV18AVJU9 through the HACS custom repo
   `frogfrogfrogfrogfrogfrog/daikinskyport-deneb` (commit `e979ed9`), entity
   `climate.daikinap69200` ("Garage Mini Split").
@@ -266,16 +267,19 @@ been fine for a while.
   from a reverse proxy was received from 127.0.0.1, but your HTTP
   integration is not set-up for reverse proxies". Whether that alone is
   what made the add-on exit is unknown; it is the first thing to rule out.
-- **Reolink:** four RLC-822A cameras — Front `192.168.1.87`, Back Left
-  `.41`, Front Right `.38`, Back Right `.19`, all on firmware
-  `v3.1.0.1643_2402219215` (2024-02). **"Front Right" (`.38`) is offline
-  outright** — no HTTP, no RTSP — and Core's bootstrap waits up to ~27 min
-  on it at every start (an earlier draft of this doc blamed Back Left;
-  `.41` answers fine). Either bring the camera back or disable its
-  config entry so restarts are quick. (The 2026.9.4 update on 2026-10-03
+- **Reolink:** four cameras on one static-lease block. **One of them is
+  offline outright** — no HTTP, no RTSP — and Core's bootstrap waits up to
+  ~27 min on it at every start (an earlier draft of this doc blamed the wrong
+  one; check which before acting). Either bring that camera back or disable
+  its config entry so restarts are quick. (The 2026.9.4 update on 2026-10-03
   reached `RUNNING` about two minutes after the new Core came up, with the
-  entry still retrying.) All cameras also drop weekly around
-  **01:59–02:00 on Sundays** — some scheduled network event, not HA.
+  entry still retrying.) The cameras also drop weekly on a schedule — some
+  network event, not HA.
+
+  Which camera sits where, their addresses and their firmware level are
+  deliberately not written down here: this repo is public, and that set of
+  facts together describes which approach to the house is uncovered and when.
+  Read them off the Reolink app or HA's device page instead.
 - **`rpi_firmware_update_blocked`** (Settings → System → Repairs) is
   **permanent by design — ignore it.** The Supervisor sees a newer CM4
   bootloader EEPROM (`1767975133`, 2026-01, vs the installed `1638442201`,
