@@ -154,6 +154,33 @@ in {
                 }
               ];
             })
+          # The T3 Code VM (hosts/nixos/t3-code). Reachability only, same
+          # threshold 5 as the Macs' tailnet pings. Its app is a user
+          # service behind `tailscale serve`, outside Nix, so there is no
+          # stable endpoint to poll beyond the box itself.
+          ((icmp "t3-code" "ping" "100.116.99.114")
+            // {
+              alerts = [
+                {
+                  type = "ntfy";
+                  failure-threshold = 5;
+                }
+              ];
+            })
+          # hp-mini, the Proxmox host under both VMs (tailnet name
+          # `hypervisor`). This VM runs on it, so a dead hp-mini takes Gatus
+          # down too and healthchecks.nix pages instead; this check only
+          # catches the host's own tailscaled dropping off while the VMs run.
+          ((icmp "hp-mini" "ping" "100.85.97.50")
+            // {
+              alerts = [
+                {
+                  type = "ntfy";
+                  failure-threshold = 5;
+                }
+              ];
+            })
+
           # UNAS Pro 8 on the LAN — backup and Data share target.
           (icmp "nas" "ping" "192.168.1.142")
           # Home Assistant Yellow — the house. A separate box, so unlike the
