@@ -1,13 +1,12 @@
 # studio
 
-**Status: Phases 0–4 done — serving models over the tailnet, watched from
-nixos-infra.** Phase 5 (remote Nix builder) was declined on a
-measurement; 6 and 7 are decision-gated. Phase 8 — letting Hermes use
-the local model — has its **repo-side wiring landed** (the egress line
-and a named `providers.studio` provider) but is **not deployed or
-verified**, and `model.default` still routes every turn to Sonnet. See
-[`phase-8.md`](phase-8.md) for the four prerequisites it had to resolve
-first.
+**Status: RETIRED 2026-11-06.** The Mac Studio was overkill and too
+expensive for the homelab, so it went back. The host, its Gatus checks and
+the Phase 8 Hermes provider were removed from the flake; this directory
+stays for the measurements and lessons other hosts still cite (the
+`/bin/wait4path` boot trap in [`phase-2.md`](phase-2.md) protects the mini's
+Whisper daemon). The config lives in git history before the retirement
+commit.
 
 The Mac Studio (M5 Ultra, 96GB) is a dedicated local-inference box: model
 serving only, deliberately nothing else. `nixos-infra` stays the monitoring
