@@ -95,8 +95,9 @@ reason to keep it than it was before.
 
 ## Surfaces (since Phase 0.5)
 
-Telegram: `messaging`, `todo`, `vision` only — no terminal, web,
-browser, file, skills, or cron from the phone. Operator surface: the
+Telegram: `messaging`, `todo`, `vision`, `search` (web_search via Brave,
+since 2026-11-06) — no terminal, URL fetch, browser, file, skills, or
+cron from the phone. Operator surface: the
 `hermes` CLI on the VM over SSH keeps the full default preset. Config is
 declarative-only (in-container `hermes config set` / `/personality`
 saves fail against the ro mount).

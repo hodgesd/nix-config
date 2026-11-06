@@ -45,6 +45,7 @@ in {
   nixpkgs.overlays = [(final: prev: {docker = prev.docker_29;})];
 
   # Dotenv format: ANTHROPIC_API_KEY, OPENROUTER_API_KEY, TELEGRAM_BOT_TOKEN,
+  # BRAVE_SEARCH_API_KEY (web_search, see platform_toolsets below),
   # and the Telegram user-ID allowlist. The allowlist stays in ciphertext
   # deliberately — this repo is public. Root-read is fine: systemd resolves
   # EnvironmentFiles as root (same pattern as easy-afd-env).
@@ -168,7 +169,22 @@ in {
       # todo (internal task list), vision (images Derrick sends). The
       # operator surface is the `hermes` CLI on this host over SSH, which
       # keeps the full default preset (cli is deliberately not listed).
-      platform_toolsets.telegram = ["messaging" "todo" "vision"];
+      #
+      # "search" (2026-11-06) is the ONE deliberate reopening: upstream's
+      # search toolset is web_search alone — no web_extract, no browser_*.
+      # WHY that is not an exfil channel: a query goes only to Brave, never
+      # to a host the content chose, so an injected "search for <secret>"
+      # lands in Brave's logs, not an attacker's. Fetching a URL is what
+      # leaks (https://evil/?d=<inbox>) — keep web/browser OFF this list.
+      # Disable: drop "search" and redeploy.
+      platform_toolsets.telegram = ["messaging" "todo" "vision" "search"];
+
+      # Pin the search vendor. Unpinned, upstream autodetect walks a ladder
+      # (firecrawl, the Nous gateway, keyless DDG, …) — a different party
+      # seeing the queries depending on which env vars happen to exist.
+      # Strict: no fallback, a missing key fails loudly. The key is
+      # BRAVE_SEARCH_API_KEY in the sops hermes-env entry.
+      web.search_backend = "brave-free";
 
       # Voice notes → text, LOCALLY (faster-whisper in the container).
       # No cloud provider, no API key: audio never leaves the homelab.

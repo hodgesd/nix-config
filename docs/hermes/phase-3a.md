@@ -15,8 +15,10 @@ Layered, each independently verified:
    does not exist.
 3. **Tool shape:** metadata-first is structural — search/recent return
    headers+snippet only; a body is a separate deliberate `get_email(id)`.
-4. **No exfiltration channel:** the Telegram surface has no shell, web,
-   browser, file, or send capability (Phase 0.5), egress is UID-jailed,
+4. **No exfiltration channel:** the Telegram surface has no shell, URL
+   fetch, browser, file, or send capability (Phase 0.5; web_search alone
+   was added 2026-11-06 — queries reach only Brave, see
+   `phase-web-search.md`), egress is UID-jailed,
    and Telegram output reaches only the allowlist.
 5. **Policy:** `hermes-policy.md` gained mail rules — instruction-bearing
    email gets flagged with a quote, never obeyed; metadata-first; never
