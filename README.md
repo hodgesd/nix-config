@@ -65,7 +65,11 @@ Inputs: nixpkgs, nix-darwin and Home Manager track the 26.05 release
 branches, and `nixpkgs-unstable` supplies anything that must be fresh. The
 rest are sops-nix, nix-homebrew, hermes-agent, llm-agents, bj-drill and
 swiftbar_plugins. Renovate opens a weekly PR for the homelab images and one
-for the lockfile.
+for the lockfile. `nix flake metadata` shows how old each lock is.
+
+26.05 stops getting fixes on 2026-12-31, and `just update` never crosses to
+the next release. Before then, bump the nixpkgs, nix-darwin and Home Manager
+branch refs in `flake.nix` together.
 
 ## Secrets
 
