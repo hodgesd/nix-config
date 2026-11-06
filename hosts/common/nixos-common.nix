@@ -3,6 +3,8 @@
 # darwin-common.nix. Home-manager is wired by mkNixos (opt-in per host),
 # not imported here.
 {
+  config,
+  lib,
   pkgs,
   unstablePkgs,
   inputs,
@@ -120,4 +122,45 @@
     enable = true;
     trustedInterfaces = ["tailscale0"];
   };
+
+  # The rules above are defaults a host module can quietly widen, e.g. a
+  # new service adding `allowedTCPPorts = [8080]` puts it on the LAN.
+  # Assertions turn that into an eval error, so the Eval CI job (which
+  # forces every host's drvPath) fails the PR instead of the deploy
+  # shipping it. SECURITY: if one of these fires, move the service behind
+  # the tailnet; don't relax the assertion. Docker-range iptables rules in
+  # extraCommands (gatus.nix, proxy.nix) are not covered: they open ports
+  # to containers on the box, not to the LAN.
+  assertions = let
+    fw = config.networking.firewall;
+  in [
+    {
+      assertion = fw.enable;
+      message = "${config.networking.hostName}: the firewall must stay enabled (tailnet-only baseline, nixos-common.nix).";
+    }
+    {
+      # NixOS adds lo itself.
+      assertion = lib.subtractLists ["lo"] fw.trustedInterfaces == ["tailscale0"];
+      message = "${config.networking.hostName}: the firewall may trust only tailscale0, not ${toString fw.trustedInterfaces}.";
+    }
+    {
+      # 22 is the LAN SSH fallback for when tailscaled is down.
+      assertion =
+        lib.subtractLists [22] fw.allowedTCPPorts
+        == []
+        && fw.allowedUDPPorts == []
+        && fw.allowedTCPPortRanges == []
+        && fw.allowedUDPPortRanges == []
+        && lib.all (i: i == "tailscale0") (lib.attrNames fw.interfaces);
+      message = "${config.networking.hostName}: a firewall port is open beyond LAN SSH (22). Serve it on the tailnet instead.";
+    }
+    {
+      assertion = config.services.openssh.settings.PasswordAuthentication == false;
+      message = "${config.networking.hostName}: SSH password auth must stay off.";
+    }
+    {
+      assertion = config.services.tailscale.enable;
+      message = "${config.networking.hostName}: Tailscale must stay enabled; it is the only remote path.";
+    }
+  ];
 }
