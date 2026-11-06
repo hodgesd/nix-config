@@ -5,7 +5,7 @@
 #   ./scripts/bootstrap.sh [hostname]
 #
 # hostname defaults to `hostname -s` and must be one of the flake's
-# darwinConfigurations (currently: mbp, mini, air, studio). On a brand-new Mac:
+# darwinConfigurations (currently: mbp, mini, air). On a brand-new Mac:
 #
 #   1. Install git via the Xcode CLT prompt (or let this script do it),
 #   2. git clone https://github.com/hodgesd/nix-config && cd nix-config
@@ -95,7 +95,7 @@ log "Validating host '$host'…"
 if ! "${NIX[@]}" eval --raw ".#darwinConfigurations.${host}.system.drvPath" >/dev/null 2>&1; then
   avail="$("${NIX[@]}" eval --json '.#darwinConfigurations' --apply builtins.attrNames 2>/dev/null \
             | tr -d '[]"' | tr ',' ' ')"
-  die "'$host' is not a known host. Available:${avail:- mbp mini air studio}
+  die "'$host' is not a known host. Available:${avail:- mbp mini air}
      Pass one explicitly:  ./scripts/bootstrap.sh <host>"
 fi
 

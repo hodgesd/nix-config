@@ -17,7 +17,6 @@ Cachix.
 | `mbp` | MacBook Pro 14" M3 Pro, 18 GB / 1 TB | daily driver; NAS backup, Gulfstream pubs watcher | `just`, on the box | `hosts/darwin/mbp/` |
 | `mini` | Mac mini M2 Pro, user `derrickhodges` | always-on; Hermes bridges (vault-mcp, apple-mcp) | `just`, on the box only | `hosts/darwin/mini/` |
 | `air` | MacBook Air 13" M1, 16 GB / 500 GB | spare laptop | `just`, on the box | common only |
-| `studio` | Mac Studio M5 Ultra, 96 GB / 2 TB | local AI inference (Ollama on the tailnet) | `just`, on the box | `hosts/darwin/studio/` |
 | `nixos-infra` | Proxmox VM, 2 vCPU, 39 GB disk | homelab: Docker apps behind tailnet sidecars, Gatus, Hermes, easy-afd, 21.hdgs.me, agent workbench | `just deploy`, from a Mac | `hosts/nixos/nixos-infra/` |
 | `t3-code` | Proxmox VM 101, 4 vCPU, 12 GB / 64 GB | T3 Code remote server, kept apart from the homelab | `just deploy t3-code switch <ssh-dest>` | `hosts/nixos/t3-code/` |
 
@@ -84,7 +83,6 @@ aborts before any service restarts. Edit with `sops secrets/<host>.yaml`.
 | set up or migrate a Mac, run the audits | [docs/MAC-SETUP.md](docs/MAC-SETUP.md) |
 | change packages, macOS defaults, hotkeys, Homebrew | [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md), [docs/HOMEBREW.md](docs/HOMEBREW.md) |
 | operate or recover the homelab | [docs/NIXOS-INFRA.md](docs/NIXOS-INFRA.md), [status board](https://status.jaguar-duckbill.ts.net) |
-| run models on the studio | [docs/studio/](docs/studio/) |
 | work on Hermes | [docs/hermes/](docs/hermes/) |
 | Home Assistant, HN summaries, the Gatus decision | [HOME-ASSISTANT.md](docs/HOME-ASSISTANT.md), [HN-SUMMARIES.md](docs/HN-SUMMARIES.md), [GATUS-EVAL.md](docs/GATUS-EVAL.md) |
 | CI, Cachix, Renovate | [.github/workflows/README.md](.github/workflows/README.md) |
