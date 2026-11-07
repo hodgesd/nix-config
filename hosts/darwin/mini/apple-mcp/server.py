@@ -285,11 +285,9 @@ def update_event(
         raise ValueError("nothing to change")
     d0 = datetime.combine(day, datetime.min.time())
     lines = [_as_date_lines(d0, "d0"), _as_date_lines(d0 + timedelta(days=1), "d1")]
-    sets = []
-    if new_title:
-        sets.append(f'set summary of ev to "{_as_str(new_title)}"')
-    if new_location:
-        sets.append(f'set location of ev to "{_as_str(new_location)}"')
+    # Every check runs before the first `set`, so a rejected edit changes
+    # nothing (and the error is the whole story).
+    checks, sets = [], []
     if new_start or new_end:
         if new_start:
             ns, a = _parse_when(new_start)
@@ -303,12 +301,14 @@ def update_event(
             lines.append(_as_date_lines(ne, "ne"))
         if new_start and new_end and ne <= ns:
             raise ValueError("new_end must be after new_start")
-        sets += [
+        checks += [
             "if allday event of ev then error \"all-day event: change its times yourself\"",
             "set dur to (end date of ev) - (start date of ev)",
             "set ns to " + ("ns" if new_start else "start date of ev"),
             "set ne to " + ("ne" if new_end else "ns + dur"),
             'if ne is less than or equal to ns then error "end must be after start"',
+        ]
+        sets += [
             # Move end first when going later, so start never passes end.
             "if ns > (end date of ev) then",
             "  set end date of ev to ne",
@@ -318,6 +318,10 @@ def update_event(
             "  set end date of ev to ne",
             "end if",
         ]
+    if new_title:
+        sets.append(f'set summary of ev to "{_as_str(new_title)}"')
+    if new_location:
+        sets.append(f'set location of ev to "{_as_str(new_location)}"')
     script = (
         "".join(lines)
         + 'tell application "Calendar"\n'
@@ -335,7 +339,7 @@ def update_event(
         + "    set loc to location of ev\n"
         + '    if loc is missing value then set loc to ""\n'
         + '    set old to "was: " & summary of ev & " | " & ((start date of ev) as string) & " to " & ((end date of ev) as string) & " | " & loc\n'
-        + "".join(f"    {x}\n" for x in sets)
+        + "".join(f"    {x}\n" for x in checks + sets)
         + "    return old\n"
         + "  end tell\n"
         + "end tell\n"
