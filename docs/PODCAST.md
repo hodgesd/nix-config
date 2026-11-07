@@ -151,13 +151,15 @@ Recorded so it can be redone after a rebuild or a key rotation.
 
 ### Rotating a token
 
-Set the new value as in step 3, deploy, then:
+Set the new value as in step 3 and deploy, plus:
 
-- **podcast-feed-token**: on nixos-infra, `docker restart ts-podcast`.
-  The sidecar reads serve.json only at start, so until then the old
-  `/p/<old-token>/` path stays on Funnel and serves the rewritten
-  feed.xml, new token included. Check that the old feed URL now answers
-  404, then re-add the new URL in Overcast.
+- **podcast-feed-token**: on nixos-infra, `docker stop ts-podcast`
+  *before* the deploy and `docker start ts-podcast` after it. The sidecar
+  reads serve.json only at start, so a running one keeps the old
+  `/p/<old-token>/` path on Funnel, and it would serve the rewritten
+  feed.xml with the new token in it. The deploy doesn't start it again
+  (the compose file is unchanged). Check that the old feed URL answers
+  404 and the new one 200, then re-add the new URL in Overcast.
 - **podcast-intake-token**: copy it into `secrets/mini.yaml` again and
   switch the mini, and paste it into the Shortcut's Text action (step 2
   below). Both keep their own copy.
