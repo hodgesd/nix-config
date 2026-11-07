@@ -27,7 +27,7 @@
 #   tell-hermes-internal  adapter <-> Hermes on loopback: it is Hermes's
 #                         API_SERVER_KEY and the HMAC secret of the webhook
 #                         route. One value for both because both are the same
-#                         trust edge (this adapter), and it never leaves the VM.
+#                         trust edge (this adapter), and only the VM uses it.
 # Own file rather than nixos-infra.yaml so they could be created without
 # decrypting that one; same recipients (.sops.yaml).
 #
@@ -86,8 +86,9 @@ in {
       # The secret is WEBHOOK_SECRET from the env file above, not written here
       # (this repo is public).
       routes.tell-hermes-reply = {
-        # Late answers to Telegram's home channel, no LLM call. Needs the DM
-        # to have been made the home channel once (`/sethome` in Telegram).
+        # Late answers to Telegram's home channel, no LLM call. Needs
+        # TELEGRAM_HOME_CHANNEL in hermes-env: `/sethome` cannot persist in
+        # managed mode (save_config refuses), so it is lost on restart.
         deliver = "telegram";
         deliver_only = true;
         # So replying to the message in Telegram carries the context.

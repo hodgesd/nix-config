@@ -171,6 +171,9 @@ def finish_in_background(future: Future[str], heard: str, started: float) -> Non
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "tell-hermes"
+    # Per socket read/write, so an idle connection cannot hold a thread
+    # forever. Not the reply wait: that is a future, not a socket read.
+    timeout = 30
 
     def log_message(self, format: str, *args: object) -> None:
         pass  # replaced by the structured lines in do_POST
