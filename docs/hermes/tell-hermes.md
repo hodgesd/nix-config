@@ -57,9 +57,14 @@ VM's host key.
 
 1. Read the token on the Mac and put it in the Shortcut only:
    `sops -d --extract '["tell-hermes-token"]' secrets/tell-hermes.yaml`
-   Save it in your password manager. `tell-hermes-internal` never leaves the VM.
-2. In Telegram, DM the bot and send `/sethome` once if you have not already:
-   late answers go to the home channel.
+   Save it in your password manager. `tell-hermes-internal` is only ever
+   used on the VM (your Mac key can decrypt it, as with every secret here).
+2. Late answers go to Telegram's home channel. `/sethome` does NOT persist
+   here: Hermes is Nix-managed, so it refuses to write config and the
+   setting is lost on the next restart. Instead add
+   `TELEGRAM_HOME_CHANNEL=<your Telegram user ID>` (the same number as in
+   `TELEGRAM_ALLOWED_USERS`) to the `hermes-env` entry with
+   `sops secrets/nixos-infra.yaml`, then deploy.
 3. Check `TS_AUTHKEY` in `homelab-env` is still valid and reusable
    (Tailscale admin → Settings → Keys). `ts-tell` registers a new node `tell`.
 4. From the Mac: `just deploy-check`, then `just deploy`. **This restarts
@@ -101,8 +106,10 @@ Actions, in order:
 3. **Get Text from Input**, input = **Contents of URL**. The reply is already
    plain text, so there is no JSON to unpack; this just makes the hand-off to
    the next step explicit.
-4. **Speak** that text (Wait Until Finished on). For a silent reply use
-   **Show Content** instead (named Show Result on older systems).
+4. **Speak** that text (Wait Until Finished on). **Show Content** (Show
+   Result on older systems) puts it on screen instead, but when Siri runs
+   the shortcut Siri may read it aloud anyway, so it is not a reliable
+   silent mode.
 
 The token lives in this Shortcut only.
 
@@ -133,7 +140,7 @@ node in the Tailscale admin console, and delete `secrets/tell-hermes.yaml` and i
 | Name | Where | Used for |
 | --- | --- | --- |
 | `tell-hermes-token` | `secrets/tell-hermes.yaml`, the Shortcut | Bearer token for `POST /tell`; grants one chat turn on the Telegram toolset |
-| `tell-hermes-internal` | `secrets/tell-hermes.yaml` only | Hermes `API_SERVER_KEY` and webhook HMAC secret; loopback; never leaves the VM |
+| `tell-hermes-internal` | `secrets/tell-hermes.yaml` only | Hermes `API_SERVER_KEY` and webhook HMAC secret; loopback; used only on the VM (Mac key can decrypt) |
 | `TS_AUTHKEY` | existing `homelab-env` | Registers the `tell` tailnet node |
 
 Rotate by changing the sops value and deploying; both units restart.
