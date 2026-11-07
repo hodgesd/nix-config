@@ -56,8 +56,12 @@ def main() -> int:
     vault, state_path, intake = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
     token = os.environ["PODCAST_INTAKE_TOKEN"]
     sent: dict[str, str] = json.loads(state_path.read_text()) if state_path.exists() else {}
+    inbox = vault / "Inbox"
+    if not inbox.is_dir():  # iCloud not synced, or the vault moved
+        print(f"no Inbox folder at {inbox}", flush=True)
+        return 1
     failures = 0
-    for path in sorted((vault / "Inbox").glob("*.md")):
+    for path in sorted(inbox.glob("*.md")):
         key = path.name
         if key in sent:
             continue

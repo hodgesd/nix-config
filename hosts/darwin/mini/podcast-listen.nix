@@ -5,7 +5,8 @@
 #
 # Read-only on the vault: what has been sent is remembered in
 # ~/Library/Application Support/podcast-listen/sent.json, never by editing
-# the note. Delete a note's line there to send it again.
+# the note. Remove a note's entry there to send it again (keep it valid
+# JSON: no trailing comma after the last entry).
 #
 # Disable: remove ./podcast-listen.nix from default.nix imports and switch
 # the mini; then drop podcast-intake-token from secrets/mini.yaml.

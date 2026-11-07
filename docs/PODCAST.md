@@ -131,7 +131,7 @@ Recorded so it can be redone after a rebuild or a key rotation.
    ```zsh
    sops set secrets/nixos-infra.yaml '["podcast-intake-token"]' "\"$(openssl rand -hex 32)\""
    sops set secrets/nixos-infra.yaml '["podcast-feed-token"]' "\"$(openssl rand -hex 32)\""
-   read -rs 'K?tag:podcast auth key: '; echo; sops set secrets/nixos-infra.yaml '["podcast-ts-authkey"]' "\"$K\""; unset K
+   read -rs 'K?tag:podcast auth key: '; echo; printf '"%s"' "$K" | sops set --value-stdin secrets/nixos-infra.yaml '["podcast-ts-authkey"]'; unset K
    ```
 
    And the same intake token for the mini's `#listen` watcher:
@@ -148,6 +148,19 @@ Recorded so it can be redone after a rebuild or a key rotation.
    `https://podcast.jaguar-duckbill.ts.net/p/<podcast-feed-token>/feed.xml`
    (read the token with
    `sops -d --extract '["podcast-feed-token"]' secrets/nixos-infra.yaml`).
+
+### Rotating a token
+
+Set the new value as in step 3, deploy, then:
+
+- **podcast-feed-token**: on nixos-infra, `docker restart ts-podcast`.
+  The sidecar reads serve.json only at start, so until then the old
+  `/p/<old-token>/` path stays on Funnel and serves the rewritten
+  feed.xml, new token included. Check that the old feed URL now answers
+  404, then re-add the new URL in Overcast.
+- **podcast-intake-token**: copy it into `secrets/mini.yaml` again and
+  switch the mini, and paste it into the Shortcut's Text action (step 2
+  below). Both keep their own copy.
 
 ## iOS Shortcut: "Podcast This"
 
@@ -210,8 +223,9 @@ bridge) scans `Inbox/*.md` every 15 minutes and queues each note tagged
 - anything longer goes as pasted text, titled with the note's name.
 
 It never writes to the vault. What it has sent is in
-`~/Library/Application Support/podcast-listen/sent.json` (delete a line to
-resend); its log is `~/Library/Logs/podcast-listen.log`. A failed send is
+`~/Library/Application Support/podcast-listen/sent.json` (to resend a
+note, remove its entry and keep the JSON valid: no comma left after the
+last entry, or the watcher stops at that file every run); its log is `~/Library/Logs/podcast-listen.log`. A failed send is
 retried on the next run. It runs only while the mini's GUI session is up,
 same as the bridges.
 
