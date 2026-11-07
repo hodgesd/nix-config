@@ -190,8 +190,8 @@ hyper - o : open -a "Obsidian"
 ### Homelab services
 
 Edit `hosts/nixos/nixos-infra/*.nix` (easy-afd, proxy, backup, storage,
-homelab-stack, sidecars, hermes, gatus, healthchecks, agent-workbench,
-podcast).
+homelab-stack, sidecars, hermes, tell-hermes, gatus, healthchecks,
+agent-workbench, podcast).
 A compose app behind a tailscale sidecar is compose services plus one
 `homelab.sidecars.<name>` entry (renders serve.json and the Gatus check;
 see `sidecars.nix`). Then
