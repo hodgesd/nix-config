@@ -121,3 +121,15 @@ def test_long_paragraph_splits_at_sentences() -> None:
     assert all(len(p) <= 500 for p in pieces)
     assert all(p.endswith("ok.") for p in pieces)
     assert " ".join(pieces) == (sentence * 60).strip()
+
+
+def test_furniture_labels_go_but_sentences_that_start_alike_stay() -> None:
+    article = speech.from_text(
+        "Share this\n\nShare prices fell sharply on Monday.\n\nComments (12)\n\n"
+        "Subscribe to our newsletter\n\nNext article: Flaps",
+        "Markets",
+    )
+    text = "\n".join(t for t, _ in speech.to_pieces(article))
+    assert "Share prices fell sharply on Monday." in text
+    for furniture in ("Share this", "Comments", "Subscribe", "Next article"):
+        assert furniture not in text

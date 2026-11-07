@@ -65,10 +65,12 @@ _SKIP_SECTIONS = {
     "on this page",
     "in this article",
 }
-# Short paragraphs that are site furniture rather than article.
+# Short paragraphs that are site furniture rather than article. The labels
+# only count without a closing full stop: "Share this" is furniture,
+# "Share prices fell sharply on Monday." is the article.
 _BOILERPLATE_RE = re.compile(
     r"^(share( this)?|subscribe|sign up|follow us|related( articles| posts)?"
-    r"|read more|advertisement|comments?|blog index|back to top)\b"
+    r"|read more|advertisement|comments?|blog index|back to top)\b(?!.*[.?!]$)"
     r"|\b(next|previous) (article|post):",
     re.I,
 )
