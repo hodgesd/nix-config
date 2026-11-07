@@ -98,10 +98,12 @@ in {
 
     # SECURITY: a voice command follows the same rules as a typed one, so the
     # API-server surface gets exactly the Telegram toolset (hermes.nix, Phase
-    # 0.5 gate 1): no terminal, no file tool, no browser. The upstream default
-    # for this surface (hermes-api-server) is the FULL toolset including the
-    # shell. MCP servers (vault, Apple, Fastmail) still apply as on Telegram.
-    platform_toolsets.api_server = ["messaging" "todo" "vision"];
+    # 0.5 gate 1): no terminal, no file tool, no browser. Referenced, not
+    # copied, so a change there (e.g. adding "search") applies here too. The
+    # upstream default for this surface (hermes-api-server) is the FULL
+    # toolset including the shell. MCP servers (vault, Apple, Fastmail) still
+    # apply as on Telegram.
+    platform_toolsets.api_server = config.services.hermes-agent.settings.platform_toolsets.telegram;
 
     # SECURITY: an API-server turn has no human to approve a dangerous
     # command, so it is refused outright instead of waiting out the approval
