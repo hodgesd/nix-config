@@ -47,21 +47,21 @@ Shortcut → https://tell.jaguar-duckbill.ts.net/tell   (ts-tell sidecar, tailne
   Follow-ups after a Telegram hand-off also carry context
   (`mirror_to_session`).
 
-## Before the first deploy (you; this VM has no age key)
+## Before the first deploy
 
-The build fails until both secrets exist in the ciphertext (sops-nix checks
-the key names at build time), so `just deploy` aborts before touching anything.
+The two secrets already exist, encrypted, in `secrets/tell-hermes.yaml`
+(generated and encrypted in one pipe on the t3-code VM, never displayed; own
+file so no age private key was needed). Recipients are your Mac key and the
+VM's host key.
 
-1. `openssl rand -hex 32` twice. One is the Shortcut token, one is internal.
-   Do not reuse one for the other, and do not paste either into chat or the repo.
-2. `sops secrets/nixos-infra.yaml`, add two string keys:
-   `tell-hermes-token` and `tell-hermes-internal`. Commit to the PR branch.
-3. Put the token in the Shortcut only (below). Save it in your password manager.
-4. In Telegram, DM the bot and send `/sethome` once if you have not already:
+1. Read the token on the Mac and put it in the Shortcut only:
+   `sops -d --extract '["tell-hermes-token"]' secrets/tell-hermes.yaml`
+   Save it in your password manager. `tell-hermes-internal` never leaves the VM.
+2. In Telegram, DM the bot and send `/sethome` once if you have not already:
    late answers go to the home channel.
-5. Check `TS_AUTHKEY` in `homelab-env` is still valid and reusable
+3. Check `TS_AUTHKEY` in `homelab-env` is still valid and reusable
    (Tailscale admin → Settings → Keys). `ts-tell` registers a new node `tell`.
-6. From the Mac: `just deploy-check`, then `just deploy`. **This restarts
+4. From the Mac: `just deploy-check`, then `just deploy`. **This restarts
    hermes-agent** (new env file and settings), so pick a quiet moment.
 
 The `just` recipes are macOS-only; nothing here was deployed from the VM.
@@ -124,14 +124,14 @@ by name), or tap it in the Shortcuts app on the watch.
 Remove `./tell-hermes.nix` from `hosts/nixos/nixos-infra/default.nix` and the
 `ts-tell` service from `stacks/homelab/docker-compose.yml`, then
 `just deploy`. Afterwards delete `/srv/homelab/ts-tell`, remove the `tell`
-node in the Tailscale admin console, and delete the two sops keys.
+node in the Tailscale admin console, and delete `secrets/tell-hermes.yaml` and its `.sops.yaml` rule.
 
 ## Credential inventory (names and scopes only)
 
 | Name | Where | Used for |
 | --- | --- | --- |
-| `tell-hermes-token` | sops, the Shortcut | Bearer token for `POST /tell`; grants one chat turn on the Telegram toolset |
-| `tell-hermes-internal` | sops only | Hermes `API_SERVER_KEY` and webhook HMAC secret; loopback; never leaves the VM |
+| `tell-hermes-token` | `secrets/tell-hermes.yaml`, the Shortcut | Bearer token for `POST /tell`; grants one chat turn on the Telegram toolset |
+| `tell-hermes-internal` | `secrets/tell-hermes.yaml` only | Hermes `API_SERVER_KEY` and webhook HMAC secret; loopback; never leaves the VM |
 | `TS_AUTHKEY` | existing `homelab-env` | Registers the `tell` tailnet node |
 
 Rotate by changing the sops value and deploying; both units restart.
