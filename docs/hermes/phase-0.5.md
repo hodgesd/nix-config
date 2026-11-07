@@ -7,7 +7,7 @@ Built and deployed 2026-08-30. Commits: `f653fdc` (gate 1), `3c243fc`
 
 | Gate | Mechanism |
 |---|---|
-| 1 — minimal Telegram surface | `platform_toolsets.telegram = [messaging todo vision]`. Dropped: terminal, web, browser, file, skills, cronjob, image, tts. Operator surface = `hermes` CLI on the VM over SSH (full preset, deliberately). |
+| 1 — minimal Telegram surface | `platform_toolsets.telegram = [messaging todo vision]`. Dropped: terminal, web, browser, file, skills, cronjob, image, tts. Operator surface = `hermes` CLI on the VM over SSH (full preset, deliberately). **2026-11-06:** `search` (web_search only) added back — see `phase-web-search.md`. |
 | 2 — default-deny egress | `hermes-egress.nix`: iptables/ip6tables OUTPUT chain keyed to `-m owner --uid-owner hermes` (every agent process runs as that UID). Allow: loopback, established, port 53; reject RFC1918 + 100.64/10 + link-local/ULA **before** allowing tcp/443 to public addresses; log-then-reject the rest (`hermes-egress-drop` in the journal). Chosen over bridge networking because upstream hardcodes `--network=host` with no option (verified at pinned rev and HEAD); UID-scoping is per-workload and survives flake updates. |
 | 3 — immutable config/policy | Read-only binds into the container: host `config.yaml` (activation merge rewrites in place → declared changes propagate), `AGENTS.md` from the nix store (policy edits change the store path → container auto-recreates), and empty ro shadows over `.hermes.md`/`HERMES.md` (they'd outrank AGENTS.md in the context loader). `fallback_providers = []` explicitly — fail closed to Anthropic. |
 
