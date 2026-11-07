@@ -41,7 +41,8 @@ the queries.
 ## Verify
 
 1. `just deploy-check`, then `just deploy` (needs the key in sops first).
-2. On the VM: `docker exec hermes-agent hermes tools` lists `web_search`
+2. On the VM: `runuser -u hermes -- env HERMES_HOME=/var/lib/hermes/.hermes hermes tools`
+   (the CLI is on the host, not in the container) lists `web_search`
    for telegram and no `web_extract` / `browser_*`.
 3. Journal shows no "BRAVE_SEARCH_API_KEY" or "no provider" error on the
    first search.
