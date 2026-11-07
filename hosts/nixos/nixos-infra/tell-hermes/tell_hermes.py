@@ -106,7 +106,11 @@ def post_json(url: str, body: bytes, headers: dict[str, str], timeout: float) ->
 
 
 def ask_hermes(text: str) -> str:
-    """One turn of the persistent Tell Hermes session; returns speakable text."""
+    """One turn of the persistent Tell Hermes session; returns the raw answer.
+
+    Raw, not speakable(): a handed-off answer goes to Telegram, which can show
+    the long or formatted parts the watch would have dropped.
+    """
     body = json.dumps(
         {
             "model": "hermes-agent",
@@ -123,7 +127,7 @@ def ask_hermes(text: str) -> str:
         {"Authorization": f"Bearer {INTERNAL}", "X-Hermes-Session-Id": SESSION_ID},
         TURN_TIMEOUT,
     )
-    return speakable(json.loads(raw)["choices"][0]["message"]["content"] or "")
+    return json.loads(raw)["choices"][0]["message"]["content"] or ""
 
 
 def push_to_telegram(heard: str, reply: str) -> None:
@@ -149,7 +153,7 @@ def push_to_telegram(heard: str, reply: str) -> None:
 def finish_in_background(future: Future[str], heard: str, started: float) -> None:
     """Waits for a handed-off turn to end, then tells the user over Telegram."""
     try:
-        reply = future.result()
+        reply = future.result().strip() or "Done."
         outcome = "finished"
     except Exception as exc:
         log.warning("handed-off turn failed: %s", type(exc).__name__)
@@ -234,7 +238,7 @@ class Handler(BaseHTTPRequestHandler):
         log.info("heard: %r", text)
         future = POOL.submit(ask_hermes, text)
         try:
-            reply = future.result(timeout=REPLY_WAIT)
+            reply = speakable(future.result(timeout=REPLY_WAIT))
         except FutureTimeout:
             # Own thread, not a done-callback: that would run on this request
             # thread if the turn finished in the gap, delaying the reply.
