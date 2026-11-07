@@ -3,8 +3,9 @@
 Built 2026-11-06. Module `hosts/nixos/nixos-infra/podcast.nix`, code in
 `hosts/nixos/nixos-infra/podcast/`, containers in `stacks/podcast/`.
 
-Send an article URL (or pasted text) from the iPhone's Share Sheet or by
-telling Hermes "podcast this <url>". A few minutes later it is an episode in
+Send an article URL (or pasted text) from the iPhone's Share Sheet, by
+telling Hermes "podcast this <url>", or by tagging an Obsidian inbox note
+`#listen`. A few minutes later it is an episode in
 a private podcast feed in Overcast, read by Kokoro in a voice that sounds
 like a person reading the article, not a screen reader reading the page.
 The idea is from Talk Python #567 (Jeff Triplett's Hermes setup).
@@ -14,6 +15,7 @@ The idea is from Talk Python #567 (Jeff Triplett's Hermes setup).
 ```
 Shortcut ──https://podcast.jaguar-duckbill.ts.net:8444/enqueue──┐  (tailnet only, bearer)
 Hermes ── podcast_this (mcp-podcast, 127.0.0.1:9105) ── 127.0.0.1:8095 ─┤
+mini podcast-listen (Inbox #listen, every 15 min) ──── same as Shortcut ─┤
                                                                          ▼
                   podcast.service (native): SQLite queue → fetch → trafilatura
                   → speech.py cleanup → Kokoro (127.0.0.1:8880, one request
@@ -107,6 +109,8 @@ default, and the voice the speed above was measured with. Change it in
 
    ```jsonc
    "grants": [
+     // Your phones and Macs, the mini (#listen watcher) included if it is
+     // user-owned; add its tag here if it has one.
      {"src": ["autogroup:member"], "dst": ["tag:podcast"], "ip": ["8444"]},
      {"src": ["tag:homelab"], "dst": ["tag:podcast"], "ip": ["8444"]},
    ],
@@ -126,7 +130,15 @@ default, and the voice the speed above was measured with. Change it in
    sops secrets/nixos-infra.yaml   # add: podcast-ts-authkey: tskey-auth-…
    ```
 
-4. `just deploy-check`, then `just deploy`.
+   And the same intake token for the mini's `#listen` watcher:
+
+   ```bash
+   sops set secrets/mini.yaml '["podcast-intake-token"]' \
+     "\"$(sops -d --extract '["podcast-intake-token"]' secrets/nixos-infra.yaml)\""
+   ```
+
+4. `just deploy-check`, then `just deploy`. Switch the mini (`just` on the
+   mini) to start the `#listen` watcher.
 
 5. **Overcast**: + → Add URL →
    `https://podcast.jaguar-duckbill.ts.net/p/<podcast-feed-token>/feed.xml`
@@ -177,10 +189,20 @@ works from both Telegram and the webhook.
 
 ## Obsidian `#listen`
 
-Not built. The vault lives on the mini, and nixos-infra reaches it only
-through Hermes's vault bridge (`vault.nix`, tools `read_note`,
-`search_notes`, `list_notes` and three append-only writes). The worker has
-no path to it, and inventing a sync was out of scope. Decision pending.
+The vault lives on the mini; nixos-infra only sees it through Hermes's
+vault bridge. So the mini does the watching: `podcast-listen`
+(`hosts/darwin/mini/podcast-listen.nix`, a user LaunchAgent like the
+bridge) scans `Inbox/*.md` every 15 minutes and queues each note tagged
+`#listen` (inline or in frontmatter `tags`) once:
+
+- a link capture (a URL plus at most 40 other words) goes as the URL;
+- anything longer goes as pasted text, titled with the note's name.
+
+It never writes to the vault. What it has sent is in
+`~/Library/Application Support/podcast-listen/sent.json` (delete a line to
+resend); its log is `~/Library/Logs/podcast-listen.log`. A failed send is
+retried on the next run. It runs only while the mini's GUI session is up,
+same as the bridges.
 
 ## Verify
 
@@ -208,12 +230,13 @@ uv run ruff check . && uv run ruff format --check .
 
 ## Disable
 
-Remove `./podcast.nix` from the imports in
+Remove `./podcast-listen.nix` from the mini's imports and switch it. Remove
+`./podcast.nix` from the imports in
 `hosts/nixos/nixos-infra/default.nix` and `just deploy`, then on the VM
 `docker compose --project-directory /srv/podcast down` (this also takes the
 Funnel down). Afterwards delete `/var/lib/podcast` and `/srv/podcast`,
 remove the `podcast` node in the admin console, the `tag:podcast` ACL
-entries and the three `podcast-*` sops keys.
+entries and the `podcast-*` sops keys in both secrets files.
 
 Emergency, Funnel only: `docker stop ts-podcast` on the VM.
 
@@ -221,7 +244,7 @@ Emergency, Funnel only: `docker stop ts-podcast` on the VM.
 
 | Name | Used by | Scope |
 |---|---|---|
-| `podcast-intake-token` | podcast.service (checks it), mcp-podcast (sends it), the Shortcut (a Text action) | Queue a job. Nothing else. |
+| `podcast-intake-token` | podcast.service (checks it); mcp-podcast, the mini's podcast-listen (`secrets/mini.yaml`) and the Shortcut (a Text action) send it | Queue a job. Nothing else. |
 | `podcast-feed-token` | podcast.service (writes feed URLs), ts-podcast serve.json (the Funnel path), Overcast (in the URL) | Read the feed and the MP3s. Rotating it changes the feed URL. |
 | `podcast-ts-authkey` | ts-podcast, first login only | Join the tailnet as `tag:podcast`, one use, 1-day expiry. |
 
