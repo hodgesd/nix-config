@@ -249,6 +249,48 @@ in {
       };
   };
 
+  # Peer traffic: import adsb.lol's daily track archive into
+  # data/peer_landings.sqlite (scripts/ingest_adsblol.py). One day is a
+  # ~3.5 GB download read as a stream — nothing lands on disk but a
+  # ~1 MB/day SQLite — and about 10 minutes of one core, so it runs at
+  # idle priority and the household never competes with it. The app
+  # reads the store per request, so no reload is needed.
+  systemd.services.easy-afd-adsblol = {
+    description = "Import adsb.lol tracks for Easy A/FD peer traffic";
+    after = ["network-online.target"];
+    wants = ["network-online.target"];
+    environment.PYTHONPATH = appDir;
+    # A missed night is caught up by the next (the script takes up to two
+    # days a run), but a run that keeps failing should still page.
+    onFailure = ["notify-failure@%n.service"];
+    serviceConfig =
+      hardening
+      // {
+        Type = "oneshot";
+        User = "easy-afd";
+        Group = "easy-afd";
+        StateDirectory = "easy-afd";
+        WorkingDirectory = stateDir;
+        ExecStart = "${pyEnv}/bin/python ${appDir}/scripts/ingest_adsblol.py --data-dir ${stateDir}/data";
+        Nice = 19;
+        CPUSchedulingPolicy = "idle";
+        IOSchedulingClass = "idle";
+        MemoryMax = "1G";
+        TimeoutStartSec = "2h";
+      };
+  };
+
+  # adsb.lol publishes a day at about 03:30Z the next day; 02:00 local is
+  # 07:00-08:00Z.
+  systemd.timers.easy-afd-adsblol = {
+    wantedBy = ["timers.target"];
+    timerConfig = {
+      OnCalendar = "*-*-* 02:00";
+      Persistent = true;
+      RandomizedDelaySec = "30min";
+    };
+  };
+
   # Daily, within the hour after local midnight.
   #
   # The app decides which 28-day cycle is "current" by the date, so at
