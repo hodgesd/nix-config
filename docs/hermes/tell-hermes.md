@@ -94,13 +94,14 @@ Actions, in order:
    - URL: `https://tell.jaguar-duckbill.ts.net/tell`
    - Method: **POST**
    - Headers: add `Authorization` = `Bearer ` followed by your token
-   - Request Body: **JSON**; add a **Text** field named `text`, value = the
-     **Dictated Text** variable
+   - Request Body: **JSON**; add a **Text** field whose Key is `text`
+     (lowercase; an empty key gets a 400), value = the **Dictated Text**
+     variable
 3. **Get Text from Input**, input = **Contents of URL**. The reply is already
    plain text, so there is no JSON to unpack; this just makes the hand-off to
    the next step explicit.
-4. **Speak Text** with that text (Wait Until Finished on). Use **Show Result**
-   instead for a silent reply.
+4. **Speak** that text (Wait Until Finished on). For a silent reply use
+   **Show Content** instead (named Show Result on older systems).
 
 The token lives in this Shortcut only.
 
