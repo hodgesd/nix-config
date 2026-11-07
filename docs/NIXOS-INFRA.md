@@ -18,6 +18,7 @@ with `just deploy` (see [Deploying](#deploying)).
 |---|---|---|---|
 | `easy-afd` | `easy-afd.nix` | Easy A/FD (gunicorn :8000, tailnet-only via firewall) | always |
 | `nginx` | `proxy.nix`, `bj-drill.nix` | TLS front for **https://afd.hdgs.me** (proxy to :8000) and **https://21.hdgs.me** (blackjack drill, static files from the Nix store); LE certs, DNS-01 via Cloudflare | always |
+| `easy-afd-telegram` | `easy-afd.nix` | Telegram bot: an airport ident in, the text brief and PNG card back (`scripts/telegram_brief.py`); outbound only. Exists only once the `easy-afd-telegram-env` secret is in sops | always (when enabled) |
 | `easy-afd-refresh` | `easy-afd.nix` | Rebuilds NASR, the d-TPP chart index, OurAirports and openAIP data; reloads the app; Gatus heartbeat on success; retries twice, then pages via `notify-failure@` | nightly (00:00–01:00) |
 | `homelab-backup` | `backup.nix` | Mirror /srv/homelab + secrets → NAS `backups` share | nightly 03:30 |
 | `mnt-data.automount` | `storage.nix` | `//192.168.1.142/Data` at /mnt/data (MeTube downloads) | on access |
@@ -237,6 +238,7 @@ aborts activation *before* any service restarts.
 | Secret | Consumers |
 |---|---|
 | `easy-afd-env` | easy-afd, refresh (OPENAIP_API_KEY, AUTOROUTER_*, FAA_NMS_*, GATUS_REFRESH_PUSH_URL/TOKEN) |
+| `easy-afd-telegram-env` | easy-afd-telegram (TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_CHATS, optional ANTHROPIC_API_KEY). Optional: the unit is declared only when this key exists in the file |
 | `healthchecks-env` | hc-heartbeat (HC_PING_URL), hc-ntfy (HC_NTFY_PING_URL), homelab-backup (HC_BACKUP_PING_URL) — each healthchecks.io ping URL is a credential |
 | `cloudflare-acme-env` | ACME (CLOUDFLARE_DNS_API_TOKEN + propagation tuning) |
 | `nas-backup-credentials` | /mnt/data mount + backup script (SMB user `nixos-backup`) |

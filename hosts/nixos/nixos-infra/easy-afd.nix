@@ -130,6 +130,21 @@
     fi
   '';
 
+  # The Telegram bot (scripts/telegram_brief.py in the app repo) exists only
+  # once its secret does. sops-nix fails activation when a declared key is
+  # missing from the file, so the unit and the secret are gated on the key
+  # being present in secrets/nixos-infra.yaml — a text check, the values
+  # stay encrypted. Add it with `sops secrets/nixos-infra.yaml`:
+  #   easy-afd-telegram-env: |
+  #     TELEGRAM_BOT_TOKEN=...          from @BotFather
+  #     TELEGRAM_ALLOWED_CHATS=123,456  your chat id(s); others are ignored
+  #     ANTHROPIC_API_KEY=...           optional, enables free-text questions
+  # then deploy. Until then this file changes nothing on the host.
+  # The leading newline keeps a nested key from matching; it is prepended
+  # to the file too so a key on the very first line still counts.
+  telegramSecretPresent =
+    lib.hasInfix "\neasy-afd-telegram-env:" ("\n" + builtins.readFile ../../../secrets/nixos-infra.yaml);
+
   hardening = {
     NoNewPrivileges = true;
     PrivateTmp = true;
@@ -153,7 +168,14 @@ in {
     wantedBy = ["multi-user.target"];
     after = ["network-online.target"];
     wants = ["network-online.target"];
-    environment.PYTHONPATH = appDir;
+    environment = {
+      PYTHONPATH = appDir;
+      # /brief/<ident>.png: the app shells out to resvg with Inter loaded
+      # explicitly (services/brief_card.py), so the card renders the same
+      # here as on the dev Mac. Without these the PNG route answers 503.
+      BRIEF_RESVG = lib.getExe pkgs.resvg;
+      BRIEF_FONT_FILE = "${pkgs.inter}/share/fonts/truetype/Inter.ttc";
+    };
 
     # Unit-level, NOT serviceConfig: systemd moved the start-rate limit
     # to [Unit] in v229, so setting these under [Service] is silently
@@ -246,6 +268,33 @@ in {
         # dropping requests, which matters now that this is nightly.
         ExecStopPost = "+${lib.getExe' pkgs.systemd "systemctl"} try-reload-or-restart easy-afd.service";
         EnvironmentFile = config.sops.secrets.easy-afd-env.path;
+      };
+  };
+
+  # Telegram bot: text an ident, get the brief and card back. Outbound
+  # only (long-polls api.telegram.org, reads the app on localhost), so
+  # nothing new listens. Gated: see telegramSecretPresent above.
+  sops.secrets.easy-afd-telegram-env = lib.mkIf telegramSecretPresent {
+    restartUnits = ["easy-afd-telegram.service"];
+  };
+
+  systemd.services.easy-afd-telegram = lib.mkIf telegramSecretPresent {
+    description = "Easy A/FD Telegram brief bot";
+    wantedBy = ["multi-user.target"];
+    after = ["network-online.target" "easy-afd.service"];
+    wants = ["network-online.target"];
+    startLimitBurst = 5;
+    startLimitIntervalSec = 60;
+    serviceConfig =
+      hardening
+      // {
+        User = "easy-afd";
+        Group = "easy-afd";
+        WorkingDirectory = stateDir;
+        ExecStart = "${pyEnv}/bin/python ${appDir}/scripts/telegram_brief.py";
+        EnvironmentFile = config.sops.secrets.easy-afd-telegram-env.path;
+        Restart = "always";
+        RestartSec = "10s";
       };
   };
 
