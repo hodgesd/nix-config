@@ -143,7 +143,9 @@ node in the Tailscale admin console, and delete `secrets/tell-hermes.yaml` and i
 | `tell-hermes-internal` | `secrets/tell-hermes.yaml` only | Hermes `API_SERVER_KEY` and webhook HMAC secret; loopback; used only on the VM (Mac key can decrypt) |
 | `TS_AUTHKEY` | existing `homelab-env` | Registers the `tell` tailnet node |
 
-Rotate by changing the sops value and deploying; both units restart.
+Rotate by changing the sops value and deploying; both units restart. After
+rotating `tell-hermes-token`, put the new value in the Shortcut's
+Authorization header and your password manager, or every request gets 401.
 
 ## Manual test script
 
