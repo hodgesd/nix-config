@@ -145,30 +145,37 @@ Recorded so it can be redone after a rebuild or a key rotation.
 ## iOS Shortcut: "Podcast This"
 
 The phone must be on the tailnet (Tailscale app connected). Build it in
-Shortcuts → +, actions in this order:
+Shortcuts → +, actions in this order (as built on iOS 26, 2026-11-07):
 
-1. **Receive** *URLs, Safari web pages and Text* input from *Share Sheet*.
-   If there's no input: *Ask For* → *Text*.
-2. **Text**: paste the value of `podcast-intake-token`. Tap the action's
-   output and rename the variable to `Token`. The token lives only here.
-3. **Get URLs from Input**: *Shortcut Input*.
-4. **If** *URLs* *has any value*
-5. — **Get Item from List**: *First Item* from *URLs*.
-6. — **Get Contents of URL**: `https://podcast.jaguar-duckbill.ts.net:8444/enqueue`.
-   Expand it: Method *POST*; Headers: `Authorization` = `Bearer ` followed
-   by the `Token` variable; Request Body *JSON*, one field: `url` (Text) =
-   *Item from List*.
-7. **Otherwise**
-8. — **Ask for Input**: *Text*, prompt `Title?`.
-9. — **Get Contents of URL**: same URL, method and header as step 6;
+1. **Get URLs from Input**: *Shortcut Input*. Adding it makes the grey
+   **Receive *Any* input from *Nowhere*** block appear on top: tap
+   *Nowhere* → *Share Sheet*, tap *Any* and leave only *Safari Web Pages*,
+   *URLs* and *Text* on. If there's no input: *Ask For* → *Text*.
+2. **Text**: paste the value of `podcast-intake-token` (on the mbp:
+   `sops -d --extract '["podcast-intake-token"]' secrets/nixos-infra.yaml | pbcopy`,
+   then `pbcopy < /dev/null` once done). The token lives only here. Its
+   output variable is called *Text*; that is the only Text action, so the
+   headers below can use it as is.
+3. **If** *URLs* *has any value*
+4. — **Get Item from List**: *First Item* from *URLs*.
+5. — **Get Contents of URL**: `https://podcast.jaguar-duckbill.ts.net:8444/enqueue`.
+   Expand it: Method *POST*; Headers: `Authorization` = `Bearer `, a space,
+   then the *Text* variable (a blue bubble, not typed); no other header
+   rows; Request Body *JSON*, one field: `url` (Text) = *Item from List*.
+6. **Otherwise**
+7. — **Ask for Input**: *Text*, prompt `Title?`.
+8. — **Get Contents of URL**: same URL, method and header as step 5;
    Request Body *JSON* with `text` (Text) = *Shortcut Input* and `title`
    (Text) = *Provided Input*.
-10. **End If**
-11. **Show Notification**: `Queued for the podcast`.
+9. **End If**
+10. **Show Notification**: the *If Result* variable. That is the intake's
+    reply, `{"id": …, "status": "queued"}` on success. Get Contents of URL
+    does not stop on an HTTP error, so a fixed "Queued" message would also
+    show for a 401 (bad token) or a 400 (empty body).
 
-Then in the shortcut's settings (ⓘ) turn on **Show in Share Sheet**. From
-Safari: Share → Podcast This. The notification appears within a second;
-the episode follows a few minutes later.
+**Show in Share Sheet** (under ⓘ in the bottom bar) is switched on by
+choosing *Share Sheet* in step 1. From Safari: Share → Podcast This. The
+reply appears within a second; the episode follows a few minutes later.
 
 ## Hermes
 
@@ -248,7 +255,7 @@ Emergency, Funnel only: `docker stop ts-podcast` on the VM.
 ## Manual test script
 
 1. Safari on the iPhone (Tailscale on) → Share → Podcast This on a
-   long-form article. The notification appears at once;
+   long-form article. The notification shows `"status": "queued"` at once;
    `journalctl -u podcast` shows `queued` and, minutes later, `done … Nx
    real time`.
 2. In Overcast, pull to refresh the Read Later feed: the episode is there,
