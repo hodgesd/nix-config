@@ -36,7 +36,8 @@ Shortcut → https://tell.jaguar-duckbill.ts.net/tell   (ts-tell sidecar, tailne
 ```
 
 - **Same rules as typed.** The voice surface gets exactly the Telegram
-  toolset (`messaging`, `todo`, `vision`: no shell, no file tool). Upstream's
+  toolset, by reference to it in `hermes.nix` (currently `messaging`, `todo`,
+  `vision`, `search`: no shell, no file tool, no page fetching). Upstream's
   default for it would be the full toolset including the shell. MCP servers
   (vault, Apple, Fastmail) still apply, as on Telegram.
 - **Dangerous commands are refused, not approved.** An API-server turn has no
