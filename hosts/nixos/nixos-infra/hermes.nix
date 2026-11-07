@@ -121,13 +121,11 @@ in {
       # OpenRouter guarantees neither US-only nor fixed-provider routing
       # without explicit pinning, and it receives FULL session context
       # (vault reads, Fastmail metadata, Reminders, terminal output).
-      # Accepted knowingly, not by accident. Pinning (provider.only +
-      # allow_fallbacks: false) is the follow-up once a long-term model is
-      # chosen — the plumbing exists upstream (the OpenRouter profile's
-      # build_extra_body maps a `provider_preferences` context key onto
-      # OpenRouter's `provider` routing object), but the config key that
-      # populates it is not yet identified. hermes-sentinel.nix watches
-      # for drift from the pair declared here in the meantime.
+      # Accepted knowingly, not by accident. The pinning key is
+      # `provider_routing` (flat, or per model under `.models.<id>`); see
+      # the GLM block below. Sonnet is unpinned: every endpoint OpenRouter
+      # lists for it is Anthropic's model behind a major cloud.
+      # hermes-sentinel.nix watches for drift from the pair declared here.
       #
       # Namespaced model id: both "claude-sonnet-5" and
       # "anthropic/claude-sonnet-5" appear in state.db history. The
@@ -148,6 +146,27 @@ in {
       # = "medium"` is Anthropic's starting point for multistep tool use.
       model.default = "anthropic/claude-sonnet-5.5";
       model.base_url = "https://openrouter.ai/api/v1";
+
+      # GLM-5.3 trial (2026-11): provider pin, inert until GLM is used.
+      # Upstream merges `provider_routing.models.<id>` only for the model in
+      # use (agent/chat_completion_helpers.py at the pinned rev), so Sonnet
+      # traffic is untouched; cron jobs read the same config.
+      #
+      # WHY pin: 36 providers serve GLM-5.3, $0.07 to $2.80/M input, and the
+      # cheap end is quantized (per-provider GPQA spans 84.3–88.7% for the
+      # same weights). Unpinned, each turn could hit a different copy.
+      # WHY these three: standard $1.40/$4.40, cached input $0.26/M, tool
+      # calls supported, no prompt-training flag (OpenRouter endpoints API,
+      # 2026-11-06). Z.ai built the model (fp8). Three, not one: OpenRouter
+      # shows 99.88% availability with fallback vs 98.07% without.
+      # data_collection = "deny" — WHY: full session context (mail, vault,
+      # reminders) must never land with a provider that trains on prompts.
+      # Disable: delete this block (no effect unless GLM is selected).
+      provider_routing.models."z-ai/glm-5.3" = {
+        order = ["z-ai" "fireworks" "together"];
+        only = ["z-ai" "fireworks" "together"];
+        data_collection = "deny";
+      };
 
       # Prompt-cache TTL. Upstream default is "5m"; the only other
       # Anthropic-supported tier is "1h" (hermes_cli/config_defaults.py,
