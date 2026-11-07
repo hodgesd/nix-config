@@ -42,6 +42,13 @@ TARGET_LIST = "Inbox"
 # read-only because no tool names it.
 WRITE_CALENDAR = "Derrick"
 MARKER = "#hermes"
+# WHY: `calendar "Derrick"` picks the first calendar with that name in ANY
+# account (iCloud, Google, Exchange). Refuse to write unless the name is
+# unique, so a same-named calendar elsewhere never receives Hermes's writes.
+_ONE_CALENDAR = (
+    f'  if (count of (every calendar whose name is "{WRITE_CALENDAR}")) is not 1 then '
+    f'error "need exactly one calendar named {WRITE_CALENDAR}"\n'
+)
 MAX_OUT = 20_000
 
 
@@ -251,6 +258,7 @@ def create_event(
     script = (
         f"{_as_date_lines(s, 's')}{_as_date_lines(e, 'e')}"
         'tell application "Calendar"\n'
+        f"{_ONE_CALENDAR}"
         f'  tell calendar "{WRITE_CALENDAR}"\n'
         f"    make new event with properties {{{', '.join(props)}}}\n"
         "  end tell\n"
@@ -268,20 +276,21 @@ def update_event(
     new_title: str = "",
     new_start: str = "",
     new_end: str = "",
-    new_location: str = "",
+    new_location: str | None = None,
 ) -> str:
     """Edit ONE event in Derrick's calendar: the event whose title contains
     `title` and that starts on on_date ('YYYY-MM-DD'). Only the new_*
     fields given change; new_start alone keeps the duration. Times:
     'YYYY-MM-DD HH:MM' local (timed events only). Refuses events with
-    attendees (an edit emails every invitee) and repeating events. Notes
+    attendees (an edit emails every invitee) and repeating events.
+    new_location="" clears the location. Notes
     are not editable (they carry the #hermes marker; change them in
     Calendar). Returns the OLD values so the edit can be undone."""
     try:
         day = date.fromisoformat(on_date)
     except ValueError as e:
         raise ValueError(f"on_date must be YYYY-MM-DD: {e}") from None
-    if not any([new_title, new_start, new_end, new_location]):
+    if not any([new_title, new_start, new_end]) and new_location is None:
         raise ValueError("nothing to change")
     d0 = datetime.combine(day, datetime.min.time())
     lines = [_as_date_lines(d0, "d0"), _as_date_lines(d0 + timedelta(days=1), "d1")]
@@ -320,11 +329,12 @@ def update_event(
         ]
     if new_title:
         sets.append(f'set summary of ev to "{_as_str(new_title)}"')
-    if new_location:
+    if new_location is not None:  # "" clears it
         sets.append(f'set location of ev to "{_as_str(new_location)}"')
     script = (
         "".join(lines)
         + 'tell application "Calendar"\n'
+        + _ONE_CALENDAR
         + f'  tell calendar "{WRITE_CALENDAR}"\n'
         + f'    set hits to (every event whose summary contains "{_as_str(title)}" and start date \u2265 d0 and start date < d1)\n'
         + '    if (count of hits) is 0 then error "no matching event that day"\n'
