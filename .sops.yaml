@@ -37,3 +37,11 @@ creation_rules:
       - age:
           - *admin_hodgesd
           - *host_mbp
+  # Tell Hermes (hosts/nixos/nixos-infra/tell-hermes.nix): its own file so the
+  # two secrets could be created without decrypting nixos-infra.yaml. Same
+  # recipients as that file.
+  - path_regex: secrets/tell-hermes\.yaml$
+    key_groups:
+      - age:
+          - *admin_hodgesd
+          - *host_nixos_infra

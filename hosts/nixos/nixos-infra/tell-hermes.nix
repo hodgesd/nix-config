@@ -21,18 +21,20 @@
 # host.docker.internal (sidecars.nix). No Funnel anywhere: serve.json has no
 # AllowFunnel, and nothing here is reachable from the internet.
 #
-# Secrets (sops, secrets/nixos-infra.yaml; create each with
-# `openssl rand -hex 32`, never reuse one for the other):
-#   tell-hermes-token     the Shortcut's bearer token
+# Secrets (sops, secrets/tell-hermes.yaml, values from `openssl rand -hex 32`):
+#   tell-hermes-token     the Shortcut's bearer token. Read it on the Mac with
+#                         `sops -d --extract '["tell-hermes-token"]' secrets/tell-hermes.yaml`
 #   tell-hermes-internal  adapter <-> Hermes on loopback: it is Hermes's
 #                         API_SERVER_KEY and the HMAC secret of the webhook
 #                         route. One value for both because both are the same
 #                         trust edge (this adapter), and it never leaves the VM.
+# Own file rather than nixos-infra.yaml so they could be created without
+# decrypting that one; same recipients (.sops.yaml).
 #
 # Disable: remove ./tell-hermes.nix from default.nix imports and the ts-tell
 # service from stacks/homelab/docker-compose.yml, deploy. Then delete
 # /srv/homelab/ts-tell (the sidecar's tailnet identity), remove the `tell`
-# node in the Tailscale admin console, and the two sops entries.
+# node in the Tailscale admin console, and secrets/tell-hermes.yaml with its .sops.yaml rule.
 {
   config,
   pkgs,
@@ -45,8 +47,14 @@ in {
   sops.secrets = {
     # restartUnits: a rotated token must reach the running adapter (systemd
     # restarts on unit change, not on credential-file change).
-    tell-hermes-token.restartUnits = ["tell-hermes.service"];
-    tell-hermes-internal.restartUnits = ["tell-hermes.service"];
+    tell-hermes-token = {
+      sopsFile = ../../../secrets/tell-hermes.yaml;
+      restartUnits = ["tell-hermes.service"];
+    };
+    tell-hermes-internal = {
+      sopsFile = ../../../secrets/tell-hermes.yaml;
+      restartUnits = ["tell-hermes.service"];
+    };
   };
 
   # Hermes reads these from its dotenv. Rendered from the one internal secret
