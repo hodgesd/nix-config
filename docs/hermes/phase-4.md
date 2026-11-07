@@ -118,13 +118,14 @@ script stopped using a Nix bash.
 
 ### Credential inventory
 
-None new. Same `apple-mcp-token`; new macOS grant: Automation → Calendar
-for `/bin/bash`.
+None new. Same `apple-mcp-token`, whose reach now includes creating and
+editing events in `Derrick`. New macOS grant: Automation → Calendar for
+`/bin/bash`.
 
 ### Verify
 
-1. mini: `just` (rebuild), then nixos-infra: `just deploy-check` and
-   `just deploy`. Mini first, so the VM never lists a tool the bridge
+1. On the mini: `just` (rebuild). Then on a Mac (mbp), for nixos-infra:
+   `just deploy-check` and `just deploy`. Mini first, so the VM never lists a tool the bridge
    lacks.
 2. Telegram: "add test event Hermes tomorrow 3pm" → Hermes restates the
    date and an assumed length ("tomorrow" and the length are inferred) →

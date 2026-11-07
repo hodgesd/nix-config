@@ -286,6 +286,8 @@ def update_event(
     new_location="" clears the location. Notes
     are not editable (they carry the #hermes marker; change them in
     Calendar). Returns the OLD values so the edit can be undone."""
+    if not title.strip():
+        raise ValueError("title is required (an empty one matches every event)")
     try:
         day = date.fromisoformat(on_date)
     except ValueError as e:
