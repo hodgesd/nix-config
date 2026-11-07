@@ -26,6 +26,7 @@
     ./fastmail.nix
     ./vault.nix
     ./apple.nix
+    ./tell-hermes.nix
     ./healthchecks.nix
     ./gatus.nix
     ./samsclub-popcorn.nix # TEMPORARY, expires 2026-12-12
