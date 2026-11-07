@@ -23,6 +23,7 @@ import hmac
 import ipaddress
 import json
 import os
+import re
 import shutil
 import socket
 import sqlite3
@@ -66,6 +67,9 @@ COVER = os.environ.get("PODCAST_COVER", "")
 
 MAX_BODY = 2_000_000  # bytes of JSON one intake request may carry
 MAX_PAGE = 10_000_000  # bytes of HTML one fetch may read
+# Longest article synthesized: about 3 hours of audio, ~600 MB of WAV in
+# tmp/ while it runs. A 2 MB paste could otherwise mean a day of audio.
+MAX_WORDS = 30_000
 SAMPLE_RATE = 24_000  # Kokoro's output; silence is written to match
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
@@ -73,6 +77,9 @@ USER_AGENT = (
 )
 ITUNES = "http://www.itunes.com/dtds/podcast-1.0.dtd"
 ATOM = "http://www.w3.org/2005/Atom"
+# Characters XML 1.0 forbids; ElementTree writes them anyway, and one in a
+# pasted title would make Overcast reject the whole feed.
+XML_INVALID = re.compile("[^\t\n\r\x20-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
 
 WAKE = threading.Event()
 
@@ -372,9 +379,9 @@ def write_feed() -> None:
     channel = ET.SubElement(rss, "channel")
 
     def add(parent: ET.Element, tag: str, body: str = "", **attrs: str) -> ET.Element:
-        el = ET.SubElement(parent, tag, attrs)
+        el = ET.SubElement(parent, tag, {k: XML_INVALID.sub("", v) for k, v in attrs.items()})
         if body:
-            el.text = body
+            el.text = XML_INVALID.sub("", body)
         return el
 
     add(channel, "title", FEED_TITLE)
@@ -452,6 +459,10 @@ def process(job: sqlite3.Row) -> None:
                 article.title = job["title"]
         else:
             article = speech.from_text(job["text"], job["title"] or "")
+        if article.words > MAX_WORDS:
+            raise speech.ExtractionError(
+                f"{article.words} words is over the {MAX_WORDS}-word limit (about 3 hours of audio)"
+            )
         deadline = time.monotonic() + 600  # Kokoro may still be starting after a boot
         while not kokoro_ready(timeout=5):
             if time.monotonic() > deadline:
@@ -461,7 +472,10 @@ def process(job: sqlite3.Row) -> None:
     except Exception as e:
         reason = str(e) if isinstance(e, speech.ExtractionError) else f"{type(e).__name__}: {e}"
         if isinstance(e, subprocess.CalledProcessError):
-            reason += f" — {e.stderr.decode(errors='replace')[-300:]}"
+            err = e.stderr or ""
+            if isinstance(err, bytes):  # ffmpeg's is bytes, ffprobe's (text=True) str
+                err = err.decode(errors="replace")
+            reason += f" — {err[-300:]}"
         with db() as conn:
             conn.execute(
                 "UPDATE jobs SET status = 'failed', reason = ? WHERE id = ?",
