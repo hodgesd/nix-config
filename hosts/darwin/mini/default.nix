@@ -25,7 +25,7 @@ in {
   # the 8GB CPU-only VM for transcription ACCURACY, not speed. Read that
   # file's header before rebooting this box: it adds a voice-path
   # dependency on the mini being unlocked.
-  imports = [./whisper-stt.nix];
+  imports = [./whisper-stt.nix ./podcast-listen.nix];
 
   # NO auto-login here, deliberately. The bridges are *user* LaunchAgents
   # (they live in the user's iCloud session), so they only start once a GUI

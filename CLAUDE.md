@@ -124,7 +124,9 @@ opens one grouped update PR weekly — see NIXOS-INFRA.md; it also opens a
 separate weekly PR for `flake.lock`). Changing an image string recreates
 that container (config-hash change) even if it resolves to the same image.
 
-The only stack is `stacks/homelab/docker-compose.yml` → `/srv/homelab` on
+The stacks are `stacks/homelab/docker-compose.yml` → `/srv/homelab` and
+`stacks/podcast/docker-compose.yml` → `/srv/podcast` (Kokoro TTS and the
+Funnel sidecar for the read-later podcast, `docs/PODCAST.md`), both on
 nixos-infra. A darwin (launchd/OrbStack) variant of the module ran the
 mini's Uptime Kuma stack until Gatus replaced it on 2026-09-06; it was
 removed in 2026-09 and lives in git history if a Mac ever needs compose
@@ -188,7 +190,8 @@ hyper - o : open -a "Obsidian"
 ### Homelab services
 
 Edit `hosts/nixos/nixos-infra/*.nix` (easy-afd, proxy, backup, storage,
-homelab-stack, sidecars, hermes, gatus, healthchecks, agent-workbench).
+homelab-stack, sidecars, hermes, gatus, healthchecks, agent-workbench,
+podcast).
 A compose app behind a tailscale sidecar is compose services plus one
 `homelab.sidecars.<name>` entry (renders serve.json and the Gatus check;
 see `sidecars.nix`). Then
@@ -284,7 +287,7 @@ home/
   default.nix                   # User config entry point (portable)
   modules/                      # Tool-specific configs (core, cli, services)
 modules/                        # Custom modules (swiftbar, wallpaper [darwin, on by default], nixos/{compose-stack,mcp-server})
-stacks/                         # Docker compose files (homelab)
+stacks/                         # Docker compose files (homelab, podcast)
 scripts/                        # bootstrap.sh + audit helpers
 docs/                           # STRUCTURE, ADDING_MACHINE, CUSTOMIZATION,
                                 # HOMEBREW, NIXOS-INFRA (homelab runbook)
