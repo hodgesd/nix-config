@@ -140,8 +140,10 @@
   #     TELEGRAM_ALLOWED_CHATS=123,456  your chat id(s); others are ignored
   #     ANTHROPIC_API_KEY=...           optional, enables free-text questions
   # then deploy. Until then this file changes nothing on the host.
+  # The leading newline keeps a nested key from matching; it is prepended
+  # to the file too so a key on the very first line still counts.
   telegramSecretPresent =
-    lib.hasInfix "\neasy-afd-telegram-env:" (builtins.readFile ../../../secrets/nixos-infra.yaml);
+    lib.hasInfix "\neasy-afd-telegram-env:" ("\n" + builtins.readFile ../../../secrets/nixos-infra.yaml);
 
   hardening = {
     NoNewPrivileges = true;
