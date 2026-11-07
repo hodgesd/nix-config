@@ -60,6 +60,9 @@ RETENTION_DAYS = int(os.environ.get("PODCAST_RETENTION_DAYS", "30"))
 FEED_TITLE = os.environ.get("PODCAST_FEED_TITLE", "Read Later")
 INTAKE_TOKEN = os.environ["PODCAST_INTAKE_TOKEN"]
 FEED_TOKEN = os.environ["PODCAST_FEED_TOKEN"]
+# Feed artwork (a PNG in the Nix store), copied into public/ at startup
+# because ts-podcast only sees public/.
+COVER = os.environ.get("PODCAST_COVER", "")
 
 MAX_BODY = 2_000_000  # bytes of JSON one intake request may carry
 MAX_PAGE = 10_000_000  # bytes of HTML one fetch may read
@@ -385,6 +388,12 @@ def write_feed() -> None:
     add(channel, f"{{{ITUNES}}}category", text="Technology")
     # Keeps the feed out of Apple's public directory; it is private by URL.
     add(channel, f"{{{ITUNES}}}block", "Yes")
+    if (PUBLIC / "cover.png").exists():
+        image = add(channel, "image")
+        add(image, "url", f"{base}/cover.png")
+        add(image, "title", FEED_TITLE)
+        add(image, "link", f"{base}/feed.xml")
+        add(channel, f"{{{ITUNES}}}image", href=f"{base}/cover.png")
 
     with db() as conn:
         rows = conn.execute(
@@ -494,7 +503,10 @@ def main() -> None:
     shutil.rmtree(STATE / "tmp", ignore_errors=True)  # WAVs of a job cut off mid-run
     (STATE / "tmp").mkdir(parents=True, exist_ok=True)
     PUBLIC.mkdir(parents=True, exist_ok=True)
+    if COVER:
+        shutil.copyfile(COVER, PUBLIC / "cover.png")
     init_db()
+    write_feed()  # picks up a changed cover without waiting for an episode
     threading.Thread(target=worker, name="worker", daemon=True).start()
     server = ThreadingHTTPServer((BIND, PORT), Intake)
     log(f"listening on {BIND}:{PORT}, kokoro={KOKORO} voice={VOICE}")

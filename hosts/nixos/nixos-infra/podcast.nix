@@ -59,6 +59,11 @@
     fileset = lib.fileset.unions [./podcast/server.py ./podcast/speech.py];
   };
 
+  # Feed artwork, 3000 px square (Apple's maximum; Overcast scales down).
+  cover = pkgs.runCommand "podcast-cover.png" {nativeBuildInputs = [pkgs.librsvg];} ''
+    rsvg-convert -w 3000 -h 3000 ${./podcast/cover.svg} -o $out
+  '';
+
   ph = config.sops.placeholder;
 in {
   # Three raw values (no dotenv blobs), so templates can place each one
@@ -142,6 +147,7 @@ in {
       PODCAST_VOICE = voice;
       PODCAST_PUBLIC_BASE = publicBase;
       PODCAST_RETENTION_DAYS = toString retentionDays;
+      PODCAST_COVER = "${cover}";
       PYTHONUNBUFFERED = "1";
     };
     startLimitBurst = 5;

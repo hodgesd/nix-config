@@ -83,6 +83,13 @@ The VM does not need more resources. More vCPUs would only make episodes
 arrive sooner. Kokoro runs at `cpu_shares: 256`, so during synthesis it
 yields to AdGuard, Hermes and the rest.
 
+## Artwork
+
+`podcast/cover.svg` (a bookmark with a play button). The build renders it to
+a 3000 px PNG; podcast.service copies it to `public/cover.png` at start and
+names it in the feed's `<image>` and `<itunes:image>`. Edit the SVG and
+deploy to change it; Overcast picks it up on its next fetch.
+
 ## Voice
 
 `af_heart`: the only grade-A voice in hexgrad's Kokoro-82M `VOICES.md`
