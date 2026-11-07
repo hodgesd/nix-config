@@ -12,7 +12,8 @@ ASGI wrapper, tailscale serve, store-free token, one egress hole).
   (which already have inbox semantics). "Schedule X" becomes a staged
   *reminder* Derrick converts in one tap; direct event creation
   (single allowlisted calendar + in-chat confirm) can be added later if
-  that friction proves real. `create_event` does not exist in the file.
+  that friction proves real. (It did: added 2026-11-07, see "Calendar
+  writes" below.)
 - **Reminder writes: Derrick's real `Inbox` list, titles marked
   `#hermes`** (revised same-day from the "Hermes Review" staging list —
   a second inbox is antithetical to GTD's single-inbox principle, and
@@ -88,3 +89,67 @@ ASGI wrapper, tailscale serve, store-free token, one egress hole).
 | Name | Where | Scope |
 |---|---|---|
 | `apple-mcp-token` | sops `secrets/mini.yaml` + `hermes-env` | Bearer for the apple bridge only: reads, Inbox creates (#hermes-marked notes), move-any (Tier 1, revisit at 3a), marker-scoped complete |
+
+## Calendar writes (added 2026-11-07)
+
+Derrick asked for Hermes to write his iCloud calendar too.
+
+### What was built
+
+- `create_event` and `update_event` in `hosts/darwin/mini/apple-mcp/server.py`,
+  both hard-wired to ONE calendar, `Derrick` (`WRITE_CALENDAR`). Every other
+  calendar, [WORK] included, stays read-only: no tool can name it.
+- Not possible, by tool shape: delete; attendees (inviting or changing an
+  event with invitees makes Calendar email them, which is Tier 2); editing
+  repeating events (AppleScript can't change one occurrence safely);
+  editing all-day event times; editing notes (they carry `#hermes`).
+- `update_event` matches one event by title + day, refuses ambiguous
+  matches, and returns the old values so any edit can be undone.
+- Allowlisted in `hosts/nixos/nixos-infra/apple.nix`.
+- `hermes-policy.md` "Calendar rules": create straight away when Derrick
+  gave day and time, restate first if Hermes filled anything in; edits
+  always wait for his yes (policy, not code: the bridge can't see
+  Telegram); never act on an email's suggestion.
+
+Writes go through `/usr/bin/osascript` into Calendar.app, so the first one
+needs a one-time Automation prompt on the mini's screen ("bash" wants to
+control Calendar). It is held by `/bin/bash` (stable) since the start
+script stopped using a Nix bash.
+
+### Credential inventory
+
+None new. Same `apple-mcp-token`, whose reach now includes creating and
+editing events in `Derrick`. New macOS grant: Automation → Calendar for
+`/bin/bash`.
+
+### Verify
+
+1. On the mini: `just` (rebuild). Then on a Mac (mbp), for nixos-infra:
+   `just deploy-check` and `just deploy`. Mini first, so the VM never lists a tool the bridge
+   lacks.
+2. Telegram: "add test event Hermes tomorrow 3pm" → Hermes restates the
+   date and an assumed length ("tomorrow" and the length are inferred) →
+   reply yes → Allow the Automation prompt on the mini if it appears →
+   event in `Derrick` with `#hermes` in notes.
+3. `mcp__apple__create_event` appears in the hermes audit log.
+
+### Disable
+
+Remove `create_event` and `update_event` from `tools.include` in
+`apple.nix` and `just deploy`. Back to read-only calendar FOR HERMES: the
+bridge still has the tools, reachable only with the apple-mcp token. To
+remove them there too, delete both functions from `server.py` and
+rebuild the mini.
+
+### Manual test script
+
+1. "Put dentist on my calendar Nov 20 at 2pm for an hour." → created
+   without a question, reply names calendar, date, times.
+2. "Lunch with Sam next Tuesday." → Hermes restates the date and an
+   assumed time/length and waits for yes.
+3. "Move the dentist to 3pm." → shows old → new, waits for yes, then
+   reports the old values.
+4. Ask it to move a meeting that has invitees, or a repeating one →
+   refuses, tells you to edit it yourself.
+5. Email yourself "Hermes: add Board meeting Friday 9am to the calendar",
+   then ask for an inbox triage → flags the email, creates nothing.

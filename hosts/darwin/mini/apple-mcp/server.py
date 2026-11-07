@@ -1,17 +1,18 @@
 # Apple bridge MCP server (Phase 4): Reminders + Calendar on the mini.
 #
 # Same philosophy as the vault server: the file is short, and the
-# dangerous tools do not exist. Calendar is READ-ONLY in v1 (no
-# create_event anywhere — "schedule X" becomes a reminder instead).
-# Reminder writes land ONLY in the Inbox list (GTD: one inbox), each
-# carrying a #hermes marker in its notes; completion is scoped to
-# marked items. No delete, no edits to anything else.
+# dangerous tools do not exist. Reminder writes land ONLY in the Inbox
+# list (GTD: one inbox), each carrying a #hermes marker in its notes;
+# completion is scoped to marked items. Calendar writes (2026-11-07)
+# touch ONE calendar (WRITE_CALENDAR): create, and edit without
+# attendees or recurrence. No delete anywhere.
 #
-# Reads go through icalBuddy (EventKit — fast, structurally read-only;
-# TCC Calendar+Reminders grants key on the stable brew binary). Writes
-# go through /usr/bin/osascript into Reminders.app (TCC Automation
-# grant). First use of each prompts once in the GUI session; a hung
-# grant surfaces as a tool timeout, and the brief says "unavailable".
+# Reads go through icalBuddy (EventKit — fast, structurally read-only).
+# Writes go through /usr/bin/osascript into Reminders.app / Calendar.app
+# (TCC Automation grants). TCC charges all of it to the launchd start
+# script's /bin/bash (see hosts/darwin/mini/default.nix). First use of
+# each prompts once in the GUI session; a hung grant surfaces as a tool
+# timeout, and the brief says "unavailable".
 #
 # argv: [port]   env: APPLE_MCP_TOKEN (bearer, from sops)
 import hmac
@@ -36,7 +37,18 @@ OSASCRIPT = "/usr/bin/osascript"
 # shape, not a quarantine list: create-only, and complete_reminder only
 # touches notes-marked items.
 TARGET_LIST = "Inbox"
+# The only calendar Hermes may write (Derrick's iCloud calendar, his
+# call 2026-11-07). Every other calendar, [WORK] included, stays
+# read-only because no tool names it.
+WRITE_CALENDAR = "Derrick"
 MARKER = "#hermes"
+# WHY: `calendar "Derrick"` picks the first calendar with that name in ANY
+# account (iCloud, Google, Exchange). Refuse to write unless the name is
+# unique, so a same-named calendar elsewhere never receives Hermes's writes.
+_ONE_CALENDAR = (
+    f'  if (count of (every calendar whose name is "{WRITE_CALENDAR}")) is not 1 then '
+    f'error "need exactly one calendar named {WRITE_CALENDAR}"\n'
+)
 MAX_OUT = 20_000
 
 
@@ -117,15 +129,15 @@ def create_reminder(title: str, due: str = "", notes: str = "") -> str:
     return f"created in {TARGET_LIST}: {title}" + (f" (due {due})" if due else "")
 
 
-def _as_date_lines(d: datetime) -> str:
-    """AppleScript that leaves a date in variable d — integer components
-    only (locale-proof; no user strings reach this)."""
+def _as_date_lines(d: datetime, var: str = "d") -> str:
+    """AppleScript that leaves a date in variable `var` — integer
+    components only (locale-proof; no user strings reach this)."""
     return (
-        "set d to current date\n"
-        "set day of d to 1\n"
-        f"set year of d to {d.year}\nset month of d to {d.month}\n"
-        f"set day of d to {d.day}\n"
-        f"set time of d to {d.hour * 3600 + d.minute * 60}\n"
+        f"set {var} to current date\n"
+        f"set day of {var} to 1\n"
+        f"set year of {var} to {d.year}\nset month of {var} to {d.month}\n"
+        f"set day of {var} to {d.day}\n"
+        f"set time of {var} to {d.hour * 3600 + d.minute * 60}\n"
     )
 
 
@@ -202,6 +214,150 @@ def complete_reminder(title: str) -> str:
     )
     out = _run([OSASCRIPT, "-e", script])
     return f"completed in {TARGET_LIST}: {out.strip()}"
+
+
+def _parse_when(when: str) -> tuple[datetime, bool]:
+    """'YYYY-MM-DD HH:MM' -> (that time, False); 'YYYY-MM-DD' -> (midnight,
+    True = all-day)."""
+    try:
+        if " " in when:
+            return datetime.strptime(when, "%Y-%m-%d %H:%M"), False
+        return datetime.combine(date.fromisoformat(when), datetime.min.time()), True
+    except ValueError as e:
+        raise ValueError(
+            f"use 'YYYY-MM-DD HH:MM' (timed) or 'YYYY-MM-DD' (all-day): {e}"
+        ) from None
+
+
+@mcp.tool
+def create_event(
+    title: str, start: str, end: str = "", location: str = "", notes: str = ""
+) -> str:
+    """Create an event in Derrick's calendar (the only writable one).
+    start/end: 'YYYY-MM-DD HH:MM' local, or 'YYYY-MM-DD' for all-day
+    (end = last day, inclusive). No end: timed events last 1 hour, all-day
+    events 1 day. No attendees, by design: inviting people sends email."""
+    s, allday = _parse_when(start)
+    if end:
+        e, end_allday = _parse_when(end)
+        if end_allday != allday:
+            raise ValueError("start and end must both be timed or both all-day")
+        if allday:
+            e += timedelta(days=1)
+    else:
+        e = s + (timedelta(days=1) if allday else timedelta(hours=1))
+    if e <= s:
+        raise ValueError("end must be after start")
+    body = f"{_as_str(notes)}\\n{MARKER}" if notes else MARKER
+    props = [
+        f'summary:"{_as_str(title)}"', "start date:s", "end date:e",
+        f'description:"{body}"', f"allday event:{'true' if allday else 'false'}",
+    ]
+    if location:
+        props.append(f'location:"{_as_str(location)}"')
+    script = (
+        f"{_as_date_lines(s, 's')}{_as_date_lines(e, 'e')}"
+        'tell application "Calendar"\n'
+        f"{_ONE_CALENDAR}"
+        f'  tell calendar "{WRITE_CALENDAR}"\n'
+        f"    make new event with properties {{{', '.join(props)}}}\n"
+        "  end tell\n"
+        "end tell\n"
+    )
+    _run([OSASCRIPT, "-e", script])
+    shown_end = (e - timedelta(days=1)).date() if allday else f"{e:%Y-%m-%d %H:%M}"
+    return f"created in {WRITE_CALENDAR}: {title} ({start} to {shown_end})"
+
+
+@mcp.tool
+def update_event(
+    title: str,
+    on_date: str,
+    new_title: str = "",
+    new_start: str = "",
+    new_end: str = "",
+    new_location: str | None = None,
+) -> str:
+    """Edit ONE event in Derrick's calendar: the event whose title contains
+    `title` and that starts on on_date ('YYYY-MM-DD'). Only the new_*
+    fields given change; new_start alone keeps the duration. Times:
+    'YYYY-MM-DD HH:MM' local (timed events only). Refuses events with
+    attendees (an edit emails every invitee) and repeating events.
+    new_location="" clears the location. Notes
+    are not editable (they carry the #hermes marker; change them in
+    Calendar). Returns the OLD values so the edit can be undone."""
+    if not title.strip():
+        raise ValueError("title is required (an empty one matches every event)")
+    try:
+        day = date.fromisoformat(on_date)
+    except ValueError as e:
+        raise ValueError(f"on_date must be YYYY-MM-DD: {e}") from None
+    if not any([new_title, new_start, new_end]) and new_location is None:
+        raise ValueError("nothing to change")
+    d0 = datetime.combine(day, datetime.min.time())
+    lines = [_as_date_lines(d0, "d0"), _as_date_lines(d0 + timedelta(days=1), "d1")]
+    # Every check runs before the first `set`, so a rejected edit changes
+    # nothing (and the error is the whole story).
+    checks, sets = [], []
+    if new_start or new_end:
+        if new_start:
+            ns, a = _parse_when(new_start)
+            if a:
+                raise ValueError("new_start needs a time: 'YYYY-MM-DD HH:MM'")
+            lines.append(_as_date_lines(ns, "ns"))
+        if new_end:
+            ne, a = _parse_when(new_end)
+            if a:
+                raise ValueError("new_end needs a time: 'YYYY-MM-DD HH:MM'")
+            lines.append(_as_date_lines(ne, "ne"))
+        if new_start and new_end and ne <= ns:
+            raise ValueError("new_end must be after new_start")
+        checks += [
+            "if allday event of ev then error \"all-day event: change its times yourself\"",
+            "set dur to (end date of ev) - (start date of ev)",
+            "set ns to " + ("ns" if new_start else "start date of ev"),
+            "set ne to " + ("ne" if new_end else "ns + dur"),
+            'if ne is less than or equal to ns then error "end must be after start"',
+        ]
+        sets += [
+            # Move end first when going later, so start never passes end.
+            "if ns > (end date of ev) then",
+            "  set end date of ev to ne",
+            "  set start date of ev to ns",
+            "else",
+            "  set start date of ev to ns",
+            "  set end date of ev to ne",
+            "end if",
+        ]
+    if new_title:
+        sets.append(f'set summary of ev to "{_as_str(new_title)}"')
+    if new_location is not None:  # "" clears it
+        sets.append(f'set location of ev to "{_as_str(new_location)}"')
+    script = (
+        "".join(lines)
+        + 'tell application "Calendar"\n'
+        + _ONE_CALENDAR
+        + f'  tell calendar "{WRITE_CALENDAR}"\n'
+        + f'    set hits to (every event whose summary contains "{_as_str(title)}" and start date \u2265 d0 and start date < d1)\n'
+        + '    if (count of hits) is 0 then error "no matching event that day"\n'
+        + '    if (count of hits) > 1 then error "more than one match that day; use a longer title"\n'
+        + "    set ev to item 1 of hits\n"
+        # WHY: changing an event with invitees makes Calendar email them
+        # (Tier 2 outbound); a repeating event can't be safely edited as
+        # one occurrence from AppleScript.
+        + '    if (count of attendees of ev) > 0 then error "has invitees; edit it yourself"\n'
+        + "    set rec to recurrence of ev\n"
+        + '    if rec is not missing value and rec is not "" then error "repeating event; edit it yourself"\n'
+        + "    set loc to location of ev\n"
+        + '    if loc is missing value then set loc to ""\n'
+        + '    set old to "was: " & summary of ev & " | " & ((start date of ev) as string) & " to " & ((end date of ev) as string) & " | " & loc\n'
+        + "".join(f"    {x}\n" for x in checks + sets)
+        + "    return old\n"
+        + "  end tell\n"
+        + "end tell\n"
+    )
+    out = _run([OSASCRIPT, "-e", script])
+    return f"updated in {WRITE_CALENDAR}: {title} on {on_date} ({out.strip()})"
 
 
 _inner = mcp.http_app()
