@@ -1,0 +1,54 @@
+# AUTHORITATIVE — deployed to /srv/podcast by the compose-stack module
+# (hosts/nixos/nixos-infra/podcast.nix); hand-edits on the VM are
+# overwritten. Images are pinned repo:tag@sha256:… like stacks/homelab, and
+# Renovate's weekly "homelab images" PR covers this file too.
+#
+# The read-later podcast's containers. The worker that fetches articles,
+# cleans them for speech and writes the feed is a native service
+# (podcast.service), not a container: see podcast.nix for why.
+services:
+  # Kokoro-82M TTS behind an OpenAI-compatible API, CPU build. Published on
+  # the VM's loopback only: podcast.service is its one client, and nothing
+  # on the tailnet or the internet reaches it.
+  kokoro:
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:v0.9.2@sha256:cbcc28802fb5d1eaaba8b91e38b0e872a669e85831c513cf6a29c709cbe25405
+    container_name: kokoro
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:8880:8880
+    environment:
+      # Article text is untrusted. Upstream's kill switches for treating
+      # input as markup ("[voice:…]" speaker switches, SSML) are for
+      # exactly this case; the web player is a UI nobody here uses.
+      ENABLE_VOICE_TAGS: "false"
+      ENABLE_SSML: "false"
+      ENABLE_WEB_PLAYER: "false"
+      CORS_ENABLED: "false"
+    # Synthesis takes every core it can get (4 vCPUs, ~2.4x real time).
+    # A quarter of the default weight makes it yield to the household's
+    # services under contention without slowing it when the VM is idle.
+    cpu_shares: 256
+
+  # Dedicated tailnet node "podcast", and the only node with Funnel.
+  # serve.json is a sops template (podcast.nix) because it carries the
+  # feed's path token; read the SECURITY note there before editing.
+  ts-podcast:
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
+    container_name: ts-podcast
+    hostname: podcast
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY} # its own key, tag:podcast (not the homelab key)
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - ./ts-podcast/state:/var/lib/tailscale
+      - /run/secrets/rendered/ts-podcast-serve.json:/config/serve.json:ro
+      # feed.xml and the MP3s, served by tailscale's own file server.
+      - /var/lib/podcast/public:/public:ro
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE

@@ -1,0 +1,25 @@
+# Dev and test environment only. On nixos-infra the service runs on
+# nixpkgs' python3 with trafilatura (podcast.nix); the pin below matches
+# that version so the tests exercise the same extractor.
+[project]
+name = "read-later-podcast"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["trafilatura==2.1.0"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.8"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+# Article text is full of typographic dashes and quotes; matching them is the point.
+allowed-confusables = ["–", "—", "’", "“", "”"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

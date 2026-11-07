@@ -31,6 +31,7 @@
     ./samsclub-popcorn.nix # TEMPORARY, expires 2026-12-12
     ./hn-summaries.nix
     ./agent-workbench.nix
+    ./podcast.nix
   ];
 
   # Secrets: decrypted at activation by sops-nix into /run/secrets (tmpfs)
