@@ -126,15 +126,19 @@ for `/bin/bash`.
 1. mini: `just` (rebuild), then nixos-infra: `just deploy-check` and
    `just deploy`. Mini first, so the VM never lists a tool the bridge
    lacks.
-2. Telegram: "add test event Hermes tomorrow 3pm" → Allow the Automation
-   prompt on the mini if it appears → event in `Derrick` with `#hermes`
-   in notes.
+2. Telegram: "add test event Hermes tomorrow 3pm" → Hermes restates the
+   date and an assumed length ("tomorrow" and the length are inferred) →
+   reply yes → Allow the Automation prompt on the mini if it appears →
+   event in `Derrick` with `#hermes` in notes.
 3. `mcp__apple__create_event` appears in the hermes audit log.
 
 ### Disable
 
 Remove `create_event` and `update_event` from `tools.include` in
-`apple.nix` and `just deploy`. Back to read-only calendar.
+`apple.nix` and `just deploy`. Back to read-only calendar FOR HERMES: the
+bridge still has the tools, reachable only with the apple-mcp token. To
+remove them there too, delete both functions from `server.py` and
+rebuild the mini.
 
 ### Manual test script
 
