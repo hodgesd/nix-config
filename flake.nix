@@ -31,7 +31,7 @@
       flake = false; # repo has no flake.nix; treat as raw files
     };
     # Bill Filer, the household statement filer
-    # (hosts/common/darwin/billfiler.nix builds it and takes the SwiftBar
+    # (hosts/common/darwin/billfiler/ builds it and takes the SwiftBar
     # plugin out of the same tree, so the plugin and the CLI it shells out to
     # can never drift apart). Private repo, so git+ssh and not github: --
     # the github: fetcher uses the anonymous API and 404s on it. Update with:

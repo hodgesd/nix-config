@@ -5,7 +5,7 @@ These workflows verify this config so breakage shows up before `darwin-rebuild s
 | Workflow | Trigger | Runner | What it does |
 |---|---|---|---|
 | `eval.yaml` | every push / PR | Linux (free, fast) | Evaluates every host. Catches syntax errors, bad options, module conflicts, per-host metadata branches. No build. |
-| `build.yaml` | `flake.lock` change, nightly, manual | macOS | Full `nix build` of every host (macOS runners for the Macs, Linux for the NixOS VMs); pushes results to Cachix. |
+| `build.yaml` | `flake.lock` change, nightly, manual | macOS | Full `nix build` of every host (macOS runners for the Macs, Linux for the NixOS VMs); pushes the NixOS results to Cachix. The Macs only pull: their closures contain the private billfiler source and the cache is public. |
 | `renovate.yaml` | weekly, manual | Linux | Self-hosted Renovate: one grouped PR for the homelab compose images and one for `flake.lock` inputs (rules in `/renovate.json`), both gated by Eval/Build. |
 
 ## One-time setup

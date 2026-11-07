@@ -238,8 +238,10 @@ byte-for-byte as generated on the VM — don't format it.
   darwin-only must be guarded (`pkgs.stdenv.isDarwin`) or live under
   `hosts/common/darwin/desktop/`. Changes require darwin-rebuild (not
   home-manager switch).
-- CI (`.github/workflows/`): eval matrix covers every host; build jobs push
-  darwin + nixos closures to Cachix (`hodgesd-nix-config`). Add new hosts to
+- CI (`.github/workflows/`): eval matrix covers every host; the build jobs push
+  the **nixos** closures to Cachix (`hodgesd-nix-config`) and the darwin ones
+  deliberately not -- that cache is public and every Mac closure contains the
+  private billfiler source. Do not "restore" the darwin push. Add new hosts to
   the matrices.
 
 ## Flake Inputs

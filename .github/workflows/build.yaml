@@ -1,7 +1,7 @@
 # Full macOS build of every host. Thorough but expensive, so it only runs when
 # flake.lock changes (the risky dependency bump), nightly, or on demand.
-# Built store paths are pushed to Cachix so local `darwin-rebuild switch`
-# downloads them instead of recompiling.
+# The Linux hosts' store paths are pushed to Cachix so local switches download
+# them instead of recompiling. The Macs only pull -- see skipPush below.
 #
 # Requires repository secret CACHIX_AUTH_TOKEN (see .github/workflows/README.md).
 name: Build 🍎
@@ -45,7 +45,20 @@ jobs:
       - uses: cachix/cachix-action@v15
         with:
           name: hodgesd-nix-config
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          # No authToken on purpose, and it is not an oversight: pulling from a
+          # public cache needs none, and without one cachix has no push
+          # credential at all. That is a second barrier behind skipPush -- drop
+          # skipPush later and this job still cannot publish anything.
+          #
+          # hodgesd-nix-config is a PUBLIC cache and every Mac's closure now
+          # contains billfiler, whose repo is private -- its store path holds
+          # the readable .py source. Pushing here would publish that source to
+          # anyone who reads a store path out of these logs. Pull still works,
+          # so CI stays fast; what is lost is fresh Mac paths for local
+          # `darwin-rebuild switch`. pushFilter is NOT an alternative: cachix
+          # documents that it does not hold for a path inside the closure of
+          # something that is pushed, and billfiler is exactly that.
+          skipPush: true
       - name: Build ${{ matrix.host }}
         run: nix build -L ".#darwinConfigurations.${{ matrix.host }}.system"
 
@@ -77,5 +90,15 @@ jobs:
         with:
           name: hodgesd-nix-config
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          # Push the built closure, NOT "every new path in the store". These
+          # closures do not contain billfiler, but the runner's store does: nix
+          # fetches every flake input eagerly, so the private repo's source is
+          # unpacked here even though no NixOS host references it. Left to its
+          # own devices cachix picks a push mode at runtime, and one of them
+          # (StoreScan, used whenever the runner is not a trusted nix user) is a
+          # whole-store diff that would sweep that source into a public cache.
+          # Naming a path forces the deterministic mode. pushFilter is not a
+          # substitute -- cachix documents that it does not hold for closures.
+          pathsToPush: result
       - name: Build ${{ matrix.host }}
         run: nix build -L ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel"
