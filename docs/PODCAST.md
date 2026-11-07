@@ -90,13 +90,17 @@ yields to AdGuard, Hermes and the rest.
 default, and the voice the speed above was measured with. Change it in
 `podcast.nix` (`voice = …`).
 
-## One-time setup (Derrick)
+## One-time setup (done 2026-11-06)
 
-1. **Tailscale ACL** (admin console → Access controls). Add:
+Recorded so it can be redone after a rebuild or a key rotation.
+
+1. **Tailscale ACL** (admin console → Access controls). The policy is
+   allow-all, so only the tag and its Funnel attribute were added, next to
+   the existing `tag:cmy` entries:
 
    ```jsonc
    "tagOwners": {
-     "tag:podcast": ["autogroup:admin"],
+     "tag:podcast": ["group:admin"],
    },
    "nodeAttrs": [
      // Funnel for the podcast sidecar only. Never widen this to tag:homelab.
@@ -104,35 +108,28 @@ default, and the voice the speed above was measured with. Change it in
    ],
    ```
 
-   If the policy is not allow-all, also let your devices and nixos-infra
-   (Gatus) reach the intake:
-
-   ```jsonc
-   "grants": [
-     // Your phones and Macs, the mini (#listen watcher) included if it is
-     // user-owned; add its tag here if it has one.
-     {"src": ["autogroup:member"], "dst": ["tag:podcast"], "ip": ["8444"]},
-     {"src": ["tag:homelab"], "dst": ["tag:podcast"], "ip": ["8444"]},
-   ],
-   ```
+   If the policy ever stops being allow-all, the phones, Macs (the mini's
+   `#listen` watcher) and nixos-infra (Gatus, `tag:homelab`) need tcp/8444
+   on `tag:podcast`.
 
 2. **Auth key** (admin console → Settings → Keys → Generate auth key):
-   not reusable, not ephemeral, pre-approved, tag `tag:podcast`, 1-day
-   expiry. It is used once; the node's identity then lives in
+   not reusable, not ephemeral, tag `tag:podcast`, 7-day expiry (it only
+   has to outlast the wait until the first deploy). It is used once; the node's identity then lives in
    `/srv/podcast/ts-podcast/state`. It must not be the homelab key: that
    key's tags are what every other sidecar carries.
 
-3. **Secrets**, on the Mac in this repo:
+3. **Secrets**, on the Mac in this repo (zsh; nothing is echoed or kept
+   in history):
 
-   ```bash
+   ```zsh
    sops set secrets/nixos-infra.yaml '["podcast-intake-token"]' "\"$(openssl rand -hex 32)\""
    sops set secrets/nixos-infra.yaml '["podcast-feed-token"]' "\"$(openssl rand -hex 32)\""
-   sops secrets/nixos-infra.yaml   # add: podcast-ts-authkey: tskey-auth-…
+   read -rs 'K?tag:podcast auth key: '; echo; sops set secrets/nixos-infra.yaml '["podcast-ts-authkey"]' "\"$K\""; unset K
    ```
 
    And the same intake token for the mini's `#listen` watcher:
 
-   ```bash
+   ```zsh
    sops set secrets/mini.yaml '["podcast-intake-token"]' \
      "\"$(sops -d --extract '["podcast-intake-token"]' secrets/nixos-infra.yaml)\""
    ```
