@@ -39,13 +39,18 @@ ASGI wrapper, tailscale serve, store-free token, one egress hole).
 - **Calendar/Reminders grants are NOT held by icalBuddy** (found
   2026-11-07). A command-line tool never gets its own row in Privacy &
   Security; macOS charges the access to the process launchd started for
-  the agent, and the Calendars pane lists that as **"bash"** — a
-  Nix-built bash, identified by its store path. When an update changes
-  that path, the old row stays but no longer matches: the brief shows
-  `Today: unavailable (… "No calendars")` and the mini's screen holds a
-  *"bash" would like full access to your Calendar* prompt (often hidden
-  behind other windows). Fix: Allow Full Access (and the Reminders
-  twin). Each update leaves another stale "bash" row; harmless.
+  the agent: the interpreter of its start script, listed as **"bash"**.
+  Until 2026-11-07 that was a Nix bash, recorded by store path
+  (`…-bash-5.3p3/bin/bash`); a nixpkgs bump to 5.3p9 changed the path,
+  the grant no longer matched, the brief showed
+  `Today: unavailable (… "No calendars")`, and a *"bash" would like
+  full access to your Calendar* prompt sat hidden on the mini's screen.
+  Fix since then: the start script's shebang is Apple's `/bin/bash`
+  (`hosts/darwin/mini/default.nix`), which is signed and keeps its grant
+  across Nix and macOS updates. One Allow (Calendar and Reminders) after
+  that change landed; none expected after. If it ever recurs, look for
+  the hidden prompt. The stale Nix-bash rows in Privacy & Security can
+  be switched off.
 - After a `just update` that changes the python env, the *Automation*
   grant re-prompts too (reminder writes hang → tool timeout → brief
   says "unavailable"). Re-approve at the screen.

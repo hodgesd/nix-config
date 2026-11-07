@@ -62,11 +62,13 @@ in {
   # Phase 4: the Apple bridge (apple-mcp/server.py) — Reminders writes
   # staged to the "Hermes Review" list only, Calendar read-only in v1.
   # Reads via icalBuddy (brew; EventKit), writes via /usr/bin/osascript.
-  # TCC does NOT key on icalBuddy: Calendars/Reminders show this agent as
-  # "bash" (a Nix store path), so an update that changes it re-prompts at
-  # the mini's screen; until approved the brief says "No calendars". The
-  # osascript Automation grant re-prompts the same way. See the TCC
-  # runbook in docs/hermes/phase-4.md.
+  # WHY the start script runs under Apple's /bin/bash: TCC charges this
+  # agent's Calendar/Reminders access to the start script's interpreter,
+  # not to icalBuddy. Under Nix bash the grant was tied to a store path,
+  # so bash 5.3p3 -> 5.3p9 dropped it and the brief said "No calendars"
+  # (2026-11-07). /bin/bash is Apple-signed and keeps its grant across
+  # updates. Trade-off: the grant covers any launchd job whose script runs
+  # under /bin/bash (all ours). See the TCC runbook in docs/hermes/phase-4.md.
   launchd.user.agents.apple-mcp = {
     path = [vaultMcpEnv pkgs.coreutils];
     serviceConfig = {
@@ -78,12 +80,14 @@ in {
       StandardOutPath = "/Users/${username}/Library/Logs/apple-mcp.log";
       StandardErrorPath = "/Users/${username}/Library/Logs/apple-mcp.log";
     };
-    script = ''
+    # Not `script =`: nix-darwin would give it a Nix bash shebang.
+    command = toString (pkgs.writeScript "apple-mcp-start" ''
+      #!/bin/bash
       set -eu
       APPLE_MCP_TOKEN=$(cat ${lib.escapeShellArg config.sops.secrets.apple-mcp-token.path})
       export APPLE_MCP_TOKEN
       exec python3 ${./apple-mcp/server.py} 9103
-    '';
+    '');
   };
 
   # The vault MCP server (vault-mcp/server.py — the whole tool surface,
