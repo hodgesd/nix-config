@@ -46,12 +46,13 @@ in {
 
   # The mover, on the mini only -- see the header for why that is structural.
   #
-  # Keyed on the hostname, NOT on `primaryUse == "server"`: studio is a server
-  # too, so the role gate would have installed a second mover on a box with no
-  # Apple ID, no inbox and no share -- the exact double-filing race the header
-  # argues against. lib/machines.nix names this pattern for studio-only
-  # behavior; "the Mac holding the iCloud inbox and the UNAS mount" is not a
-  # role that exists, it is this one machine.
+  # Keyed on the hostname, NOT on `primaryUse == "server"`: that role has held
+  # more than one Mac at a time (studio did, until #121 retired it), and the
+  # role gate duly installed a second mover on a box with no Apple ID, no inbox
+  # and no share -- the exact double-filing race the header argues against.
+  # Retiring studio did not make the gate safe, it just emptied the trap: "the
+  # Mac holding the iCloud inbox and the UNAS mount" is not a role that exists,
+  # it is this one machine, and the next server-role Mac would spring it again.
   #
   # These are USER agents, with the same consequence as this host's Hermes
   # bridges: the inbox lives in the user's iCloud session and the UNAS share
