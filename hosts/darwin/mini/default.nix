@@ -61,10 +61,12 @@ in {
 
   # Phase 4: the Apple bridge (apple-mcp/server.py) — Reminders writes
   # staged to the "Hermes Review" list only, Calendar read-only in v1.
-  # Reads via icalBuddy (brew; EventKit; TCC keys on that stable binary),
-  # writes via /usr/bin/osascript (TCC Automation on the python env — a
-  # `just update` that changes the env re-prompts at the screen; until
-  # approved, tools time out and the brief degrades honestly).
+  # Reads via icalBuddy (brew; EventKit), writes via /usr/bin/osascript.
+  # TCC does NOT key on icalBuddy: Calendars/Reminders show this agent as
+  # "bash" (a Nix store path), so an update that changes it re-prompts at
+  # the mini's screen; until approved the brief says "No calendars". The
+  # osascript Automation grant re-prompts the same way. See the TCC
+  # runbook in docs/hermes/phase-4.md.
   launchd.user.agents.apple-mcp = {
     path = [vaultMcpEnv pkgs.coreutils];
     serviceConfig = {

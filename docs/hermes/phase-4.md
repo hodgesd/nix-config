@@ -23,9 +23,8 @@ ASGI wrapper, tailscale serve, store-free token, one egress hole).
   deleted in Reminders.
 - **Reads via icalBuddy (brew), writes via /usr/bin/osascript** —
   nixpkgs has no pyobjc-EventKit and Swift-in-nix is a project.
-  Deliberate TCC win: read grants key on the *stable brew binary*, so
-  they survive nix env rebuilds; only the osascript Automation grant
-  keys on the python env's store path.
+  The original assumption here (read grants key on the stable brew
+  binary, so they survive nix rebuilds) was WRONG — see the runbook.
 - **[WORK] calendar: not built** — governance-gated on the
   employer-policy question (v1.1.1). Personal-only brief until answered.
 
@@ -37,10 +36,19 @@ ASGI wrapper, tailscale serve, store-free token, one egress hole).
   "Full Access", and icalBuddy under the default returns `error: No
   calendars.`** Fix: System Settings → Privacy & Security → Calendars →
   icalBuddy → Full Access.
+- **Calendar/Reminders grants are NOT held by icalBuddy** (found
+  2026-11-07). A command-line tool never gets its own row in Privacy &
+  Security; macOS charges the access to the process launchd started for
+  the agent, and the Calendars pane lists that as **"bash"** — a
+  Nix-built bash, identified by its store path. When an update changes
+  that path, the old row stays but no longer matches: the brief shows
+  `Today: unavailable (… "No calendars")` and the mini's screen holds a
+  *"bash" would like full access to your Calendar* prompt (often hidden
+  behind other windows). Fix: Allow Full Access (and the Reminders
+  twin). Each update leaves another stale "bash" row; harmless.
 - After a `just update` that changes the python env, the *Automation*
-  grant re-prompts (reminder writes hang → tool timeout → brief says
-  "unavailable"). Re-approve at the screen. icalBuddy reads are immune
-  (stable binary) unless brew upgrades it.
+  grant re-prompts too (reminder writes hang → tool timeout → brief
+  says "unavailable"). Re-approve at the screen.
 
 ## Validation (2026-08-30)
 
