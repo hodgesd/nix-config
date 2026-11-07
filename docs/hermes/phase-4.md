@@ -30,12 +30,13 @@ ASGI wrapper, tailscale serve, store-free token, one egress hole).
 
 ## TCC runbook (the operational knowledge this phase bought)
 
-- First tool calls pop dialogs in the mini's GUI session: icalBuddy →
-  Reminders, icalBuddy → Calendars, python → Reminders (Automation).
+- First tool calls pop dialogs in the mini's GUI session, all named
+  **"bash"** (the start script's interpreter, see next bullets):
+  Calendars, Reminders, and Automation (control Reminders/Calendar).
 - **Trap found live: macOS Calendar access is split "Add Only" vs
-  "Full Access", and icalBuddy under the default returns `error: No
+  "Full Access", and icalBuddy under "Add Only" returns `error: No
   calendars.`** Fix: System Settings → Privacy & Security → Calendars →
-  icalBuddy → Full Access.
+  **bash** → Full Access.
 - **Calendar/Reminders grants are NOT held by icalBuddy** (found
   2026-11-07). A command-line tool never gets its own row in Privacy &
   Security; macOS charges the access to the process launchd started for
