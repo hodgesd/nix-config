@@ -269,19 +269,19 @@ def update_event(
     new_start: str = "",
     new_end: str = "",
     new_location: str = "",
-    new_notes: str = "",
 ) -> str:
     """Edit ONE event in Derrick's calendar: the event whose title contains
     `title` and that starts on on_date ('YYYY-MM-DD'). Only the new_*
     fields given change; new_start alone keeps the duration. Times:
     'YYYY-MM-DD HH:MM' local (timed events only). Refuses events with
-    attendees (an edit emails every invitee) and repeating events.
-    Returns the OLD values so the edit can be undone."""
+    attendees (an edit emails every invitee) and repeating events. Notes
+    are not editable (they carry the #hermes marker; change them in
+    Calendar). Returns the OLD values so the edit can be undone."""
     try:
         day = date.fromisoformat(on_date)
     except ValueError as e:
         raise ValueError(f"on_date must be YYYY-MM-DD: {e}") from None
-    if not any([new_title, new_start, new_end, new_location, new_notes]):
+    if not any([new_title, new_start, new_end, new_location]):
         raise ValueError("nothing to change")
     d0 = datetime.combine(day, datetime.min.time())
     lines = [_as_date_lines(d0, "d0"), _as_date_lines(d0 + timedelta(days=1), "d1")]
@@ -290,8 +290,6 @@ def update_event(
         sets.append(f'set summary of ev to "{_as_str(new_title)}"')
     if new_location:
         sets.append(f'set location of ev to "{_as_str(new_location)}"')
-    if new_notes:
-        sets.append(f'set description of ev to "{_as_str(new_notes)}"')
     if new_start or new_end:
         if new_start:
             ns, a = _parse_when(new_start)

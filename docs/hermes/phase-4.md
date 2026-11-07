@@ -102,7 +102,7 @@ Derrick asked for Hermes to write his iCloud calendar too.
 - Not possible, by tool shape: delete; attendees (inviting or changing an
   event with invitees makes Calendar email them, which is Tier 2); editing
   repeating events (AppleScript can't change one occurrence safely);
-  editing all-day event times.
+  editing all-day event times; editing notes (they carry `#hermes`).
 - `update_event` matches one event by title + day, refuses ambiguous
   matches, and returns the old values so any edit can be undone.
 - Allowlisted in `hosts/nixos/nixos-infra/apple.nix`.
