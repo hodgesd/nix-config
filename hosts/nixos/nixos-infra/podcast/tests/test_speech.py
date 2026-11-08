@@ -133,3 +133,30 @@ def test_furniture_labels_go_but_sentences_that_start_alike_stay() -> None:
     assert "Share prices fell sharply on Monday." in text
     for furniture in ("Share this", "Comments", "Subscribe", "Next article"):
         assert furniture not in text
+
+
+def test_shared_link_with_a_headline_is_queued_as_the_link() -> None:
+    # What a news app's Share Sheet hands the Shortcut: headline, then link.
+    shared = "The incoming class of U.S. senators is full of historic firsts https://n.pr/4oQx1"
+    assert speech.link_capture(shared) == "https://n.pr/4oQx1"
+    assert speech.link_capture("https://go.dev/blog/16years") == "https://go.dev/blog/16years"
+    assert speech.link_capture("https://en.wikipedia.org/wiki/Oliver!") == (
+        "https://en.wikipedia.org/wiki/Oliver!"  # a bare URL is taken as is
+    )
+    assert speech.link_capture("word " * 41 + "https://example.com") is None
+    assert speech.link_capture("no link here") is None
+    assert (
+        speech.link_capture("Read this: https://example.com/story.") == "https://example.com/story"
+    )
+
+
+def test_pasted_text_without_a_title_is_titled_from_its_first_line() -> None:
+    article = speech.from_text("Why flaps matter\n\nFlaps change the camber of the wing.", "")
+    assert article.title == "Why flaps matter"
+    assert [b.text for b in article.blocks] == ["Flaps change the camber of the wing."]
+    long_first = speech.from_text("Flaps change the camber of the wing and lower the stall speed.")
+    assert long_first.title == "Flaps change the camber of the wing and…"
+    short = speech.from_text("Flaps lower the stall speed.")  # all of it is read, not just titled
+    assert (short.title, short.words) == ("Flaps lower the stall speed.", 5)
+    code_only = speech.from_text("Run this command:\n\n```\necho hi\n```")  # still has words
+    assert code_only.words == 3
