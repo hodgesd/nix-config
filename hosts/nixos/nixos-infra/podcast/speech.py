@@ -161,7 +161,7 @@ def link_capture(text: str) -> str | None:
     """The URL to fetch when shared text is really a link, else None."""
     urls = _SHARED_URL_RE.findall(text)
     if urls and len(_SHARED_URL_RE.sub("", text).split()) <= LINK_CAPTURE_WORDS:
-        return urls[0]
+        return urls[0].rstrip(".,;:!?")  # "…firsts https://n.pr/x." ends a sentence
     return None
 
 
@@ -204,7 +204,8 @@ def from_text(text: str, title: str = "") -> Article:
         title = blocks.pop(0).text
     # No title given (the Share Sheet Shortcut never asks): a short first
     # paragraph is the headline; otherwise the opening words name it.
-    if not title and len(blocks) > 1 and len(blocks[0].text.split()) <= TITLE_WORDS:
+    readable_after = any(b.kind == "para" and b.text != CODE_NOTE for b in blocks[1:])
+    if not title and readable_after and len(blocks[0].text.split()) <= TITLE_WORDS:
         title = blocks.pop(0).text
     elif not title and blocks:
         words = blocks[0].text.split()

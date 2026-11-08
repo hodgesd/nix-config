@@ -142,6 +142,9 @@ def test_shared_link_with_a_headline_is_queued_as_the_link() -> None:
     assert speech.link_capture("https://go.dev/blog/16years") == "https://go.dev/blog/16years"
     assert speech.link_capture("word " * 41 + "https://example.com") is None
     assert speech.link_capture("no link here") is None
+    assert (
+        speech.link_capture("Read this: https://example.com/story.") == "https://example.com/story"
+    )
 
 
 def test_pasted_text_without_a_title_is_titled_from_its_first_line() -> None:
@@ -152,3 +155,5 @@ def test_pasted_text_without_a_title_is_titled_from_its_first_line() -> None:
     assert long_first.title == "Flaps change the camber of the wing and…"
     short = speech.from_text("Flaps lower the stall speed.")  # all of it is read, not just titled
     assert (short.title, short.words) == ("Flaps lower the stall speed.", 5)
+    code_only = speech.from_text("Run this command:\n\n```\necho hi\n```")  # still has words
+    assert code_only.words == 3
