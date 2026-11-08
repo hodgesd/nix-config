@@ -4,8 +4,9 @@ One process, two threads:
 
 - intake (stdlib ThreadingHTTPServer): POST /enqueue takes {"url": …} or
   {"text": …, "title": …} with a bearer token, stores a job and answers
-  202 at once. Text that is really a link is queued as the link, and text
-  without a title is titled from its first line (speech.py). GET /healthz for Gatus.
+  202 at once. Untitled text that is really a link is queued as the link;
+  other untitled text is titled from its opening (speech.from_text).
+  GET /healthz for Gatus.
 - worker: one job at a time. Fetch → speech.extract_html / from_text →
   one Kokoro request per piece → ffmpeg concat → MP3 → feed.xml. A failed
   job keeps its reason in the jobs table and never reaches the feed.

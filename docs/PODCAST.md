@@ -177,7 +177,7 @@ The phone must be on the tailnet (Tailscale app connected). The Shortcut
 only forwards what it was shared; the intake decides what it is. A URL, or
 a URL with up to 40 other words (news apps share "Headline https://…"), is
 fetched as that URL. Anything else is read as pasted text, titled from its
-first line. Kept this small on purpose: a Shortcut has no history or diff,
+first paragraph when that is short, else its opening words. Kept this small on purpose: a Shortcut has no history or diff,
 and the first, 10-step version lost three actions without a trace
 (2026-11-08; most likely an iCloud sync conflict or a stray Delete). The logic
 lives in `speech.link_capture` and `speech.from_text`, under test.
