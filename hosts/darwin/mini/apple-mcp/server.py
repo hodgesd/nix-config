@@ -15,6 +15,7 @@
 # timeout, and the brief says "unavailable".
 #
 # argv: [port]   env: APPLE_MCP_TOKEN (bearer, from sops)
+import asyncio
 import hmac
 import os
 import subprocess
@@ -360,10 +361,37 @@ def update_event(
     return f"updated in {WRITE_CALENDAR}: {title} on {on_date} ({out.strip()})"
 
 
+def _calendar_readable() -> bool:
+    """Probe the calendar read used by list_events and log failures locally."""
+    try:
+        _run([ICALBUDDY, "-nc", "-li", "1", "eventsToday"], timeout=15)
+        return True
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        print(f"calendar health probe failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return False
+
+
 _inner = mcp.http_app()
 
 
 async def app(scope, receive, send):
+    """Serve the public calendar status; require a token for other HTTP paths."""
+    # SECURITY: /healthz is the one path before the token check, so the
+    # sentinel (hermes-sentinel.nix) needs no credential. It returns only
+    # "ok" or "calendar unreadable", never calendar data, and like the rest
+    # of this server it is reachable only on the tailnet (tailscale serve).
+    if scope["type"] == "http" and scope["path"] == "/healthz":
+        ok = await asyncio.to_thread(_calendar_readable)
+        await send({
+            "type": "http.response.start",
+            "status": 200 if ok else 503,
+            "headers": [(b"content-type", b"text/plain")],
+        })
+        await send({
+            "type": "http.response.body",
+            "body": b"ok" if ok else b"calendar unreadable",
+        })
+        return
     if scope["type"] == "http":
         auth = dict(scope.get("headers") or []).get(b"authorization", b"")
         if not hmac.compare_digest(auth, b"Bearer " + TOKEN.encode()):

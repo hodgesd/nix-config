@@ -7,6 +7,8 @@
 #   bridge-vault / bridge-apple  the mini bridges answer their auth wall
 #                                (HTTP 401 == healthy: reachable AND
 #                                auth enforced; anything else is down)
+#   calendar-access              the apple bridge can read the calendar
+#                                (its /healthz: 503 = macOS refused it)
 #   unit-mcp-unifi / unit-mcp-fastmail  VM-local MCP servers active
 #                                (a revoked Fastmail token shows up here
 #                                as a crash-loop)
@@ -77,12 +79,30 @@ in {
         name=''${b%%:*}; port=''${b##*:}
         code=$(${curl} -s -o /dev/null -m 12 -w '%{http_code}' \
           "https://mini.jaguar-duckbill.ts.net:$port/mcp/" || echo 000)
+        if [ "$name" = apple ]; then apple_code="$code"; fi
         if [ "$code" = 401 ]; then
           report "bridge-$name" ok "mini:$port answering again (HTTP 401)."
         else
           report "bridge-$name" fail "mini:$port returned HTTP $code (expected 401). Mini down, serve off, or agent hung?"
         fi
       done
+
+      # Calendar access on the mini. The bridge can answer its auth wall
+      # (above) while macOS refuses it the calendar: a rebuild re-prompts
+      # on the mini's headless screen, and the running bridge keeps the
+      # denial until restarted (2026-11-07, 2026-11-08; runbook in
+      # docs/hermes/phase-4.md). If the auth wall is down, bridge-apple
+      # reports it; unexpected health responses need their own alert when
+      # the auth wall is healthy.
+      code=$(${curl} -s -o /dev/null -m 20 -w '%{http_code}' \
+        "https://mini.jaguar-duckbill.ts.net:8322/healthz" || echo 000)
+      if [ "$code" = 200 ]; then
+        report calendar-access ok "The Apple bridge can read the calendar again."
+      elif [ "$code" = 503 ]; then
+        report calendar-access fail "The Apple bridge cannot read the calendar. Check its error on the mini; if it says No calendars, allow any bash prompt, grant Calendars Full Access, then launchctl kickstart -k gui/\$(id -u)/org.nixos.apple-mcp"
+      elif [ "$apple_code" = 401 ]; then
+        report calendar-access fail "The Apple bridge health check returned HTTP $code (expected 200). Check the bridge on the mini."
+      fi
 
       # VM-local MCP servers.
       for u in mcp-unifi mcp-fastmail; do
