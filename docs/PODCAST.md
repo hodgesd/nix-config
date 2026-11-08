@@ -173,38 +173,39 @@ Set the new value as in step 3 and deploy, plus:
 
 ## iOS Shortcut: "Podcast This"
 
-The phone must be on the tailnet (Tailscale app connected). Build it in
-Shortcuts → +, actions in this order (as built on iOS 26, 2026-11-07):
+The phone must be on the tailnet (Tailscale app connected). The Shortcut
+only forwards what it was shared; the intake decides what it is. A URL, or
+a URL with up to 40 other words (news apps share "Headline https://…"), is
+fetched as that URL. Anything else is read as pasted text, titled from its
+first line. Kept this small on purpose: a Shortcut has no history or diff,
+and the first, 10-step version lost three actions without a trace
+(2026-11-08; most likely an iCloud sync conflict or a stray Delete). The logic
+lives in `speech.link_capture` and `speech.from_text`, under test.
 
-1. **Get URLs from Input**: *Shortcut Input*. Adding it makes the grey
-   **Receive *Any* input from *Nowhere*** block appear on top: tap
-   *Nowhere* → *Share Sheet*, tap *Any* and leave only *Safari Web Pages*,
-   *URLs* and *Text* on. If there's no input: *Ask For* → *Text*.
+Build it in Shortcuts → +, actions in this order (as built on iOS 26):
+
+1. **Receive** from **Share Sheet**: add any action first and the grey
+   *Receive* block appears on top. Tap *Nowhere* → *Share Sheet*, tap the
+   input types and leave only *URLs* and *Text* on. If there's no input:
+   *Ask For* → *Text*.
 2. **Text**: paste the value of `podcast-intake-token` (on the mbp:
    `sops -d --extract '["podcast-intake-token"]' secrets/nixos-infra.yaml | pbcopy`,
-   then `pbcopy < /dev/null` once done). The token lives only here. Its
-   output variable is called *Text*; that is the only Text action, so the
-   headers below can use it as is.
-3. **If** *URLs* *has any value*
-4. — **Get Item from List**: *First Item* from *URLs*.
-5. — **Get Contents of URL**: `https://podcast-intake.jaguar-duckbill.ts.net/enqueue`.
+   then `pbcopy < /dev/null` once done). The token lives only here.
+3. **Set Variable**: *Token* to *Text*.
+4. **Get Contents of URL**: `https://podcast-intake.jaguar-duckbill.ts.net/enqueue`.
    Expand it: Method *POST*; Headers: `Authorization` = `Bearer `, a space,
-   then the *Text* variable (a blue bubble, not typed); no other header
-   rows; Request Body *JSON*, one field: `url` (Text) = *Item from List*.
-6. **Otherwise**
-7. — **Ask for Input**: *Text*, prompt `Title?`.
-8. — **Get Contents of URL**: same URL, method and header as step 5;
-   Request Body *JSON* with `text` (Text) = *Shortcut Input* and `title`
-   (Text) = *Provided Input*.
-9. **End If**
-10. **Show Notification**: the *If Result* variable. That is the intake's
-    reply, `{"id": …, "status": "queued"}` on success. Get Contents of URL
-    does not stop on an HTTP error, so a fixed "Queued" message would also
-    show for a 401 (bad token) or a 400 (empty body).
+   then the *Token* variable (a blue bubble, not typed); no other header
+   rows; Request Body *JSON*, one field: `text` (Text) = *Shortcut Input*.
+5. **Show Notification**: *Contents of URL*. That is the intake's reply,
+   `{"id": …, "status": "queued"}` on success. Get Contents of URL does not
+   stop on an HTTP error, so a fixed "Queued" message would also show for
+   a 401 (bad token) or a 400 (empty body).
 
 **Show in Share Sheet** (under ⓘ in the bottom bar) is switched on by
-choosing *Share Sheet* in step 1. From Safari: Share → Podcast This. The
-reply appears within a second; the episode follows a few minutes later.
+choosing *Share Sheet* in step 1. From Safari or a news app: Share →
+Podcast This. The reply appears within a second; the episode follows a few
+minutes later. Edit it on one device and let iCloud sync before opening it
+on another. After any edit, run it once and check for `"queued"`.
 
 ## Hermes
 

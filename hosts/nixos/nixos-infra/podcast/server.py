@@ -4,7 +4,8 @@ One process, two threads:
 
 - intake (stdlib ThreadingHTTPServer): POST /enqueue takes {"url": …} or
   {"text": …, "title": …} with a bearer token, stores a job and answers
-  202 at once. GET /healthz for Gatus.
+  202 at once. Text that is really a link is queued as the link, and text
+  without a title is titled from its first line (speech.py). GET /healthz for Gatus.
 - worker: one job at a time. Fetch → speech.extract_html / from_text →
   one Kokoro request per piece → ffmpeg concat → MP3 → feed.xml. A failed
   job keeps its reason in the jobs table and never reaches the feed.
@@ -204,9 +205,10 @@ class Intake(BaseHTTPRequestHandler):
         except (ValueError, AttributeError):
             self.reply(400, {"error": "body must be a JSON object"})
             return
-        # A Share Sheet sometimes hands over the page as text that is only a URL.
-        if not url and text.startswith(("http://", "https://")) and len(text.split()) == 1:
-            url, text = text, ""
+        # The Share Sheet Shortcut sends everything as text; a link (alone,
+        # or with a headline as news apps share it) is fetched as the URL.
+        if not url and (link := speech.link_capture(text)):
+            url, text = link, ""
         if url and urllib.parse.urlsplit(url).scheme not in ("http", "https"):
             self.reply(400, {"error": "url must be http or https"})
             return
