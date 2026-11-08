@@ -159,6 +159,11 @@ TITLE_WORDS = 12
 
 def link_capture(text: str) -> str | None:
     """The URL to fetch when shared text is really a link, else None."""
+    # The Shortcut sent a shared URL as the first line of a JSON Text field,
+    # followed by page content. The first line is still the URL to fetch.
+    first_line = text.strip().split("\n", 1)[0].strip()
+    if _SHARED_URL_RE.fullmatch(first_line):
+        return first_line
     urls = _SHARED_URL_RE.findall(text)
     if urls and len(_SHARED_URL_RE.sub("", text).split()) <= LINK_CAPTURE_WORDS:
         if urls[0] == text.strip():
