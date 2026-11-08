@@ -56,6 +56,17 @@ ASGI wrapper, tailscale serve, store-free token, one egress hole).
 - After a `just update` that changes the python env, the *Automation*
   grant re-prompts too (reminder writes hang → tool timeout → brief
   says "unavailable"). Re-approve at the screen.
+- **It recurred on 2026-11-08, and Allow alone did not fix it.** The
+  running bridge kept the denial it got while the prompt sat unanswered;
+  only restarting it picked up the grant. So after any Allow (or a
+  change to Full Access), restart the bridge, on the mini:
+  `launchctl kickstart -k gui/$(id -u)/org.nixos.apple-mcp`.
+  Don't test with icalBuddy in Terminal: that uses Terminal's own grant.
+- **Detection:** the bridge's unauthenticated `/healthz` runs the same
+  icalBuddy read as `list_events` and answers 503 when it fails;
+  `hermes-sentinel.nix` polls it every 10 minutes and sends a
+  `calendar-access` alert to ntfy `hermes-alerts` (one on failure, one
+  on recovery).
 
 ## Validation (2026-08-30)
 
