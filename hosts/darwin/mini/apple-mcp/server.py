@@ -362,12 +362,12 @@ def update_event(
 
 
 def _calendar_readable() -> bool:
-    """The read list_events does. Fails with "No calendars." when macOS
-    has not granted (or this process has not yet seen) Full Access."""
+    """Probe the calendar read used by list_events and log failures locally."""
     try:
         _run([ICALBUDDY, "-nc", "-li", "1", "eventsToday"], timeout=15)
         return True
-    except (OSError, ValueError, subprocess.TimeoutExpired):
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        print(f"calendar health probe failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         return False
 
 
@@ -375,6 +375,7 @@ _inner = mcp.http_app()
 
 
 async def app(scope, receive, send):
+    """Serve the public calendar status; require a token for other HTTP paths."""
     # SECURITY: /healthz is the one path before the token check, so the
     # sentinel (hermes-sentinel.nix) needs no credential. It returns only
     # "ok" or "calendar unreadable", never calendar data, and like the rest
