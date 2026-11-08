@@ -26,6 +26,37 @@
 #   ssh agent@t3-code            # then: claude (login), gh auth login
 #   npx --yes t3 service install
 #   tailscale serve --bg http://127.0.0.1:3773
+#
+# OpenCode, for T3 Code's OpenCode provider (added 2026-11-08). Same
+# shape as codex on this host: the agent user's nix profile, not
+# systemPackages, because nothing here can switch the system and the
+# host's own rule is that per-user agent state stays state. Pinned to
+# the SAME llm-agents rev flake.lock pins, so it matches nixos-infra's
+# agent-workbench.nix without an unpinned ref. The next two commands read
+# flake.lock and opencode.json straight from origin/main, so they do not
+# care what branch or how stale the working tree is -- this host's
+# checkout (~/nix-config, which T3 Code needs as its project checkout
+# anyway) is routinely parked on a feature branch. gh is already
+# authenticated by the step above:
+#   [ -d ~/nix-config ] || gh repo clone hodgesd/nix-config ~/nix-config; cd ~/nix-config && git fetch -q origin
+#   nix profile add "github:numtide/llm-agents.nix/$(git show origin/main:flake.lock | jq -r '.nodes."llm-agents".locked.rev')#opencode" --accept-flake-config
+#   f=$(mktemp) && git show origin/main:hosts/nixos/t3-code/opencode.json > "$f" && install --backup=numbered -Dm644 "$f" ~/.config/opencode/opencode.json && rm "$f"
+#     (installs nothing if git show fails -- a pipe would install an empty file
+#     and exit 0; --backup=numbered keeps EVERY earlier opencode.json as
+#     opencode.json.~N~, so re-running never destroys the original)
+#   T3 Code app: Settings → Providers → OpenCode → enable
+#     (= ~/.t3/userdata/settings.json  providerInstances.opencode =
+#     {"driver": "opencode", "enabled": true}. `driver` is REQUIRED: an
+#     entry without it fails schema validation and the server silently
+#     falls back to defaults for the WHOLE file -- check the server log
+#     for "failed to parse settings.json" if a toggle seems to do nothing.)
+# opencode.json points OpenCode at the Mac Studio's Ollama over the
+# tailnet (MagicDNS name on purpose: Ollama 403s any other Host header).
+# The Studio was retired from this repo in #121 while the hardware stays
+# up pending a keep/return decision; if it goes back, delete that JSON
+# and `nix profile remove opencode` here. T3 Code 0.1.x calls OpenCode
+# 1.14–1.x "graceful" (2.0.18+ "supported", not yet on npm stable);
+# verified 1.18.33 end to end against the Studio on 2026-11-08.
 # Mint a pairing link with `~/.t3/runtime/versions/<ver>/t3 pair --tailscale`.
 # Update with the app's update button or `t3 update --yes`.
 #
