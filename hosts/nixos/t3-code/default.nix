@@ -33,12 +33,14 @@
 # host's own rule is that per-user agent state stays state. Pinned to
 # the SAME llm-agents rev flake.lock pins, so it matches nixos-infra's
 # agent-workbench.nix without an unpinned ref. The next two commands read
-# from a nix-config checkout, so run them inside one -- on this host that
-# is ~/nix-config, which T3 Code needs as its project checkout anyway
-# (gh is already authenticated by the step above):
-#   [ -d ~/nix-config ] || gh repo clone hodgesd/nix-config ~/nix-config; cd ~/nix-config
-#   nix profile add "github:numtide/llm-agents.nix/$(jq -r '.nodes."llm-agents".locked.rev' flake.lock)#opencode" --accept-flake-config
-#   install -Dm644 hosts/nixos/t3-code/opencode.json ~/.config/opencode/opencode.json
+# flake.lock and opencode.json straight from origin/main, so they do not
+# care what branch or how stale the working tree is -- this host's
+# checkout (~/nix-config, which T3 Code needs as its project checkout
+# anyway) is routinely parked on a feature branch. gh is already
+# authenticated by the step above:
+#   [ -d ~/nix-config ] || gh repo clone hodgesd/nix-config ~/nix-config; cd ~/nix-config && git fetch -q origin
+#   nix profile add "github:numtide/llm-agents.nix/$(git show origin/main:flake.lock | jq -r '.nodes."llm-agents".locked.rev')#opencode" --accept-flake-config
+#   git show origin/main:hosts/nixos/t3-code/opencode.json | install -Dm644 /dev/stdin ~/.config/opencode/opencode.json
 #   T3 Code app: Settings → Providers → OpenCode → enable
 #     (= ~/.t3/userdata/settings.json  providerInstances.opencode =
 #     {"driver": "opencode", "enabled": true}. `driver` is REQUIRED: an
