@@ -164,6 +164,11 @@ def link_capture(text: str) -> str | None:
         if urls[0] == text.strip():
             return urls[0]  # a bare URL is taken as is ("…/wiki/Oliver!")
         return urls[0].rstrip(".,;:!?")  # "…firsts https://n.pr/x." ends a sentence
+    # The Shortcut sent a shared URL as the first line of a JSON Text field,
+    # followed by page content. The first line is still the URL to fetch.
+    first_line = text.strip().split("\n", 1)[0].strip()
+    if _SHARED_URL_RE.fullmatch(first_line):
+        return first_line
     return None
 
 
