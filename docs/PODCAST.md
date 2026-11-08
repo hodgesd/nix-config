@@ -13,7 +13,7 @@ The idea is from Talk Python #567 (Jeff Triplett's Hermes setup).
 ## How it works
 
 ```
-Shortcut ──https://podcast.jaguar-duckbill.ts.net:8444/enqueue──┐  (tailnet only, bearer)
+Shortcut ──https://podcast-intake.jaguar-duckbill.ts.net/enqueue─┐  (tailnet only, bearer)
 Hermes ── podcast_this (mcp-podcast, 127.0.0.1:9105) ── 127.0.0.1:8095 ─┤
 mini podcast-listen (Inbox #listen, every 15 min) ──── same as Shortcut ─┤
                                                                          ▼
@@ -53,15 +53,22 @@ Overcast ◀── Funnel ── https://podcast.jaguar-duckbill.ts.net/p/<token
 | What | Where | Reachable from |
 |---|---|---|
 | feed.xml + MP3s | `ts-podcast` :443, path `/p/<podcast-feed-token>/` only | **Internet (Funnel)** |
-| Intake (HTTPS) | `ts-podcast` :8444 → `host.docker.internal:8095` | Tailnet |
+| Intake (HTTPS) | `ts-podcast-intake` :443 (homelab stack) → `host.docker.internal:8095` | Tailnet |
 | Intake (HTTP) | nixos-infra :8095 | Tailnet (firewall trusts tailscale0 only) |
 | Kokoro | 127.0.0.1:8880 on the VM | The VM only |
 | Hermes tool | 127.0.0.1:9105 on the VM | The VM only |
 
 Funnel is on for one node, `podcast`, a sidecar that exists only for this
 stack; never nixos-infra's own node or another sidecar. The ACL grants the
-`funnel` attribute to `tag:podcast` and nothing else. Port 8444 cannot be
-put on Funnel even by mistake: Funnel only serves 443, 8443 and 10000.
+`funnel` attribute to `tag:podcast` and nothing else.
+
+The intake has its own node, `podcast-intake`, because a Funnel node's
+name is in public DNS: `podcast.jaguar-duckbill.ts.net` also resolves to
+Tailscale's Funnel relays. The intake first lived on `podcast` :8444, and
+the iPhone resolved that name to a relay, which drops every port but
+Funnel's, so the Shortcut timed out (2026-11-07). A node without Funnel
+has no public record; its name resolves only to the tailnet address.
+Keep tailnet-only services off the `podcast` node.
 
 The fetcher refuses any URL that resolves to a non-public address
 (loopback, LAN, tailnet, link-local), re-checked on every redirect, so a
@@ -116,8 +123,8 @@ Recorded so it can be redone after a rebuild or a key rotation.
    ```
 
    If the policy ever stops being allow-all, the phones, Macs (the mini's
-   `#listen` watcher) and nixos-infra (Gatus, `tag:homelab`) need tcp/8444
-   on `tag:podcast`.
+   `#listen` watcher) and nixos-infra (Gatus, `tag:homelab`) need tcp/443
+   on the `podcast-intake` node.
 
 2. **Auth key** (admin console → Settings → Keys → Generate auth key):
    not reusable, not ephemeral, tag `tag:podcast`, 7-day expiry (it only
@@ -180,7 +187,7 @@ Shortcuts → +, actions in this order (as built on iOS 26, 2026-11-07):
    headers below can use it as is.
 3. **If** *URLs* *has any value*
 4. — **Get Item from List**: *First Item* from *URLs*.
-5. — **Get Contents of URL**: `https://podcast.jaguar-duckbill.ts.net:8444/enqueue`.
+5. — **Get Contents of URL**: `https://podcast-intake.jaguar-duckbill.ts.net/enqueue`.
    Expand it: Method *POST*; Headers: `Authorization` = `Bearer `, a space,
    then the *Text* variable (a blue bubble, not typed); no other header
    rows; Request Body *JSON*, one field: `url` (Text) = *Item from List*.
@@ -234,7 +241,7 @@ same as the bridges.
 ## Verify
 
 ```bash
-curl -s https://podcast.jaguar-duckbill.ts.net:8444/healthz          # tailnet: {"ok": true, "kokoro": true, ...}
+curl -s https://podcast-intake.jaguar-duckbill.ts.net/healthz        # tailnet: {"ok": true, "kokoro": true, ...}
 ssh root@100.98.163.36 journalctl -u podcast -n 20                    # queued / done / failed lines
 ssh root@100.98.163.36 'sqlite3 -readonly /var/lib/podcast/podcast.db \
   "select status, coalesce(ep_title, url), reason from jobs order by created desc limit 10"'
@@ -242,9 +249,11 @@ ssh root@100.98.163.36 'sqlite3 -readonly /var/lib/podcast/podcast.db \
 
 From outside the tailnet (phone on LTE with Tailscale off): the feed URL
 answers 200; `https://podcast.jaguar-duckbill.ts.net/` and `…/healthz` answer
-404; `:8444` and `nixos-infra-1:8095` don't connect.
+404; `podcast-intake.jaguar-duckbill.ts.net` doesn't resolve and
+`nixos-infra-1:8095` doesn't connect.
 
-Gatus: group `nixos-infra`, endpoint `podcast` (`:8444/healthz`, which is
+Gatus: group `nixos-infra`, endpoint `podcast` (`podcast-intake`'s
+`/healthz`, which is
 only `ok` when Kokoro answers too).
 
 ## Tests
@@ -259,10 +268,13 @@ uv run ruff check . && uv run ruff format --check .
 
 Remove `./podcast-listen.nix` from the mini's imports and switch it. Remove
 `./podcast.nix` from the imports in
-`hosts/nixos/nixos-infra/default.nix` and `just deploy`, then on the VM
+`hosts/nixos/nixos-infra/default.nix`, delete the `ts-podcast-intake`
+service from `stacks/homelab/docker-compose.yml` (its serve.json comes from
+podcast.nix) and `just deploy`, then on the VM
 `docker compose --project-directory /srv/podcast down` (this also takes the
-Funnel down). Afterwards delete `/var/lib/podcast` and `/srv/podcast`,
-remove the `podcast` node in the admin console, the `tag:podcast` ACL
+Funnel down). Afterwards delete `/var/lib/podcast`, `/srv/podcast` and
+`/srv/homelab/ts-podcast-intake`, remove the `podcast` and `podcast-intake`
+nodes in the admin console, the `tag:podcast` ACL
 entries and the `podcast-*` sops keys in both secrets files.
 
 Emergency, Funnel only: `docker stop ts-podcast` on the VM.
@@ -290,4 +302,4 @@ Emergency, Funnel only: `docker stop ts-podcast` on the VM.
    `sqlite3 … "select reason from jobs where status='failed'"` says why.
 5. Phone on LTE with Tailscale off: the feed URL loads in Safari,
    `https://podcast.jaguar-duckbill.ts.net/` is a 404, and
-   `https://podcast.jaguar-duckbill.ts.net:8444/healthz` does not connect.
+   `https://podcast-intake.jaguar-duckbill.ts.net/healthz` does not resolve.

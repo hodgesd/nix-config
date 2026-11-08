@@ -325,6 +325,29 @@ services:
       - ./stirling-pdf/logs:/logs
       - ./stirling-pdf/pipeline:/pipeline
 
+  # Tailscale front for the read-later podcast's intake
+  # (hosts/nixos/nixos-infra/podcast.nix), a native service: same shape as
+  # ts-tell and ts-status. Tailnet only, no Funnel. Kept off the Funnel
+  # node ts-podcast (stacks/podcast) on purpose; podcast.nix says why.
+  ts-podcast-intake:
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
+    container_name: ts-podcast-intake
+    hostname: podcast-intake
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - ./ts-podcast-intake/state:/var/lib/tailscale
+      - /etc/ts-podcast-intake/serve.json:/config/serve.json:ro
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
   # Tailscale front for "Tell Hermes" (hosts/nixos/nixos-infra/tell-hermes.nix),
   # a native service like Gatus, so the same shape as ts-status below:
   # nix-rendered serve.json and a host.docker.internal upstream. Tailnet
