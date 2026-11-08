@@ -25,6 +25,13 @@ Overcast ◀── Funnel ── https://podcast.jaguar-duckbill.ts.net/p/<token
 ```
 
 - **Intake** returns 202 at once; the Shortcut never waits for TTS.
+- **Ready alert**: after the MP3 and feed are published, the worker pings
+  Overcast to refresh the feed and posts one default-priority notification
+  with the title and duration to ntfy's `podcast-ready` topic. Subscribe to
+  `https://ntfy.jaguar-duckbill.ts.net/podcast-ready` in the iPhone ntfy app;
+  the existing ntfy iOS relay delivers the wake-up through APNs while the
+  message stays on the tailnet. Keep Tailscale connected so the app can fetch
+  it. A failed ping or notification is logged and does not fail the episode.
 - **Extraction**: trafilatura. A page that yields under 200 words
   (paywall, login wall, not an article) fails the job with the reason
   kept in the `jobs` table; nothing broken is published.

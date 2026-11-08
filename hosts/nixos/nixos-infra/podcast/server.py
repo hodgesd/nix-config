@@ -61,6 +61,7 @@ VOICE = os.environ.get("PODCAST_VOICE", "af_heart")
 PUBLIC_BASE = os.environ["PODCAST_PUBLIC_BASE"].rstrip("/")
 RETENTION_DAYS = int(os.environ.get("PODCAST_RETENTION_DAYS", "30"))
 FEED_TITLE = os.environ.get("PODCAST_FEED_TITLE", "Read Later")
+NTFY_URL = os.environ.get("PODCAST_NTFY_URL", "")
 INTAKE_TOKEN = os.environ["PODCAST_INTAKE_TOKEN"]
 FEED_TOKEN = os.environ["PODCAST_FEED_TOKEN"]
 # Feed artwork (a PNG in the Nix store), copied into public/ at startup
@@ -454,7 +455,7 @@ def prune() -> None:
 # ── Worker ──────────────────────────────────────────────────────────────
 
 
-def process(job: sqlite3.Row) -> None:
+def process(job: sqlite3.Row) -> tuple[str, float] | None:
     started = time.monotonic()
     try:
         if job["url"]:
@@ -498,15 +499,40 @@ def process(job: sqlite3.Row) -> None:
         f"done id={job['id']} words={article.words} audio={duration:.0f}s "
         f"took={took:.0f}s ({duration / took:.1f}x real time) title={article.title!r}"
     )
+    return article.title, duration
+
+
+def announce_ready(title: str, duration: float) -> None:
+    """Nudge Overcast, then send one normal iPhone alert for a published episode."""
+    ping = urllib.request.Request(
+        "https://overcast.fm/ping",
+        data=urllib.parse.urlencode({"urlprefix": f"{feed_base()}/feed.xml"}).encode(),
+    )
+    requests = [("Overcast ping", ping)]
+    if NTFY_URL:
+        minutes, seconds = divmod(round(duration), 60)
+        ready = urllib.request.Request(
+            NTFY_URL,
+            data=f"{title}\n{minutes}:{seconds:02d} in Overcast".encode(),
+            headers={"Title": "Ready to listen", "Priority": "default", "Tags": "headphones"},
+        )
+        requests.append(("ntfy", ready))
+    for name, request in requests:
+        try:
+            with urllib.request.urlopen(request, timeout=5):
+                pass
+        except OSError as e:
+            log(f"{name} failed: {e}")  # a notification failure cannot undo the episode
 
 
 def worker() -> None:
     try:
         while True:
             job = claim()
-            if job is not None:
-                process(job)
+            ready = process(job) if job is not None else None
             write_feed()
+            if ready is not None:
+                announce_ready(*ready)
             prune()
             if job is None:
                 # Woken by enqueue(); the hourly timeout is the prune clock.
