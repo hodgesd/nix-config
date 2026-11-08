@@ -20,8 +20,8 @@
   # Same vault as the bridge in default.nix ("Pro Pilot 2" is the live one).
   vaultPath = "/Users/${username}/Library/Mobile Documents/iCloud~md~obsidian/Documents/Pro Pilot 2";
   stateFile = "/Users/${username}/Library/Application Support/podcast-listen/sent.json";
-  # The tailnet-only intake on the podcast sidecar (nixos-infra podcast.nix).
-  intake = "https://podcast.jaguar-duckbill.ts.net:8444/enqueue";
+  # The tailnet-only intake (ts-podcast-intake, nixos-infra podcast.nix).
+  intake = "https://podcast-intake.jaguar-duckbill.ts.net/enqueue";
 in {
   # Same value as podcast-intake-token in secrets/nixos-infra.yaml. Owned by
   # the login user because the agent runs in that user's session.

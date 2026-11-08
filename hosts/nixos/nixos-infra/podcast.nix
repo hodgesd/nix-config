@@ -15,9 +15,11 @@
 #
 # Exposure (the SECURITY note on the serve.json template below is the
 # authority): ts-podcast :443 is on Funnel and serves only /p/<token>/
-# (feed.xml + MP3s). ts-podcast :8444 is the tailnet-only HTTPS front for
-# the intake. Kokoro and :8095 are not on Funnel; :8095 is tailnet-only
-# like every other port on this VM (nixos-common.nix firewall).
+# (feed.xml + MP3s). The intake's HTTPS front is a separate, Funnel-less
+# sidecar, podcast-intake (homelab stack; see the note at
+# homelab.sidecars below for why it cannot share ts-podcast's name).
+# Kokoro and :8095 are not on Funnel; :8095 is tailnet-only like every
+# other port on this VM (nixos-common.nix firewall).
 #
 # Disable: remove ./podcast.nix from default.nix imports and deploy, then
 # on the VM `docker compose --project-directory /srv/podcast down` (the
@@ -35,12 +37,10 @@
   # ── Settings ────────────────────────────────────────────────────────────
   # Free on the VM (`ss -ltn`, 2026-11-06): 8000 easy-afd, 8080 gatus, 8090
   # hn-summaries, 8091 bj-drill api, 9101/9102 MCP. gatus.nix does not
-  # poll these by number; the check below goes through ts-podcast.
+  # poll these by number; the check below goes through ts-podcast-intake.
   port = 8095; # intake, podcast.service
   kokoroPort = 8880; # loopback publish in stacks/podcast
   mcpPort = 9105; # podcast_this tool (9104 is the mini's whisper port)
-  intakeTailnetPort = 8444; # ts-podcast, tailnet only. Funnel can't serve
-  #                           this port at all (443, 8443, 10000 only).
   # Kokoro voice. af_heart: the only grade-A voice in hexgrad's
   # Kokoro-82M VOICES.md (af_bella is A-, the male voices C+ or lower),
   # Kokoro-FastAPI's default, and the voice the 2.4x real-time figure in
@@ -103,22 +103,15 @@ in {
     # name in sync. Like sidecars.nix, an edit needs `docker restart
     # ts-podcast` (compose does not recreate for a bind mount's contents).
     "ts-podcast-serve.json".content = builtins.toJSON {
-      TCP = {
-        "443".HTTPS = true;
-        "${toString intakeTailnetPort}".HTTPS = true;
-      };
-      Web = {
-        # Public via Funnel: only this prefix exists on :443, so anything
-        # else (/, /healthz, a guessed path) is a tailscale 404.
-        "\${TS_CERT_DOMAIN}:443".Handlers."/p/${ph.podcast-feed-token}/".Path = "/public";
-        # Tailnet only: the intake.
-        "\${TS_CERT_DOMAIN}:${toString intakeTailnetPort}".Handlers."/".Proxy = "http://host.docker.internal:${toString port}";
-      };
+      TCP."443".HTTPS = true;
+      # Public via Funnel: only this prefix exists on :443, so anything
+      # else (/, /healthz, a guessed path) is a tailscale 404.
+      Web."\${TS_CERT_DOMAIN}:443".Handlers."/p/${ph.podcast-feed-token}/".Path = "/public";
       # SECURITY: a deliberate exception to the tailnet-only rule. Overcast
       # fetches feeds and audio from its own servers, so the feed must be
       # reachable from the internet. Exposed: feed.xml and the episode MP3s
       # under /p/<podcast-feed-token>/ on this node's :443, nothing else.
-      # The intake (:8444) and Kokoro are not on Funnel. The token is the
+      # The intake and Kokoro are not on this node at all. The token is the
       # only access control (Overcast cannot send credentials), so it lives
       # in sops; rotating it changes the feed URL. Funnel is enabled on this
       # dedicated node only, never on nixos-infra's own node or another
@@ -177,12 +170,26 @@ in {
     };
   };
 
-  # ts-podcast reaches the intake over Docker's bridge, which the firewall
+  # ts-podcast-intake reaches the intake over Docker's bridge, which the firewall
   # does not trust (tailscale0 only). Docker's private range, this port
   # only; the LAN stays blocked. Same rule as gatus.nix.
   networking.firewall.extraCommands = ''
     iptables -A nixos-fw -s 172.16.0.0/12 -p tcp --dport ${toString port} -j nixos-fw-accept
   '';
+
+  # The intake's tailnet-only HTTPS front: ts-podcast-intake in
+  # stacks/homelab, https://podcast-intake.jaguar-duckbill.ts.net/enqueue.
+  # Not a second port on ts-podcast: Funnel publishes the podcast node's
+  # name in public DNS (Tailscale's relays), and the iPhone resolved it
+  # there, so the Shortcut's request went to a relay that drops every port
+  # but Funnel's and timed out (2026-11-07). A node without Funnel has no
+  # public DNS record; its name resolves only to the tailnet address.
+  # gatus = null: the sidecar check polls "/", which is the intake's 404;
+  # the endpoint at the bottom polls /healthz instead.
+  homelab.sidecars.podcast-intake = {
+    upstream = "http://host.docker.internal:${toString port}";
+    gatus = null;
+  };
 
   majordouble.composeStacks.podcast = {
     composeFile = ../../../stacks/podcast/docker-compose.yml;
@@ -215,14 +222,14 @@ in {
     tools.include = ["podcast_this"];
   };
 
-  # Through the tailnet name and :8444, so DNS, the sidecar's TLS, the
+  # Through the intake's tailnet name, so DNS, the sidecar's TLS, the
   # intake and Kokoro ([BODY].ok is Kokoro's /health) are polled together.
   # The public feed is not polled: that would put its token in the store.
   services.gatus.settings.endpoints = [
     {
       group = "nixos-infra";
       name = "podcast";
-      url = "https://podcast.jaguar-duckbill.ts.net:${toString intakeTailnetPort}/healthz";
+      url = "https://podcast-intake.jaguar-duckbill.ts.net/healthz";
       interval = "60s";
       client.timeout = "45s";
       conditions = ["[STATUS] == 200" "[BODY].ok == true"];
