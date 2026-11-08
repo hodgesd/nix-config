@@ -26,6 +26,32 @@
 #   ssh agent@t3-code            # then: claude (login), gh auth login
 #   npx --yes t3 service install
 #   tailscale serve --bg http://127.0.0.1:3773
+#
+# OpenCode, for T3 Code's OpenCode provider (added 2026-11-08). Same
+# shape as codex on this host: the agent user's nix profile, not
+# systemPackages, because nothing here can switch the system and the
+# host's own rule is that per-user agent state stays state. Pinned to
+# the SAME llm-agents rev flake.lock pins, so it matches nixos-infra's
+# agent-workbench.nix without an unpinned ref. The next two commands read
+# from a nix-config checkout, so run them inside one -- on this host that
+# is ~/nix-config, which T3 Code needs as its project checkout anyway
+# (gh is already authenticated by the step above):
+#   [ -d ~/nix-config ] || gh repo clone hodgesd/nix-config ~/nix-config; cd ~/nix-config
+#   nix profile add "github:numtide/llm-agents.nix/$(jq -r '.nodes."llm-agents".locked.rev' flake.lock)#opencode" --accept-flake-config
+#   install -Dm644 hosts/nixos/t3-code/opencode.json ~/.config/opencode/opencode.json
+#   T3 Code app: Settings → Providers → OpenCode → enable
+#     (= ~/.t3/userdata/settings.json  providerInstances.opencode =
+#     {"driver": "opencode", "enabled": true}. `driver` is REQUIRED: an
+#     entry without it fails schema validation and the server silently
+#     falls back to defaults for the WHOLE file -- check the server log
+#     for "failed to parse settings.json" if a toggle seems to do nothing.)
+# opencode.json points OpenCode at the Mac Studio's Ollama over the
+# tailnet (MagicDNS name on purpose: Ollama 403s any other Host header).
+# The Studio was retired from this repo in #121 while the hardware stays
+# up pending a keep/return decision; if it goes back, delete that JSON
+# and `nix profile remove opencode` here. T3 Code 0.1.x calls OpenCode
+# 1.14–1.x "graceful" (2.0.18+ "supported", not yet on npm stable);
+# verified 1.18.33 end to end against the Studio on 2026-11-08.
 # Mint a pairing link with `~/.t3/runtime/versions/<ver>/t3 pair --tailscale`.
 # Update with the app's update button or `t3 update --yes`.
 #
