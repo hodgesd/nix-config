@@ -15,9 +15,32 @@
   poppler-utils,
   python3Packages,
   src,
+  stdenv,
   version ? "0.1.0",
 }: let
   py = python3Packages;
+
+  # weasyprint's OWN suite has one macOS-only failure at this nixpkgs rev:
+  # tests/draw/test_text.py::test_unicode_range asserts an exact pixel colour
+  # and gets red where it wants white, because font fallback for a codepoint
+  # outside the declared unicode-range resolves differently on macOS. The other
+  # 4017 of its tests pass. nixpkgs already disables test_font_stretch two
+  # lines up for exactly this reason ("needs the Ahem font (fails on macOS)")
+  # and simply missed this one -- its own aarch64-darwin build is broken too,
+  # which is why there is no substitute: cache.nixos.org 404s for darwin and
+  # 200s for linux.
+  #
+  # Darwin only, deliberately. Overriding unconditionally would change the
+  # derivation on Linux too and throw away that cached build to fix a failure
+  # that does not happen there. Drop this when nixpkgs disables the test or
+  # upstream makes the assertion portable.
+  weasyprint =
+    if stdenv.hostPlatform.isDarwin
+    then
+      py.weasyprint.overridePythonAttrs (old: {
+        disabledTests = (old.disabledTests or []) ++ ["test_unicode_range"];
+      })
+    else py.weasyprint;
 
   # Not in nixpkgs (checked 2026-11-01). Only the four runtime dependencies
   # are wired up: billfiler reads PDFs through poppler's pdftotext, so none of
@@ -50,7 +73,7 @@ in
     pyproject = true;
 
     build-system = [py.hatchling];
-    dependencies = [invoice2data py.pyyaml py.weasyprint];
+    dependencies = [invoice2data py.pyyaml weasyprint];
 
     # pdftotext is how every template reads a PDF, and a launchd agent
     # inherits almost no environment. Carrying poppler on the wrapper's own
