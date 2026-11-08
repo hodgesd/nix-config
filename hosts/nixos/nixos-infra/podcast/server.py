@@ -61,7 +61,6 @@ VOICE = os.environ.get("PODCAST_VOICE", "af_heart")
 PUBLIC_BASE = os.environ["PODCAST_PUBLIC_BASE"].rstrip("/")
 RETENTION_DAYS = int(os.environ.get("PODCAST_RETENTION_DAYS", "30"))
 FEED_TITLE = os.environ.get("PODCAST_FEED_TITLE", "Read Later")
-NTFY_URL = os.environ.get("PODCAST_NTFY_URL", "")
 INTAKE_TOKEN = os.environ["PODCAST_INTAKE_TOKEN"]
 FEED_TOKEN = os.environ["PODCAST_FEED_TOKEN"]
 # Feed artwork (a PNG in the Nix store), copied into public/ at startup
@@ -455,7 +454,7 @@ def prune() -> None:
 # ── Worker ──────────────────────────────────────────────────────────────
 
 
-def process(job: sqlite3.Row) -> tuple[str, float] | None:
+def process(job: sqlite3.Row) -> bool:
     started = time.monotonic()
     try:
         if job["url"]:
@@ -487,7 +486,7 @@ def process(job: sqlite3.Row) -> tuple[str, float] | None:
                 (reason[:1000], job["id"]),
             )
         log(f"failed id={job['id']} reason={reason[:300]!r}")
-        return
+        return False
     with db() as conn:
         conn.execute(
             "UPDATE jobs SET status = 'done', ep_title = ?, ep_summary = ?, published = ?, "
@@ -499,40 +498,34 @@ def process(job: sqlite3.Row) -> tuple[str, float] | None:
         f"done id={job['id']} words={article.words} audio={duration:.0f}s "
         f"took={took:.0f}s ({duration / took:.1f}x real time) title={article.title!r}"
     )
-    return article.title, duration
+    return True
 
 
-def announce_ready(title: str, duration: float) -> None:
-    """Nudge Overcast, then send one normal iPhone alert for a published episode."""
+def ping_overcast() -> None:
+    """Ask Overcast to refresh the feed now, so its own new-episode alert fires.
+
+    overcast.fm/ping needs no account; it already holds this feed URL
+    (token included) from the subscription, so nothing new is disclosed.
+    """
     ping = urllib.request.Request(
         "https://overcast.fm/ping",
         data=urllib.parse.urlencode({"urlprefix": f"{feed_base()}/feed.xml"}).encode(),
     )
-    requests = [("Overcast ping", ping)]
-    if NTFY_URL:
-        minutes, seconds = divmod(round(duration), 60)
-        ready = urllib.request.Request(
-            NTFY_URL,
-            data=f"{title}\n{minutes}:{seconds:02d} in Overcast".encode(),
-            headers={"Title": "Ready to listen", "Priority": "default", "Tags": "headphones"},
-        )
-        requests.append(("ntfy", ready))
-    for name, request in requests:
-        try:
-            with urllib.request.urlopen(request, timeout=5):
-                pass
-        except OSError as e:
-            log(f"{name} failed: {e}")  # a notification failure cannot undo the episode
+    try:
+        with urllib.request.urlopen(ping, timeout=5):
+            pass
+    except OSError as e:
+        log(f"Overcast ping failed: {e}")  # Overcast still finds it on its next poll
 
 
 def worker() -> None:
     try:
         while True:
             job = claim()
-            ready = process(job) if job is not None else None
+            published = process(job) if job is not None else False
             write_feed()
-            if ready is not None:
-                announce_ready(*ready)
+            if published:
+                ping_overcast()
             prune()
             if job is None:
                 # Woken by enqueue(); the hourly timeout is the prune clock.

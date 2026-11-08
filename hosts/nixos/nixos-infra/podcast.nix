@@ -139,8 +139,6 @@ in {
       KOKORO_URL = "http://127.0.0.1:${toString kokoroPort}";
       PODCAST_VOICE = voice;
       PODCAST_PUBLIC_BASE = publicBase;
-      # Tailnet-only ntfy; its iOS relay forwards a wake-up, not episode text.
-      PODCAST_NTFY_URL = "https://ntfy.jaguar-duckbill.ts.net/podcast-ready";
       PODCAST_RETENTION_DAYS = toString retentionDays;
       PODCAST_COVER = "${cover}";
       PYTHONUNBUFFERED = "1";
