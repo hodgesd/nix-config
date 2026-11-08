@@ -325,6 +325,29 @@ services:
       - ./stirling-pdf/logs:/logs
       - ./stirling-pdf/pipeline:/pipeline
 
+  # Tailscale front for "Tell Hermes" (hosts/nixos/nixos-infra/tell-hermes.nix),
+  # a native service like Gatus, so the same shape as ts-status below:
+  # nix-rendered serve.json and a host.docker.internal upstream. Tailnet
+  # only, no Funnel: the serve.json (sidecars.nix) has no AllowFunnel.
+  ts-tell:
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
+    container_name: ts-tell
+    hostname: tell
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - ./ts-tell/state:/var/lib/tailscale
+      - /etc/ts-tell/serve.json:/config/serve.json:ro
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
   # Tailscale front for Gatus, which runs natively on the host (see
   # hosts/nixos/nixos-infra/gatus.nix) rather than as a container sharing
   # this network namespace. Two consequences vs the other sidecars:
