@@ -79,6 +79,7 @@ in {
         name=''${b%%:*}; port=''${b##*:}
         code=$(${curl} -s -o /dev/null -m 12 -w '%{http_code}' \
           "https://mini.jaguar-duckbill.ts.net:$port/mcp/" || echo 000)
+        if [ "$name" = apple ]; then apple_code="$code"; fi
         if [ "$code" = 401 ]; then
           report "bridge-$name" ok "mini:$port answering again (HTTP 401)."
         else
@@ -90,14 +91,17 @@ in {
       # (above) while macOS refuses it the calendar: a rebuild re-prompts
       # on the mini's headless screen, and the running bridge keeps the
       # denial until restarted (2026-11-07, 2026-11-08; runbook in
-      # docs/hermes/phase-4.md). Only 503 counts: anything else means the
-      # bridge itself is down, which bridge-apple already reports.
+      # docs/hermes/phase-4.md). If the auth wall is down, bridge-apple
+      # reports it; unexpected health responses need their own alert when
+      # the auth wall is healthy.
       code=$(${curl} -s -o /dev/null -m 20 -w '%{http_code}' \
         "https://mini.jaguar-duckbill.ts.net:8322/healthz" || echo 000)
       if [ "$code" = 200 ]; then
         report calendar-access ok "The Apple bridge can read the calendar again."
       elif [ "$code" = 503 ]; then
-        report calendar-access fail "The Apple bridge cannot read the calendar (No calendars). On the mini: allow any bash prompt, Calendars = Full Access, then launchctl kickstart -k gui/\$(id -u)/org.nixos.apple-mcp"
+        report calendar-access fail "The Apple bridge cannot read the calendar. Check its error on the mini; if it says No calendars, allow any bash prompt, grant Calendars Full Access, then launchctl kickstart -k gui/\$(id -u)/org.nixos.apple-mcp"
+      elif [ "$apple_code" = 401 ]; then
+        report calendar-access fail "The Apple bridge health check returned HTTP $code (expected 200). Check the bridge on the mini."
       fi
 
       # VM-local MCP servers.
