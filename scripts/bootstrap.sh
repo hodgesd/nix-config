@@ -8,8 +8,15 @@
 # darwinConfigurations (currently: mbp, mini, air). On a brand-new Mac:
 #
 #   1. Install git via the Xcode CLT prompt (or let this script do it),
-#   2. git clone https://github.com/hodgesd/nix-config && cd nix-config
-#   3. ./scripts/bootstrap.sh <host>
+#   2. Give the Mac read access to github.com/hodgesd/billfiler -- flake.nix
+#      has it as a private git+ssh input and nix fetches every input eagerly,
+#      so NO host evaluates without it (the clone below is https and does not
+#      need this; the eval in step 3 does):
+#        ssh-keygen -t ed25519 -C "$(hostname -s)"
+#        ssh -T git@github.com     # accept github.com's host key
+#        # then add ~/.ssh/id_ed25519.pub at https://github.com/settings/keys
+#   3. git clone https://github.com/hodgesd/nix-config && cd nix-config
+#   4. ./scripts/bootstrap.sh <host>
 #
 # Idempotent: safe to re-run. Skips anything already in place.
 set -euo pipefail
@@ -92,10 +99,34 @@ command -v nix >/dev/null 2>&1 \
 
 # 3. Validate the requested host exists in the flake
 log "Validating host '$host'…"
-if ! "${NIX[@]}" eval --raw ".#darwinConfigurations.${host}.system.drvPath" >/dev/null 2>&1; then
+if ! err="$("${NIX[@]}" eval --raw ".#darwinConfigurations.${host}.system.drvPath" 2>&1 >/dev/null)"; then
   avail="$("${NIX[@]}" eval --json '.#darwinConfigurations' --apply builtins.attrNames 2>/dev/null \
             | tr -d '[]"' | tr ',' ' ')"
-  die "'$host' is not a known host. Available:${avail:- mbp mini air}
+  # Two unrelated failures land here and this block used to report both as the
+  # first: a wrong hostname, and a flake that cannot be evaluated at all.
+  # An empty $avail separates them -- listing the hosts needs the same
+  # evaluation, so if that worked, the name really is wrong.
+  #
+  # The second case arrived with the private billfiler input: nix fetches every
+  # flake input eagerly, so a Mac without read access to that repo cannot
+  # evaluate ANY host. The old code hid the cause with 2>/dev/null and then
+  # fell back to a hardcoded list, printing "'mbp' is not a known host.
+  # Available: mbp mini air" -- which names the host as both unknown and
+  # available, on a fresh machine where nothing else works yet either.
+  if [ -z "$avail" ]; then
+    die "the flake itself could not be evaluated, so host '$host' was never checked.
+
+     Usually this is the private input: flake.nix pulls
+     github.com/hodgesd/billfiler over git+ssh, and nix fetches every input
+     eagerly, so no host evaluates until this Mac can read it:
+       ssh-keygen -t ed25519 -C \"$host\"
+       ssh -T git@github.com     # accept github.com's host key
+       # then add ~/.ssh/id_ed25519.pub at https://github.com/settings/keys
+
+     nix said:
+$err"
+  fi
+  die "'$host' is not a known host. Available: $avail
      Pass one explicitly:  ./scripts/bootstrap.sh <host>"
 fi
 
