@@ -205,9 +205,10 @@ class Intake(BaseHTTPRequestHandler):
         except (ValueError, AttributeError):
             self.reply(400, {"error": "body must be a JSON object"})
             return
-        # The Share Sheet Shortcut sends everything as text; a link (alone,
-        # or with a headline as news apps share it) is fetched as the URL.
-        if not url and (link := speech.link_capture(text)):
+        # The Share Sheet Shortcut sends everything as untitled text; a link
+        # (alone, or with a headline as news apps share it) is fetched as the
+        # URL. Titled text (Hermes, the mini's watcher) is read as sent.
+        if not url and not title and (link := speech.link_capture(text)):
             url, text = link, ""
         if url and urllib.parse.urlsplit(url).scheme not in ("http", "https"):
             self.reply(400, {"error": "url must be http or https"})
