@@ -161,6 +161,8 @@ def link_capture(text: str) -> str | None:
     """The URL to fetch when shared text is really a link, else None."""
     urls = _SHARED_URL_RE.findall(text)
     if urls and len(_SHARED_URL_RE.sub("", text).split()) <= LINK_CAPTURE_WORDS:
+        if urls[0] == text.strip():
+            return urls[0]  # a bare URL is taken as is ("…/wiki/Oliver!")
         return urls[0].rstrip(".,;:!?")  # "…firsts https://n.pr/x." ends a sentence
     return None
 

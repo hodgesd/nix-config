@@ -140,6 +140,9 @@ def test_shared_link_with_a_headline_is_queued_as_the_link() -> None:
     shared = "The incoming class of U.S. senators is full of historic firsts https://n.pr/4oQx1"
     assert speech.link_capture(shared) == "https://n.pr/4oQx1"
     assert speech.link_capture("https://go.dev/blog/16years") == "https://go.dev/blog/16years"
+    assert speech.link_capture("https://en.wikipedia.org/wiki/Oliver!") == (
+        "https://en.wikipedia.org/wiki/Oliver!"  # a bare URL is taken as is
+    )
     assert speech.link_capture("word " * 41 + "https://example.com") is None
     assert speech.link_capture("no link here") is None
     assert (
