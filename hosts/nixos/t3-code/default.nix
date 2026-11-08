@@ -40,7 +40,8 @@
 # authenticated by the step above:
 #   [ -d ~/nix-config ] || gh repo clone hodgesd/nix-config ~/nix-config; cd ~/nix-config && git fetch -q origin
 #   nix profile add "github:numtide/llm-agents.nix/$(git show origin/main:flake.lock | jq -r '.nodes."llm-agents".locked.rev')#opencode" --accept-flake-config
-#   git show origin/main:hosts/nixos/t3-code/opencode.json | install -Dm644 /dev/stdin ~/.config/opencode/opencode.json
+#   git show origin/main:hosts/nixos/t3-code/opencode.json | install -b -Dm644 /dev/stdin ~/.config/opencode/opencode.json
+#     (-b keeps any existing opencode.json as opencode.json~ rather than silently replacing it)
 #   T3 Code app: Settings → Providers → OpenCode → enable
 #     (= ~/.t3/userdata/settings.json  providerInstances.opencode =
 #     {"driver": "opencode", "enabled": true}. `driver` is REQUIRED: an
