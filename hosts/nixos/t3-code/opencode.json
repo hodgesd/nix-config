@@ -15,6 +15,16 @@
           "limit": {
             "context": 262144,
             "output": 65536
+          },
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
           }
         },
         "qwen3.6:35b-a3b-nvfp4": {
@@ -22,6 +32,16 @@
           "limit": {
             "context": 262144,
             "output": 65536
+          },
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
           }
         }
       }
