@@ -155,6 +155,9 @@ def test_shared_url_followed_by_page_text_is_queued_as_the_link() -> None:
     url = "https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra"
     shared = url + "\nAll posts\nRecent\n" + ("Page navigation and article text. " * 45)
     assert speech.link_capture(shared) == url
+    assert speech.link_capture("https://example.com/story.\nSee this") == (
+        "https://example.com/story"
+    )
 
 
 def test_pasted_text_without_a_title_is_titled_from_its_first_line() -> None:
