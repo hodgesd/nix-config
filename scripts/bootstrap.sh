@@ -100,8 +100,15 @@ command -v nix >/dev/null 2>&1 \
 # 3. Validate the requested host exists in the flake
 log "Validating host '$host'…"
 if ! err="$("${NIX[@]}" eval --raw ".#darwinConfigurations.${host}.system.drvPath" 2>&1 >/dev/null)"; then
-  avail="$("${NIX[@]}" eval --json '.#darwinConfigurations' --apply builtins.attrNames 2>/dev/null \
-            | tr -d '[]"' | tr ',' ' ')"
+  # Guarded, not bare: `set -e` plus `pipefail` makes a failed `nix eval` abort
+  # the script right here, and this assignment is in the body of an if, not its
+  # condition, so nothing protects it. That abort would skip the diagnostic
+  # below -- the one case it exists to explain -- leaving a fresh Mac with
+  # "Validating host 'mbp'..." and a bare exit 1.
+  if ! avail="$("${NIX[@]}" eval --json '.#darwinConfigurations' --apply builtins.attrNames 2>/dev/null \
+              | tr -d '[]"' | tr ',' ' ')"; then
+    avail=""
+  fi
   # Two unrelated failures land here and this block used to report both as the
   # first: a wrong hostname, and a flake that cannot be evaluated at all.
   # An empty $avail separates them -- listing the hosts needs the same
