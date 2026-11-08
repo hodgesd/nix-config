@@ -454,7 +454,7 @@ def prune() -> None:
 # ── Worker ──────────────────────────────────────────────────────────────
 
 
-def process(job: sqlite3.Row) -> None:
+def process(job: sqlite3.Row) -> bool:
     started = time.monotonic()
     try:
         if job["url"]:
@@ -486,7 +486,7 @@ def process(job: sqlite3.Row) -> None:
                 (reason[:1000], job["id"]),
             )
         log(f"failed id={job['id']} reason={reason[:300]!r}")
-        return
+        return False
     with db() as conn:
         conn.execute(
             "UPDATE jobs SET status = 'done', ep_title = ?, ep_summary = ?, published = ?, "
@@ -498,15 +498,34 @@ def process(job: sqlite3.Row) -> None:
         f"done id={job['id']} words={article.words} audio={duration:.0f}s "
         f"took={took:.0f}s ({duration / took:.1f}x real time) title={article.title!r}"
     )
+    return True
+
+
+def ping_overcast() -> None:
+    """Ask Overcast to refresh the feed now, so its own new-episode alert fires.
+
+    overcast.fm/ping needs no account; it already holds this feed URL
+    (token included) from the subscription, so nothing new is disclosed.
+    """
+    ping = urllib.request.Request(
+        "https://overcast.fm/ping",
+        data=urllib.parse.urlencode({"urlprefix": f"{feed_base()}/feed.xml"}).encode(),
+    )
+    try:
+        with urllib.request.urlopen(ping, timeout=5):
+            pass
+    except OSError as e:
+        log(f"Overcast ping failed: {e}")  # Overcast still finds it on its next poll
 
 
 def worker() -> None:
     try:
         while True:
             job = claim()
-            if job is not None:
-                process(job)
+            published = process(job) if job is not None else False
             write_feed()
+            if published:
+                ping_overcast()
             prune()
             if job is None:
                 # Woken by enqueue(); the hourly timeout is the prune clock.

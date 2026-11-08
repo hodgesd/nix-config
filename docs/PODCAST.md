@@ -25,6 +25,13 @@ Overcast ◀── Funnel ── https://podcast.jaguar-duckbill.ts.net/p/<token
 ```
 
 - **Intake** returns 202 at once; the Shortcut never waits for TTS.
+- **Ready alert**: after the MP3 and feed are published, the worker calls
+  Overcast's [ping API](https://overcast.fm/podcasterinfo) (free, no
+  account), so Overcast refreshes the feed at once instead of on its next
+  poll. The alert is Overcast's own: in Overcast, open *Read Later* →
+  settings → turn on **Notifications**. It fires only once Overcast has the
+  episode, so "ready" is true when it arrives. A failed ping is logged and
+  the episode still appears on Overcast's next poll.
 - **Extraction**: trafilatura. A page that yields under 200 words
   (paywall, login wall, not an article) fails the job with the reason
   kept in the `jobs` table; nothing broken is published.
