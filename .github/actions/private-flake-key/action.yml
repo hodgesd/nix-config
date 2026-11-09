@@ -1,0 +1,64 @@
+# .github/actions/private-flake-key/action.yml
+# Authorise nix to fetch the private flake inputs declared in flake.nix.
+#
+# The `billfiler` input is a private repo, so every job that evaluates or
+# builds a darwin host needs to read it. A read-only deploy key scoped to that
+# one repo is the least privilege that works -- a PAT would hand the runner
+# read access to every repo on the account.
+#
+# Why not nix's own `access-tokens`: that applies to the `github:` fetcher
+# only. The input is git+ssh so that the Macs need no credential beyond the
+# SSH key they already have, which is the case worth optimising for.
+name: Authorise private flake inputs
+description: Install a read-only SSH deploy key so nix can fetch private git+ssh flake inputs.
+
+inputs:
+  key:
+    description: Private half of a read-only deploy key, from a repo secret.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        DEPLOY_KEY: ${{ inputs.key }}
+      run: |
+        set -euo pipefail
+
+        # Fail loudly here rather than 40 lines into a nix eval whose error is
+        # an opaque "could not read Username for 'https://github.com'".
+        if [ -z "${DEPLOY_KEY:-}" ]; then
+          echo "::error::BILLFILER_DEPLOY_KEY is empty or unset -- see .github/workflows/README.md"
+          exit 1
+        fi
+
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+
+        # Create the file 0600 *before* writing, so the key is never briefly
+        # world-readable on a shared runner.
+        install -m 600 /dev/null ~/.ssh/flake_input
+        printf '%s\n' "$DEPLOY_KEY" >~/.ssh/flake_input
+
+        # GitHub's published Ed25519 host key, from https://api.github.com/meta
+        # (`gh api meta --jq '.ssh_keys[]'`). Pinned, not discovered: an earlier
+        # version of this ran `ssh-keyscan`, which trusts whatever answers --
+        # on a tampered egress path that is the attacker's key, saved as
+        # trusted, and the fetch that follows talks to the impersonator. Refresh
+        # from that endpoint if GitHub rotates it, as they did the RSA key in
+        # March 2023.
+        printf '%s\n' \
+          'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' \
+          >>~/.ssh/known_hosts
+
+        # IdentitiesOnly: don't let a runner-provided identity shadow this one.
+        # StrictHostKeyChecking: refuse outright if the host key ever fails to
+        # match the pin above, rather than prompting (and hanging) or accepting.
+        cat >>~/.ssh/config <<'CONF'
+        Host github.com
+          User git
+          IdentityFile ~/.ssh/flake_input
+          IdentitiesOnly yes
+          StrictHostKeyChecking yes
+        CONF
