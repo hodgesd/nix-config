@@ -20,26 +20,39 @@
 }: let
   py = python3Packages;
 
-  # weasyprint's OWN suite has one macOS-only failure at this nixpkgs rev:
-  # tests/draw/test_text.py::test_unicode_range asserts an exact pixel colour
-  # and gets red where it wants white, because font fallback for a codepoint
-  # outside the declared unicode-range resolves differently on macOS. The other
-  # 4017 of its tests pass. nixpkgs already disables test_font_stretch two
-  # lines up for exactly this reason ("needs the Ahem font (fails on macOS)")
-  # and simply missed this one -- its own aarch64-darwin build is broken too,
-  # which is why there is no substitute: cache.nixos.org 404s for darwin and
-  # 200s for linux.
+  # Don't run weasyprint's OWN 4000-test suite on macOS. Nobody else does
+  # either: cache.nixos.org 404s for aarch64-darwin and 200s for x86_64-linux,
+  # so Hydra's darwin build does not pass, and every Mac build here pays to
+  # discover that again.
+  #
+  # Two different failures, which is the point -- one is a wrong expectation,
+  # the other is not a test bug at all:
+  #   - tests/draw/test_text.py::test_unicode_range asserts an exact pixel
+  #     colour and gets red where it wants white, because font fallback for a
+  #     codepoint outside the declared unicode-range resolves differently on
+  #     macOS. nixpkgs already disables test_font_stretch two lines up for
+  #     this reason ("needs the Ahem font (fails on macOS)") and missed this.
+  #   - tests/test_html.py::test_no_ph segfaulted the interpreter (exit 139) on
+  #     one runner while the SAME derivation hash built clean on two others
+  #     minutes apart. Naming tests cannot fix a nondeterministic native crash;
+  #     the next one would just land somewhere else.
+  #
+  # Note what `doCheck = false` really does here: in nixpkgs' python infra
+  # doCheck is already false and `doInstallCheck` is what carries
+  # pytestCheckHook, so this flips doInstallCheck and takes weasyprint's
+  # pythonImportsCheck and versionCheckHook down with the suite.
+  #
+  # That is acceptable because billfiler's own suite is the better check and
+  # already runs on these same Macs: its tests import weasyprint and render a
+  # report, and all 196 passed on aarch64-darwin in CI. A real use of the
+  # library on the target platform beats an import check of it.
   #
   # Darwin only, deliberately. Overriding unconditionally would change the
-  # derivation on Linux too and throw away that cached build to fix a failure
-  # that does not happen there. Drop this when nixpkgs disables the test or
-  # upstream makes the assertion portable.
+  # derivation on Linux too and throw away a cached build to dodge failures
+  # that do not happen there, where the suite passes and is already built.
   weasyprint =
     if stdenv.hostPlatform.isDarwin
-    then
-      py.weasyprint.overridePythonAttrs (old: {
-        disabledTests = (old.disabledTests or []) ++ ["test_unicode_range"];
-      })
+    then py.weasyprint.overridePythonAttrs {doCheck = false;}
     else py.weasyprint;
 
   # Not in nixpkgs (checked 2026-11-01). Only the four runtime dependencies
