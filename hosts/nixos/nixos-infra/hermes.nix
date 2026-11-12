@@ -140,12 +140,22 @@ in {
       # reads halved to $0.10/MTok, same tokenizer, and — per Anthropic —
       # more reliable tool use in fewer requests per task. hermes-agent
       # needs no change: unknown Claude ids get adaptive thinking and no
-      # sampling params (both of which 5.5 requires). Hermes sets no
-      # effort for the main agent, so this runs at the API default
-      # (`high`); if briefs get slower or wordier, `agent.reasoning_effort
-      # = "medium"` is Anthropic's starting point for multistep tool use.
+      # sampling params (both of which 5.5 requires).
       model.default = "anthropic/claude-sonnet-5.5";
       model.base_url = "https://openrouter.ai/api/v1";
+
+      # Effort `medium` (2026-11-11), down from the API default `high`:
+      # Anthropic's starting point for multistep tool use on Sonnet 5.5,
+      # and fewer, more consolidated tool calls per answer — a vault
+      # search had taken five searches where one would do. On OpenRouter
+      # a Claude model ignores `reasoning.effort`; the pinned hermes-agent
+      # sends this as top-level `verbosity`, which OpenRouter maps to
+      # Anthropic's output_config.effort
+      # (plugins/model-providers/openrouter). Non-Claude models already
+      # get `medium` when this is unset, so the GLM trial is unchanged.
+      # The 05:30 brief reads the same config. Watch: if Hermes starts
+      # skipping hermes-policy.md confirmations, revert this line.
+      agent.reasoning_effort = "medium";
 
       # GLM-5.3 trial (2026-11): provider pin, inert until GLM is used.
       # Upstream merges `provider_routing.models.<id>` only for the model in
