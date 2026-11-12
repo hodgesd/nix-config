@@ -86,7 +86,13 @@
     main.hostname-mode = "none";
   };
 
-  # Set up for tailscale subnet-router / exit-node use.
+  # Tailscale exit node: the forwarding sysctls below make it work, and
+  # extraSetFlags advertises it (a oneshot `tailscale set` at activation;
+  # no tailscaled restart). The admin console still has to approve it.
+  # SECURITY: forwarded tailnet traffic goes through FORWARD, not OUTPUT,
+  # so hermes-egress.nix's owner-match rules neither apply to it nor are
+  # widened by it. Disable: delete the extraSetFlags line and redeploy.
+  services.tailscale.extraSetFlags = ["--advertise-exit-node"];
   boot.kernel.sysctl = {
     "net.ipv4.ip_forward" = 1;
     "net.ipv6.conf.all.forwarding" = 1;
