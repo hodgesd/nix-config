@@ -12,6 +12,11 @@
     autosuggestion.enable = true;
     autocd = true;
 
+    # Treat `#` as a comment at the prompt, as scripts already do. Without it,
+    # a pasted `cmd  # note` hands the note to cmd as arguments, and any
+    # backticks in the note run as a command.
+    setOptions = ["INTERACTIVE_COMMENTS"];
+
     shellAliases = {
       "..." = "cd ../..";
     };
