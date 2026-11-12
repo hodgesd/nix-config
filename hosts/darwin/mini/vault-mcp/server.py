@@ -124,18 +124,28 @@ def read_note(path: str) -> str:
     return p.read_text(encoding="utf-8", errors="replace")[:MAX_READ]
 
 
+def _squash(text: str) -> str:
+    """Lowercase and drop spaces/punctuation, for title matching."""
+    return re.sub(r"[\W_]", "", text.lower())
+
+
 @mcp.tool
 def search_notes(query: str, folder: str = "") -> list[dict]:
-    """Case-insensitive substring search over note names and contents.
-    Returns path + a matching line per hit."""
+    """Search note names and contents. Titles match ignoring case, spaces
+    and punctuation ("homelab" finds "Home Lab Projects"); contents match
+    the exact phrase, case-insensitive. Returns path + a matching line per
+    hit."""
     root = _jail(folder) if folder else VAULT
     q = query.lower()
+    # Squashed title match: "homelab projects" missed "Home Lab
+    # Projects.md" (2026-11-10) and cost a round trip back to Derrick.
+    qs = _squash(query)
     hits: list[dict] = []
     for p in sorted(root.rglob("*.md")):
         rel = p.relative_to(VAULT)
         if any(part.startswith(".") for part in rel.parts):
             continue
-        if q in p.stem.lower():
+        if q in p.stem.lower() or (qs and qs in _squash(p.stem)):
             hits.append({"path": str(rel), "match": "(title)"})
         else:
             try:
