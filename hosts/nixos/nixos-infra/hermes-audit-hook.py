@@ -2,8 +2,13 @@
 # hermes.nix (which prepends the interpreter shebang) so it runs from the
 # read-only /nix/store inside the container — the agent cannot rewrite it.
 #
-# Receives the hook payload as JSON on stdin:
-#   {tool_name, args, result, duration_ms, session_id, task_id, tool_call_id}
+# Receives the hook payload as JSON on stdin (agent/shell_hooks.py upstream):
+#   {hook_event_name, tool_name, tool_input, session_id, cwd, profile,
+#    extra: {result, duration_ms, status, tool_call_id, task_id, ...}}
+# Only tool_name/tool_input/session_id are top-level; everything else is
+# under `extra`. Reading them flat logged a digest of {} and null
+# durations for every call until 2026-11 — re-check this shape when
+# bumping hermes-agent.
 # Appends ONE JSON line to $HERMES_HOME/logs/audit.jsonl. Deliberately logs
 # an args DIGEST, never argument or result content — the audit trail must
 # not become a second copy of mail bodies / note text.
@@ -29,23 +34,14 @@ def main() -> None:
         if len(parts) == 3:
             server = parts[1]
 
+    extra = payload.get("extra") or {}
     args_canon = json.dumps(
-        payload.get("args") or {}, sort_keys=True, default=str
+        payload.get("tool_input") or {}, sort_keys=True, default=str
     ).encode("utf-8")
 
-    # Outcome is best-effort: tool handlers return JSON strings, and errors
-    # are returned (not raised) as {"error": ...}-shaped strings.
-    outcome = "ok"
-    result = payload.get("result")
-    if isinstance(result, str) and result.lstrip().startswith("{"):
-        try:
-            parsed = json.loads(result)
-            if isinstance(parsed, dict) and (
-                "error" in parsed or parsed.get("success") is False
-            ):
-                outcome = "error"
-        except ValueError:
-            pass
+    # Upstream derives status from the result itself (ok / error /
+    # cancelled / …), so the hook never has to parse result content.
+    outcome = extra.get("status") or "unknown"
 
     from datetime import datetime, timezone
 
@@ -56,9 +52,9 @@ def main() -> None:
         "args_digest": hashlib.sha256(args_canon).hexdigest()[:16],
         "args_bytes": len(args_canon),
         "outcome": outcome,
-        "duration_ms": payload.get("duration_ms"),
+        "duration_ms": extra.get("duration_ms"),
         "session": payload.get("session_id"),
-        "call": payload.get("tool_call_id"),
+        "call": extra.get("tool_call_id") or None,
     }
 
     home = os.environ.get("HERMES_HOME") or os.path.expanduser("~/.hermes")
