@@ -91,7 +91,8 @@
   # no tailscaled restart). The admin console still has to approve it.
   # SECURITY: forwarded tailnet traffic goes through FORWARD, not OUTPUT,
   # so hermes-egress.nix's owner-match rules neither apply to it nor are
-  # widened by it. Disable: delete the extraSetFlags line and redeploy.
+  # widened by it. Disable: set the flag to "--advertise-exit-node=false"
+  # and redeploy; deleting the line alone leaves the saved pref on.
   services.tailscale.extraSetFlags = ["--advertise-exit-node"];
   boot.kernel.sysctl = {
     "net.ipv4.ip_forward" = 1;
