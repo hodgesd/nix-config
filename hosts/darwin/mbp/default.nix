@@ -37,5 +37,15 @@
       owner = username;
       mode = "0400";
     };
+    # Bearer for the read-later podcast intake (docs/PODCAST.md), read by the
+    # daily_news plugin's ⌥ "Podcast ·" headline rows at
+    # /run/secrets/podcast-intake-token. Same value as in nixos-infra.yaml and
+    # mini.yaml; its own file because it was added from the T3 box, which has
+    # no key to decrypt mbp.yaml. Scope: queue a job, nothing else.
+    secrets.podcast-intake-token = {
+      sopsFile = ../../../secrets/mbp-podcast.yaml;
+      owner = username;
+      mode = "0400";
+    };
   };
 }
