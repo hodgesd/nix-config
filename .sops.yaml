@@ -45,3 +45,10 @@ creation_rules:
       - age:
           - *admin_hodgesd
           - *host_nixos_infra
+  # Easy A/FD Telegram bot (hosts/nixos/nixos-infra/easy-afd.nix): own file so
+  # it could be created without decrypting nixos-infra.yaml. Same recipients.
+  - path_regex: secrets/easy-afd-telegram\.yaml$
+    key_groups:
+      - age:
+          - *admin_hodgesd
+          - *host_nixos_infra
