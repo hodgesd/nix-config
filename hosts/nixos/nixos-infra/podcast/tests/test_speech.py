@@ -115,6 +115,42 @@ def test_short_page_is_rejected() -> None:
         )
 
 
+def page(words: int, head: str = "") -> str:
+    """A plain article page of about `words` words, `head` in its <head>."""
+    para = "<p>" + " ".join(["The crew briefed the approach before descent."] * 5) + "</p>"
+    return (
+        f"<html><head><title>Briefing</title>{head}</head><body><article><h1>Briefing</h1>"
+        + para * (words // 35)
+        + "</article></body></html>"
+    )
+
+
+NYT_HEAD = (
+    '<script type="application/ld+json">{"isAccessibleForFree":false,"wordCount":1115}</script>'
+)
+STL_HEAD = '<meta itemprop="isAccessibleForFree" content="false"/>'
+
+
+def test_teaser_needs_the_not_free_mark_and_a_word_count_it_falls_short_of() -> None:
+    teaser_html = page(350, NYT_HEAD)
+    assert speech.teaser(teaser_html, speech.extract_html(teaser_html)) == (
+        "paywalled: 350 of its 1115 words are free"
+    )
+    whole = page(1120, NYT_HEAD)  # a subscriber page served whole
+    assert speech.teaser(whole, speech.extract_html(whole)) is None
+    stl = page(350, STL_HEAD)  # marked not free, no wordCount: read as fetched
+    assert speech.teaser(stl, speech.extract_html(stl)) is None
+    free = page(350, '<script type="application/ld+json">{"wordCount":1115}</script>')
+    assert speech.teaser(free, speech.extract_html(free)) is None
+
+
+def test_short_page_keeps_what_it_found_for_the_snapshot() -> None:
+    with pytest.raises(speech.TooShort) as caught:
+        speech.extract_html(page(70))
+    assert caught.value.article is not None
+    assert caught.value.article.title == "Briefing"
+
+
 def test_long_paragraph_splits_at_sentences() -> None:
     sentence = "This sentence is exactly fifty characters long ok. "
     pieces = speech._split((sentence * 60).strip(), limit=500)
