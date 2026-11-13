@@ -134,21 +134,6 @@
     fi
   '';
 
-  # The Telegram bot (scripts/telegram_brief.py in the app repo) exists only
-  # once its secret does. sops-nix fails activation when a declared key is
-  # missing from the file, so the unit and the secret are gated on the key
-  # being present in secrets/nixos-infra.yaml — a text check, the values
-  # stay encrypted. Add it with `sops secrets/nixos-infra.yaml`:
-  #   easy-afd-telegram-env: |
-  #     TELEGRAM_BOT_TOKEN=...          from @BotFather
-  #     TELEGRAM_ALLOWED_CHATS=123,456  your chat id(s); others are ignored
-  #     ANTHROPIC_API_KEY=...           optional, enables free-text questions
-  # then deploy. Until then this file changes nothing on the host.
-  # The leading newline keeps a nested key from matching; it is prepended
-  # to the file too so a key on the very first line still counts.
-  telegramSecretPresent =
-    lib.hasInfix "\neasy-afd-telegram-env:" ("\n" + builtins.readFile ../../../secrets/nixos-infra.yaml);
-
   hardening = {
     NoNewPrivileges = true;
     PrivateTmp = true;
@@ -277,12 +262,22 @@ in {
 
   # Telegram bot: text an ident, get the brief and card back. Outbound
   # only (long-polls api.telegram.org, reads the app on localhost), so
-  # nothing new listens. Gated: see telegramSecretPresent above.
-  sops.secrets.easy-afd-telegram-env = lib.mkIf telegramSecretPresent {
+  # nothing new listens.
+  #
+  # Secret (sops, secrets/easy-afd-telegram.yaml), one dotenv blob:
+  #   easy-afd-telegram-env: |
+  #     TELEGRAM_BOT_TOKEN=...          from @BotFather
+  #     TELEGRAM_ALLOWED_CHATS=123,456  private chat id(s); others are ignored
+  #     ANTHROPIC_API_KEY=...           optional, enables free-text questions
+  # Own file rather than nixos-infra.yaml so it could be created without the
+  # Mac's key (encrypted to the public recipients, as tell-hermes.yaml was).
+  # Edit with `sops secrets/easy-afd-telegram.yaml`.
+  sops.secrets.easy-afd-telegram-env = {
+    sopsFile = ../../../secrets/easy-afd-telegram.yaml;
     restartUnits = ["easy-afd-telegram.service"];
   };
 
-  systemd.services.easy-afd-telegram = lib.mkIf telegramSecretPresent {
+  systemd.services.easy-afd-telegram = {
     description = "Easy A/FD Telegram brief bot";
     wantedBy = ["multi-user.target"];
     after = ["network-online.target" "easy-afd.service"];
