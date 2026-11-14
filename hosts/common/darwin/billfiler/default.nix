@@ -144,20 +144,22 @@ in {
         set -u
         PATH=/usr/bin:/bin
         flag="${home}/Library/Application Support/billfiler/mover-stuck"
+        # The flag changes only after a push goes through, so a failed one
+        # is retried on the next check.
         notify() {
           curl -fsS -m 10 -H "Title: $1" -H "Priority: $2" -H "Tags: $3" \
-            -d "$4" ${alerts} >/dev/null || true
+            -d "$4" ${alerts} >/dev/null
         }
         if [ -n "$(find "${logPath}" -mmin +30)" ]; then
           if [ ! -e "$flag" ]; then
             notify "Bill Filer: mover stuck" high warning \
-              "No mover run logged for 30 minutes. Most likely a hidden macOS prompt on the mini after a bash update: Screen Share in and click Allow."
-            mkdir -p "$(dirname "$flag")" && touch "$flag"
+              "No mover run logged for 30 minutes. Most likely a hidden macOS prompt on the mini after a bash update: Screen Share in and click Allow." \
+              && mkdir -p "$(dirname "$flag")" && touch "$flag"
           fi
         elif [ -e "$flag" ]; then
           notify "Bill Filer: mover running again" default white_check_mark \
-            "The mover is logging its runs again."
-          rm -f "$flag"
+            "The mover is logging its runs again." \
+            && rm -f "$flag"
         fi
       '');
     };
