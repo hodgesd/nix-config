@@ -34,10 +34,17 @@
   home = "/Users/${username}";
   inbox = "${home}/Library/Mobile Documents/com~apple~CloudDocs/Bills Inbox";
   logPath = "${home}/Library/Logs/billfiler.log";
+
+  # The mirror (below): the archive on the share, copied one way into iCloud
+  # Drive so the statements can be read offline on the iPad.
+  archive = "/Volumes/Data/Documents";
+  mirror = "${home}/Library/Mobile Documents/com~apple~CloudDocs/Statements (read-only copy)";
+  overwritten = "${home}/Library/Application Support/billfiler/mirror-overwritten";
+  mirrorLog = "${home}/Library/Logs/billfiler-mirror.log";
 in {
   environment.systemPackages = [billfiler];
 
-  # Menu bar on every Mac, reading the index off the share over the tailnet.
+  # Menu bar on every Mac, reading the index off the share.
   # Sourced from the billfiler input rather than the swiftbar_plugins repo so
   # the plugin and the CLI it shells out to move as one.
   home-manager.users.${config.majordouble.user}.programs.swiftbar.plugins = {
@@ -107,6 +114,68 @@ in {
         StandardOutPath = logPath;
         StandardErrorPath = logPath;
       };
+    };
+
+    # Hourly one-way copy of Bills/ and Income/ to iCloud Drive, for reading
+    # statements away from home (the UNAS is LAN-only). The share stays the
+    # archive. iCloud cannot make a folder read-only, so the folder name says
+    # it, and anything changed or added there is reverted on the next run.
+    # Whatever a run overwrites or deletes in the copy is moved to
+    # `overwritten` first, so an edit made on the iPad is not lost.
+    #
+    # _meta (index, registry, templates) and _Unsorted (unidentified PDFs that
+    # get renamed once a template exists) stay on the share only.
+    # .billfiler-* is the mover's in-flight temp file.
+    #
+    # Shebang is Apple's /bin/bash, as for apple-mcp in
+    # hosts/darwin/mini/default.nix: if macOS asks for network-volume or
+    # iCloud access, the grant is charged to the interpreter, and Nix bash
+    # would lose it on the next bash bump. An "Operation not permitted" in
+    # the log means a prompt is waiting on the mini's screen.
+    #
+    # Force a run now, on mini:
+    #   launchctl kickstart -k gui/$(id -u)/org.nixos.billfiler-mirror
+    billfiler-mirror = {
+      serviceConfig = {
+        StartInterval = 3600;
+        RunAtLoad = true;
+        ProcessType = "Background";
+        StandardOutPath = mirrorLog;
+        StandardErrorPath = mirrorLog;
+      };
+      # Not `script =`: nix-darwin would give it a Nix bash shebang.
+      command = toString (pkgs.writeScript "billfiler-mirror" ''
+        #!/bin/bash
+        set -eu
+        # GNU rsync deliberately: /usr/bin/rsync is openrsync (see
+        # hosts/darwin/mbp/backup.nix).
+        PATH=${pkgs.rsync}/bin:/usr/bin:/bin:/sbin
+
+        # WHY this guard: with --delete, an unmounted share (or a stale,
+        # empty /Volumes/Data left behind) would look like an empty archive
+        # and wipe the copy. Only a live SMB mount counts.
+        mount | grep -q ' on /Volumes/Data (smbfs' || exit 0
+        [ -d "${archive}/Bills" ] && [ -d "${archive}/Income" ] || exit 0
+
+        mkdir -p "${mirror}"
+        # --max-delete caps a run at 25 deletions and fails it (exit 25, in
+        # the log) past that; ordinary filing never deletes that many at
+        # once. Every deleted file is also kept in `overwritten`.
+        # From Documents/ with only Bills/ and Income/ let in, and
+        # --delete-excluded, so a stray file anywhere in the copy (its root
+        # included) is removed too, never just inside the two folders.
+        out=$(rsync -rti --delete --delete-excluded --max-delete=25 \
+          --exclude _meta/ --exclude _Unsorted/ \
+          --exclude '.billfiler-*' --exclude .DS_Store \
+          --include /Bills/ --include /Income/ --exclude '/*' \
+          --backup --backup-dir="${overwritten}/$(date +%F_%H%M%S)" \
+          "${archive}/" "${mirror}/")
+        # Log only runs that changed something.
+        if [ -n "$out" ]; then
+          echo "$(date '+%F %T') mirrored"
+          echo "$out"
+        fi
+      '');
     };
   };
 }
