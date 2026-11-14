@@ -327,9 +327,9 @@ def read_url(url: str) -> speech.Article:
         why = str(e)
     try:
         snapshot = fetch(f"{ARCHIVE}/newest/{url}", TLS12, ARCHIVE_TIMEOUT)
+        # Not re-checked with speech.teaser: archive.today strips the JSON-LD
+        # that carries wordCount, and NYT's count can run 2x high anyway.
         article = speech.extract_html(snapshot, url)
-        if short := speech.teaser(snapshot, article):
-            raise speech.ExtractionError(f"the snapshot is {short}")
     except HTTPStatus as e:
         found = "has no snapshot" if e.code == 404 else f"answered {e.code}"
         raise speech.ExtractionError(f"{why}; archive.today {found}") from e
