@@ -185,7 +185,8 @@ Recorded so it can be redone after a rebuild or a key rotation.
    ```
 
 4. `just deploy-check`, then `just deploy`. Switch the mini (`just` on the
-   mini) to start the `#listen` watcher.
+   mini) to start the `#listen` watcher, and the mbp (`just` on the mbp) to
+   install its daily_news plugin token.
 
 5. **Overcast**: + → Add URL →
    `https://podcast.jaguar-duckbill.ts.net/p/<podcast-feed-token>/feed.xml`
