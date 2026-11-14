@@ -164,17 +164,20 @@ in {
         # From Documents/ with only Bills/ and Income/ let in, and
         # --delete-excluded, so a stray file anywhere in the copy (its root
         # included) is removed too, never just inside the two folders.
+        rc=0
         out=$(rsync -rti --delete --delete-excluded --max-delete=25 \
           --exclude _meta/ --exclude _Unsorted/ \
           --exclude '.billfiler-*' --exclude .DS_Store \
           --include /Bills/ --include /Income/ --exclude '/*' \
           --backup --backup-dir="${overwritten}/$(date +%F_%H%M%S)" \
-          "${archive}/" "${mirror}/")
-        # Log only runs that changed something.
+          "${archive}/" "${mirror}/") || rc=$?
+        # Log only runs that changed something, including a failed run's
+        # partial changes (the 25 deletions a capped run did make).
         if [ -n "$out" ]; then
           echo "$(date '+%F %T') mirrored"
           echo "$out"
         fi
+        exit "$rc"
       '');
     };
   };
