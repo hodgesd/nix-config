@@ -118,6 +118,50 @@ in {
       };
     };
 
+    # Alerts when the mover stops running. Its macOS grants for the share and
+    # the iCloud inbox belong to the Nix bash in its Python wrapper's shebang
+    # (the mini's TCC database, 2026-11-14), so a nixpkgs bash bump re-prompts
+    # on the mini's screen, and the waiting run hangs with nothing in the log
+    # and blocks the next ones, like the mirror below. The mover writes its log
+    # every run (every 10 minutes, offline or not), so a log untouched for 30
+    # minutes means it is stuck. Fix: Screen Share to the mini and click Allow.
+    #
+    # A separate job rather than a watchdog wrapped around the mover: starting
+    # the mover from a script would move its grant from that bash onto Python
+    # (as apple-mcp's did), which re-prompts now and on every Python update.
+    # One push when it goes stale and one when it recovers, same topic as the
+    # mirror.
+    billfiler-mover-check = {
+      serviceConfig = {
+        StartInterval = 900;
+        ProcessType = "Background";
+        # NOT logPath: writing there would refresh the age it checks.
+        StandardOutPath = "${home}/Library/Logs/billfiler-mover-check.log";
+        StandardErrorPath = "${home}/Library/Logs/billfiler-mover-check.log";
+      };
+      command = toString (pkgs.writeScript "billfiler-mover-check" ''
+        #!/bin/bash
+        set -u
+        PATH=/usr/bin:/bin
+        flag="${home}/Library/Application Support/billfiler/mover-stuck"
+        notify() {
+          curl -fsS -m 10 -H "Title: $1" -H "Priority: $2" -H "Tags: $3" \
+            -d "$4" ${alerts} >/dev/null || true
+        }
+        if [ -n "$(find "${logPath}" -mmin +30)" ]; then
+          if [ ! -e "$flag" ]; then
+            notify "Bill Filer: mover stuck" high warning \
+              "No mover run logged for 30 minutes. Most likely a hidden macOS prompt on the mini after a bash update: Screen Share in and click Allow."
+            mkdir -p "$(dirname "$flag")" && touch "$flag"
+          fi
+        elif [ -e "$flag" ]; then
+          notify "Bill Filer: mover running again" default white_check_mark \
+            "The mover is logging its runs again."
+          rm -f "$flag"
+        fi
+      '');
+    };
+
     # Hourly one-way copy of Bills/ and Income/ to iCloud Drive, for reading
     # statements away from home (the UNAS is LAN-only). The share stays the
     # archive. iCloud cannot make a folder read-only, so the folder name says
