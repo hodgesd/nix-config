@@ -178,12 +178,10 @@
         "git-credential-manager"
         "google-chrome"
         "google-gemini"
-        "istat-menus"
         "launchbar"
         "libreoffice"
         "licecap"
         "lm-studio"
-        "macwhisper"
         "microsoft-auto-update"
         "microsoft-teams"
         "netnewswire"
@@ -222,7 +220,6 @@
       "Affinity Photo" = 824183456;
       "Affinity Publisher" = 881418622;
       "Airport Madness 3D Volume 2" = 1321684059;
-      "Amphetamine" = 937984704;
       "BloonsTD6+" = 1584423325;
       "Calca" = 635758264;
       "Drafts" = 1435957248;
@@ -235,7 +232,6 @@
       # current 15.x versions); the old 409183694/409203825/409201541
       # receipts are stale 14.5 copies that cleanup is expected to remove.
       "Keynote" = 361285480;
-      "Marked 2" = 890031187;
       "MindNode" = 6446116532;
       "Mini Metro+" = 1550663539;
       "Mona" = 1659154653;
