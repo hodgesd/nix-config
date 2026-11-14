@@ -25,7 +25,8 @@
 #   rm ~/.local/state/mbp-backup/last-success && \
 #     launchctl kickstart -k gui/$(id -u)/org.nixos.mbp-backup
 #
-# NAS IP 192.168.1.142 also appears in hosts/nixos/nixos-infra/{backup,storage}.nix.
+# NAS IP 192.168.1.142 also appears in hosts/nixos/nixos-infra/{backup,storage}.nix
+# and hosts/common/darwin/billfiler/default.nix.
 {
   config,
   lib,
