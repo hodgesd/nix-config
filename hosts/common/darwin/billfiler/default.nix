@@ -41,6 +41,8 @@
   mirror = "${home}/Library/Mobile Documents/com~apple~CloudDocs/Statements (read-only copy)";
   overwritten = "${home}/Library/Application Support/billfiler/mirror-overwritten";
   mirrorLog = "${home}/Library/Logs/billfiler-mirror.log";
+  # ntfy is tailnet-only with no auth, so the topic name is not a secret.
+  alerts = "https://ntfy.jaguar-duckbill.ts.net/hermes-alerts";
 in {
   environment.systemPackages = [billfiler];
 
@@ -127,11 +129,22 @@ in {
     # get renamed once a template exists) stay on the share only.
     # .billfiler-* is the mover's in-flight temp file.
     #
-    # Shebang is Apple's /bin/bash, as for apple-mcp in
-    # hosts/darwin/mini/default.nix: if macOS asks for network-volume or
-    # iCloud access, the grant is charged to the interpreter, and Nix bash
-    # would lose it on the next bash bump. An "Operation not permitted" in
-    # the log means a prompt is waiting on the mini's screen.
+    # macOS privacy (TCC): the grants for the share (Network Volumes) and
+    # for iCloud Drive belong to rsync's Nix store path, not to the shell
+    # (the mini's TCC log and database, 2026-11-14). So every nixpkgs rsync
+    # bump re-prompts on the mini's screen, and until someone clicks Allow
+    # the run hangs in open() with nothing in the log, and launchd starts no
+    # new run while it waits. The watchdog in the script pushes an alert
+    # when a run passes 15 minutes. Fix: Screen Share to the mini and click
+    # Allow; the waiting run then finishes by itself. (If Don't Allow was
+    # clicked instead, the log says "Operation not permitted": turn rsync
+    # back on under Privacy & Security, then kickstart below.)
+    #
+    # The shebang is Apple's /bin/bash, and that does NOT make the grant
+    # last. What it does: with a platform shell as the launched process, TCC
+    # charges each access to the tool making it, so the grant sits on rsync
+    # alone. Under a Nix bash it would land on that bash instead, as the
+    # mover's does through its Python wrapper. Kept so as not to re-prompt.
     #
     # Force a run now, on mini:
     #   launchctl kickstart -k gui/$(id -u)/org.nixos.billfiler-mirror
@@ -158,6 +171,20 @@ in {
         [ -d "${archive}/Bills" ] && [ -d "${archive}/Income" ] || exit 0
 
         mkdir -p "${mirror}"
+
+        # Watchdog for the hang described above (or a share that hangs
+        # mid-run). One push per stuck run, to the topic the Hermes sentinel
+        # uses for the mini's other TCC failure (calendar-access). It does not
+        # kill rsync: an Allow at the screen lets the waiting run finish.
+        (
+          sleep 900
+          curl -fsS -m 10 -H "Title: Bill Filer: mirror stuck" \
+            -H "Priority: high" -H "Tags: warning" \
+            -d "The iCloud copy has run 15 minutes. Most likely a hidden macOS prompt for rsync on the mini: Screen Share in and click Allow. Log: ~/Library/Logs/billfiler-mirror.log" \
+            ${alerts} >/dev/null || true
+        ) &
+        watchdog=$!
+
         # --max-delete caps a run at 25 deletions and fails it (exit 25, in
         # the log) past that; ordinary filing never deletes that many at
         # once. Every deleted file is also kept in `overwritten`.
@@ -171,6 +198,7 @@ in {
           --include /Bills/ --include /Income/ --exclude '/*' \
           --backup --backup-dir="${overwritten}/$(date +%F_%H%M%S)" \
           "${archive}/" "${mirror}/") || rc=$?
+        kill "$watchdog" 2>/dev/null || true
         # Log only runs that changed something, including a failed run's
         # partial changes (the 25 deletions a capped run did make).
         if [ -n "$out" ]; then
