@@ -50,6 +50,11 @@
   retentionDays = 30;
   publicBase = "https://podcast.jaguar-duckbill.ts.net";
   stateDir = "/var/lib/podcast";
+  # Failed jobs (a paywall with no archive.today snapshot, mostly) alert
+  # here. Same tailnet ntfy as Gatus, but its own topic so they can be
+  # muted apart; ntfy has no auth on the tailnet, so the name isn't secret.
+  ntfyUrl = "https://ntfy.jaguar-duckbill.ts.net";
+  ntfyTopic = "podcast";
 
   pyEnv = pkgs.python3.withPackages (ps: [ps.trafilatura]);
   mcpEnv = pkgs.python3.withPackages (ps: [ps.fastmcp]);
@@ -141,6 +146,8 @@ in {
       PODCAST_PUBLIC_BASE = publicBase;
       PODCAST_RETENTION_DAYS = toString retentionDays;
       PODCAST_COVER = "${cover}";
+      PODCAST_NTFY_URL = ntfyUrl;
+      PODCAST_NTFY_TOPIC = ntfyTopic;
       PYTHONUNBUFFERED = "1";
     };
     startLimitBurst = 5;

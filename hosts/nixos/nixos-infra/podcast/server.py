@@ -29,6 +29,7 @@ import re
 import shutil
 import socket
 import sqlite3
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -66,6 +67,10 @@ FEED_TOKEN = os.environ["PODCAST_FEED_TOKEN"]
 # Feed artwork (a PNG in the Nix store), copied into public/ at startup
 # because ts-podcast only sees public/.
 COVER = os.environ.get("PODCAST_COVER", "")
+# Where a failed job is reported: ntfy's JSON publish endpoint (base URL)
+# and a topic. Either one empty turns the alert off.
+NTFY_URL = os.environ.get("PODCAST_NTFY_URL", "").rstrip("/")
+NTFY_TOPIC = os.environ.get("PODCAST_NTFY_TOPIC", "")
 
 MAX_BODY = 2_000_000  # bytes of JSON one intake request may carry
 MAX_PAGE = 10_000_000  # bytes of HTML one fetch may read
@@ -257,24 +262,86 @@ class CheckedRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def fetch(url: str) -> str:
+class HTTPStatus(speech.ExtractionError):
+    """The site answered with an error status; `code` lets read_url tell a
+    paywall (401/402/403) or a missing snapshot (404) from other failures."""
+
+    def __init__(self, code: int, reason: str) -> None:
+        super().__init__(f"the site answered {code} {reason}")
+        self.code = code
+
+
+# archive.today (every mirror) never answers a TLS 1.3 ClientHello from
+# nixos-infra or the t3-code VM, so a request hangs until its timeout; TLS
+# 1.2 gets an answer at once (probed 2026-11-13). Its newest snapshot of a
+# URL is a redirect from /newest/<url>, and a URL it never saved is a 404.
+# Its first byte can take over 30 s (33 s for a 3.7 MB NYT snapshot, 9 s
+# on the retry), hence the longer timeout.
+ARCHIVE = "https://archive.ph"
+ARCHIVE_TIMEOUT = 90
+TLS12 = ssl.create_default_context()
+TLS12.maximum_version = ssl.TLSVersion.TLSv1_2
+PAYWALL_STATUSES = {401, 402, 403}
+
+
+def fetch(url: str, context: ssl.SSLContext | None = None, timeout: float = 30) -> str:
     check_public(url)
-    opener = urllib.request.build_opener(CheckedRedirect)
+    opener = urllib.request.build_opener(
+        CheckedRedirect, urllib.request.HTTPSHandler(context=context)
+    )
     request = urllib.request.Request(
         url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"}
     )
     try:
-        with opener.open(request, timeout=30) as resp:
+        with opener.open(request, timeout=timeout) as resp:
             ctype = resp.headers.get_content_type()
             if ctype not in ("text/html", "application/xhtml+xml"):
                 raise speech.ExtractionError(f"not a web page ({ctype})")
             data = resp.read(MAX_PAGE + 1)
             charset = resp.headers.get_content_charset() or "utf-8"
     except urllib.error.HTTPError as e:
-        raise speech.ExtractionError(f"the site answered {e.code} {e.reason}") from e
+        raise HTTPStatus(e.code, e.reason) from e
     if len(data) > MAX_PAGE:
         raise speech.ExtractionError("page is larger than 10 MB")
     return data.decode(charset, errors="replace")
+
+
+def read_url(url: str) -> speech.Article:
+    """The article at `url`. A paywalled page is read from archive.today's
+    newest snapshot instead, and with no usable snapshot the job fails:
+    reading the teaser aloud would publish an episode that stops mid-story.
+    Paywalled means under MIN_WORDS, a 401/402/403, or speech.teaser().
+    """
+    direct: speech.Article | None = None
+    try:
+        html = fetch(url)
+        direct = speech.extract_html(html, url)
+        why = speech.teaser(html, direct)
+        if why is None:
+            return direct
+    except speech.TooShort as e:
+        direct, why = e.article, str(e)
+    except HTTPStatus as e:
+        if e.code not in PAYWALL_STATUSES:
+            raise
+        why = str(e)
+    try:
+        snapshot = fetch(f"{ARCHIVE}/newest/{url}", TLS12, ARCHIVE_TIMEOUT)
+        # Not re-checked with speech.teaser: archive.today strips the JSON-LD
+        # that carries wordCount, and NYT's count can run 2x high anyway.
+        article = speech.extract_html(snapshot, url)
+    except HTTPStatus as e:
+        found = "has no snapshot" if e.code == 404 else f"answered {e.code}"
+        raise speech.ExtractionError(f"{why}; archive.today {found}") from e
+    except (speech.ExtractionError, OSError) as e:
+        raise speech.ExtractionError(f"{why}; archive.today: {e}") from e
+    # archive.ph's own page names itself as the site and drops the byline.
+    if direct is not None:
+        article.title, article.author, article.site = direct.title, direct.author, direct.site
+    else:
+        article.site = (urllib.parse.urlsplit(url).hostname or "").removeprefix("www.")
+    log(f"archive.today snapshot for {url} ({why})")
+    return article
 
 
 # ── Synthesis ───────────────────────────────────────────────────────────
@@ -458,7 +525,7 @@ def process(job: sqlite3.Row) -> bool:
     started = time.monotonic()
     try:
         if job["url"]:
-            article = speech.extract_html(fetch(job["url"]), job["url"])
+            article = read_url(job["url"])
             if job["title"] and article.title == "Untitled article":
                 article.title = job["title"]
         else:
@@ -486,6 +553,7 @@ def process(job: sqlite3.Row) -> bool:
                 (reason[:1000], job["id"]),
             )
         log(f"failed id={job['id']} reason={reason[:300]!r}")
+        alert_failure(job, reason)
         return False
     with db() as conn:
         conn.execute(
@@ -516,6 +584,32 @@ def ping_overcast() -> None:
             pass
     except OSError as e:
         log(f"Overcast ping failed: {e}")  # Overcast still finds it on its next poll
+
+
+def alert_failure(job: sqlite3.Row, reason: str) -> None:
+    """Push a failed job to ntfy: a send that never becomes an episode would
+    otherwise fail silently. Tapping the alert opens the article. JSON
+    publish because ntfy's header form can't carry a non-Latin-1 title."""
+    if not (NTFY_URL and NTFY_TOPIC):
+        return
+    url = job["url"] or ""
+    label = job["title"] or (urllib.parse.urlsplit(url).hostname or "pasted text")
+    alert: dict[str, Any] = {
+        "topic": NTFY_TOPIC,
+        "title": f"Not read aloud: {label.removeprefix('www.')}",
+        "message": reason[:1000],
+        "tags": ["warning"],
+    }
+    if url:
+        alert["click"] = url
+    request = urllib.request.Request(
+        NTFY_URL, data=json.dumps(alert).encode(), headers={"Content-Type": "application/json"}
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10):
+            pass
+    except OSError as e:
+        log(f"ntfy alert failed: {e}")  # the reason is still in the jobs table
 
 
 def worker() -> None:

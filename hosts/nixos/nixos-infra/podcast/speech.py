@@ -106,6 +106,16 @@ class ExtractionError(ValueError):
     """The input did not yield an article worth reading; the message says why."""
 
 
+class TooShort(ExtractionError):
+    """A page that yielded under MIN_WORDS. server.read_url tries archive.today
+    for it; `article` (None when nothing was found) lends that snapshot its
+    title, author and site, which on archive.ph's copy belong to archive.ph."""
+
+    def __init__(self, message: str, article: Article | None = None) -> None:
+        super().__init__(message)
+        self.article = article
+
+
 # ── Extraction ──────────────────────────────────────────────────────────
 
 
@@ -128,7 +138,7 @@ def extract_html(html: str, url: str = "") -> Article:
         include_comments=False,
     )
     if not xml:
-        raise ExtractionError("no article text found on the page")
+        raise TooShort("no article text found on the page")
     doc = ET.fromstring(xml.replace(_SPACE_HOLD, " "))
     site = (doc.get("sitename") or doc.get("hostname") or "").strip()
     title = _clean_title(doc.get("title") or "", site)
@@ -142,10 +152,37 @@ def extract_html(html: str, url: str = "") -> Article:
         blocks=blocks,
     )
     if article.words < MIN_WORDS:
-        raise ExtractionError(
-            f"only {article.words} words extracted (paywall, login wall or not an article)"
+        raise TooShort(
+            f"only {article.words} words extracted (paywall, login wall or not an article)",
+            article,
         )
     return article
+
+
+# schema.org paywall markup, as JSON-LD ("isAccessibleForFree":false) or
+# microdata (itemprop="isAccessibleForFree" content="false").
+_NOT_FREE_RE = re.compile(r"""isAccessibleForFree["']?\s*(?::|content=)\s*["']?false""", re.I)
+_WORD_COUNT_RE = re.compile(r'"wordCount"\s*:\s*"?(\d+)')
+# Extraction drops captions and furniture, so a whole article can come out a
+# little under its declared count. The NYT teaser seen was 32% of it.
+TEASER_SHARE = 0.7
+
+
+def teaser(html: str, article: Article) -> str | None:
+    """Why `article` is only the free part of a paywalled page, else None.
+
+    Needs both things a page can declare about itself: that it is not free,
+    and a wordCount the extraction falls well short of. NYT sends a few
+    paragraphs past MIN_WORDS (353 of 1,115 words, 2026-11-13). A page marked
+    not free without a wordCount is read as fetched: STLToday's ship the
+    whole story and hide it with JavaScript.
+    """
+    if not _NOT_FREE_RE.search(html):
+        return None
+    match = _WORD_COUNT_RE.search(html)
+    if not match or article.words >= int(match.group(1)) * TEASER_SHARE:
+        return None
+    return f"paywalled: {article.words} of its {match.group(1)} words are free"
 
 
 # A share with a URL and at most this many other words is a link, not text

@@ -4,8 +4,9 @@ Built 2026-11-06. Module `hosts/nixos/nixos-infra/podcast.nix`, code in
 `hosts/nixos/nixos-infra/podcast/`, containers in `stacks/podcast/`.
 
 Send an article URL (or pasted text) from the iPhone's Share Sheet, by
-telling Hermes "podcast this <url>", or by tagging an Obsidian inbox note
-`#listen`. A few minutes later it is an episode in
+telling Hermes "podcast this <url>", by tagging an Obsidian inbox note
+`#listen`, or by holding ⌥ over a headline in the daily_news SwiftBar
+plugin and clicking its "Podcast ·" row. A few minutes later it is an episode in
 a private podcast feed in Overcast, read by Kokoro in a voice that sounds
 like a person reading the article, not a screen reader reading the page.
 The idea is from Talk Python #567 (Jeff Triplett's Hermes setup).
@@ -16,8 +17,10 @@ The idea is from Talk Python #567 (Jeff Triplett's Hermes setup).
 Shortcut ──https://podcast-intake.jaguar-duckbill.ts.net/enqueue─┐  (tailnet only, bearer)
 Hermes ── podcast_this (mcp-podcast, 127.0.0.1:9105) ── 127.0.0.1:8095 ─┤
 mini podcast-listen (Inbox #listen, every 15 min) ──── same as Shortcut ─┤
+daily_news SwiftBar plugin (⌥-click a headline, mbp + mini) ─ same ──────┤
                                                                          ▼
-                  podcast.service (native): SQLite queue → fetch → trafilatura
+                  podcast.service (native): SQLite queue → fetch (paywalled:
+                  archive.today's snapshot, or fail + ntfy) → trafilatura
                   → speech.py cleanup → Kokoro (127.0.0.1:8880, one request
                   per paragraph) → ffmpeg concat → MP3 → public/feed.xml
                                                                          ▼
@@ -35,6 +38,24 @@ Overcast ◀── Funnel ── https://podcast.jaguar-duckbill.ts.net/p/<token
 - **Extraction**: trafilatura. A page that yields under 200 words
   (paywall, login wall, not an article) fails the job with the reason
   kept in the `jobs` table; nothing broken is published.
+- **Paywalls** (`read_url` in server.py): a page is treated as paywalled
+  when it yields under 200 words, answers 401/402/403, or is a teaser:
+  marked `isAccessibleForFree: false` with a declared `wordCount` the text
+  falls well short of (NYT sends 200–350 free words, enough to pass the
+  200-word gate). Then the worker reads archive.today's newest snapshot
+  (`https://archive.ph/newest/<url>`, lookup only, never a new capture)
+  under the original page's title and byline. No snapshot fails the job
+  before any TTS. A page marked not free but with no `wordCount` is read
+  as fetched: STLToday's ship the whole story and hide it with JS.
+  archive.today never answers a TLS 1.3 handshake from here, so that
+  fetch is pinned to TLS 1.2, and its first byte can take 30+ s (90 s
+  timeout). The Wayback Machine had no copy of, or answered 429 for,
+  every paywalled article tried on 2026-11-13, so it isn't consulted.
+- **Failure alert**: every failed job posts to ntfy topic `podcast`
+  (`https://ntfy.jaguar-duckbill.ts.net`, same server as Gatus, own topic)
+  with the reason; tapping it opens the article. Subscribe to `podcast` in
+  the ntfy app to get it. A failed post is logged; the reason is still in
+  the `jobs` table.
 - **Cleanup for speech** (`speech.py`, deterministic, no LLM): link text
   kept and URLs dropped; footnote markers, reference sections, images and
   captions, share/subscribe/next-article furniture, nav crumbs and
@@ -155,8 +176,17 @@ Recorded so it can be redone after a rebuild or a key rotation.
      "\"$(sops -d --extract '["podcast-intake-token"]' secrets/nixos-infra.yaml)\""
    ```
 
+   And for the daily_news plugin on the mbp (the mini's plugin reads the
+   watcher's copy above), in its own file:
+
+   ```zsh
+   sops set secrets/mbp-podcast.yaml '["podcast-intake-token"]' \
+     "\"$(sops -d --extract '["podcast-intake-token"]' secrets/nixos-infra.yaml)\""
+   ```
+
 4. `just deploy-check`, then `just deploy`. Switch the mini (`just` on the
-   mini) to start the `#listen` watcher.
+   mini) to start the `#listen` watcher, and the mbp (`just` on the mbp) to
+   install its daily_news plugin token.
 
 5. **Overcast**: + → Add URL →
    `https://podcast.jaguar-duckbill.ts.net/p/<podcast-feed-token>/feed.xml`
@@ -174,9 +204,9 @@ Set the new value as in step 3 and deploy, plus:
   feed.xml with the new token in it. The deploy doesn't start it again
   (the compose file is unchanged). Check that the old feed URL answers
   404 and the new one 200, then re-add the new URL in Overcast.
-- **podcast-intake-token**: copy it into `secrets/mini.yaml` again and
-  switch the mini, and paste it into the Shortcut's Text action (step 2
-  below). Both keep their own copy.
+- **podcast-intake-token**: copy it into `secrets/mini.yaml` and
+  `secrets/mbp-podcast.yaml` again and switch both Macs, and paste it into
+  the Shortcut's Text action (step 2 below). Each keeps its own copy.
 
 ## iOS Shortcut: "Podcast This"
 
@@ -293,7 +323,7 @@ Emergency, Funnel only: `docker stop ts-podcast` on the VM.
 
 | Name | Used by | Scope |
 |---|---|---|
-| `podcast-intake-token` | podcast.service (checks it); mcp-podcast, the mini's podcast-listen (`secrets/mini.yaml`) and the Shortcut (a Text action) send it | Queue a job. Nothing else. |
+| `podcast-intake-token` | podcast.service (checks it); mcp-podcast, the mini's podcast-listen and daily_news plugin (`secrets/mini.yaml`), the mbp's daily_news plugin (`secrets/mbp-podcast.yaml`) and the Shortcut (a Text action) send it | Queue a job. Nothing else. |
 | `podcast-feed-token` | podcast.service (writes feed URLs), ts-podcast serve.json (the Funnel path), Overcast (in the URL) | Read the feed and the MP3s. Rotating it changes the feed URL. |
 | `podcast-ts-authkey` | ts-podcast, first login only | Join the tailnet as `tag:podcast`, one use, 1-day expiry. |
 
@@ -308,8 +338,11 @@ Emergency, Funnel only: `docker stop ts-podcast` on the VM.
    no URLs or "code block" noise.
 3. Tell Hermes on Telegram "podcast this <a URL>". It replies "Queued
    (job …)", and `hermes-audit` shows one `mcp__podcast__podcast_this` call.
-4. Queue a paywalled article. No episode appears;
-   `sqlite3 … "select reason from jobs where status='failed'"` says why.
+4. Queue a paywalled article that archive.today has (most NYT articles
+   within hours): the episode reads the whole story, and the journal has
+   an `archive.today snapshot for …` line. Queue one it lacks (add
+   `?x=1` to the URL): no episode, and an ntfy `podcast` alert saying
+   `… archive.today has no snapshot`.
 5. Phone on LTE with Tailscale off: the feed URL loads in Safari,
    `https://podcast.jaguar-duckbill.ts.net/` is a 404, and
    `https://podcast-intake.jaguar-duckbill.ts.net/healthz` does not resolve.

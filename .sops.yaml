@@ -52,3 +52,11 @@ creation_rules:
       - age:
           - *admin_hodgesd
           - *host_nixos_infra
+  # The mbp's copy of podcast-intake-token, for the daily_news SwiftBar
+  # plugin's ⌥ "Podcast ·" rows (docs/PODCAST.md): own file so it could be
+  # created without decrypting mbp.yaml. Same recipients as that file.
+  - path_regex: secrets/mbp-podcast\.yaml$
+    key_groups:
+      - age:
+          - *admin_hodgesd
+          - *host_mbp
