@@ -11,9 +11,11 @@
 # Macs watching one iCloud inbox would race for the same PDF.
 #
 # Deliberately NOT declarative:
-#   - The SMB mount of the UNAS share. Its credential is a Keychain entry,
+#   - The UNAS share's credential (user bill-filer). It is a Keychain entry,
 #     interactive by nature; putting a NAS password through sops would move a
 #     household credential into this public repo to save a one-time dialog.
+#     Mounting the share at login IS declared (billfiler-mount, below); it
+#     reads that Keychain entry.
 #   - `billfiler init`, which creates the archive. That writes data, not
 #     config, and it needs the share already mounted.
 #   - The registry (Bills/_meta/vendors.yaml) and the templates beside it.
@@ -37,6 +39,9 @@
 
   # The mirror (below): the archive on the share, copied one way into iCloud
   # Drive so the statements can be read offline on the iPad.
+  # The UNAS. Same IP as hosts/darwin/mbp/backup.nix and nixos-infra's
+  # backup.nix and storage.nix.
+  nas = "192.168.1.142";
   archive = "/Volumes/Data/Documents";
   mirror = "${home}/Library/Mobile Documents/com~apple~CloudDocs/Statements (read-only copy)";
   overwritten = "${home}/Library/Application Support/billfiler/mirror-overwritten";
@@ -70,6 +75,38 @@ in {
   # leaves the mover down at the unlock screen. Nothing is lost -- the PDFs
   # sit in the inbox and the next run takes them.
   launchd.user.agents = lib.mkIf (machine.hostname == "mini") {
+    # Mounts the share at login. It was mounted once by hand and nothing
+    # brought it back after a reboot: the mover would log "archive offline"
+    # every run and the mirror would do nothing.
+    # Retries for 5 minutes because the network can come up after login.
+    # Uses the bill-filer password already in the login Keychain.
+    #
+    # Mount it now, on mini:
+    #   launchctl kickstart gui/$(id -u)/org.nixos.billfiler-mount
+    billfiler-mount = {
+      serviceConfig = {
+        RunAtLoad = true;
+        ProcessType = "Background";
+        StandardOutPath = logPath;
+        StandardErrorPath = logPath;
+      };
+      command = toString (pkgs.writeScript "billfiler-mount" ''
+        #!/bin/bash
+        set -u
+        PATH=/usr/bin:/bin:/sbin
+        for _ in 1 2 3 4 5 6 7 8 9 10; do
+          mount | grep -q ' on /Volumes/Data (smbfs' && exit 0
+          # Success only at /Volumes/Data: a stale directory left there makes
+          # macOS mount at /Volumes/Data-1, which the mover and mirror ignore.
+          osascript -e 'mount volume "smb://bill-filer@${nas}/Data"' >/dev/null \
+            && mount | grep -q ' on /Volumes/Data (smbfs' && exit 0
+          sleep 30
+        done
+        echo "$(date '+%F %T') could not mount //bill-filer@${nas}/Data on /Volumes/Data"
+        exit 1
+      '');
+    };
+
     billfiler = {
       serviceConfig = {
         ProgramArguments = ["${billfiler}/bin/billfiler" "run"];
