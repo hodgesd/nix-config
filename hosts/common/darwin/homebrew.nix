@@ -188,8 +188,8 @@
         "microsoft-teams"
         "netnewswire"
         "obsidian"
+        "openclip" # open-source selected-text popup; replaced popclip 2026-11-14
         "opencode-desktop"
-        "popclip"
         "rectangle"
         "reminders-menubar"
         "remoteviewer"
