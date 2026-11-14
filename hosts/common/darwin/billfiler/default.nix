@@ -96,10 +96,13 @@ in {
         PATH=/usr/bin:/bin:/sbin
         for _ in 1 2 3 4 5 6 7 8 9 10; do
           mount | grep -q ' on /Volumes/Data (smbfs' && exit 0
-          osascript -e 'mount volume "smb://bill-filer@${nas}/Data"' >/dev/null && exit 0
+          # Success only at /Volumes/Data: a stale directory left there makes
+          # macOS mount at /Volumes/Data-1, which the mover and mirror ignore.
+          osascript -e 'mount volume "smb://bill-filer@${nas}/Data"' >/dev/null \
+            && mount | grep -q ' on /Volumes/Data (smbfs' && exit 0
           sleep 30
         done
-        echo "$(date '+%F %T') could not mount //bill-filer@${nas}/Data"
+        echo "$(date '+%F %T') could not mount //bill-filer@${nas}/Data on /Volumes/Data"
         exit 1
       '');
     };
