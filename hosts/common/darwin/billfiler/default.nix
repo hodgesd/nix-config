@@ -14,8 +14,8 @@
 #   - The UNAS share's credential (user bill-filer). It is a Keychain entry,
 #     interactive by nature; putting a NAS password through sops would move a
 #     household credential into this public repo to save a one-time dialog.
-#     Mounting the share at login IS declared (billfiler-mount, below); it
-#     reads that Keychain entry.
+#     Keeping the share mounted IS declared (billfiler-mount, below, on every
+#     Mac); it reads that Keychain entry, so each Mac needs it saved once.
 #   - `billfiler init`, which creates the archive. That writes data, not
 #     config, and it needs the share already mounted.
 #   - The registry (Bills/_meta/vendors.yaml) and the templates beside it.
@@ -58,6 +58,99 @@ in {
     "bills.4h.py".source = "${billfiler}/share/billfiler/bills.4h.py";
   };
 
+  # Keeps the share mounted, on every Mac: the menu bar on each reads the
+  # index off it, and the mini's mover and mirror need it to do anything.
+  #
+  # It was a run-once-at-login job, and on 2026-11-15 at 00:04 the NAS dropped
+  # both Macs' SMB sessions (mini kernel log: "iod 7 is dead, give up"). macOS
+  # unmounted the share, nothing mounted it again, and the mover failed every
+  # run for eight hours with no alert -- it kept logging, so the mover check
+  # below saw a healthy log.
+  #
+  # Every 5 minutes, then:
+  #   mounted and readable  -> nothing
+  #   mounted, unreadable   -> log; on the mini, alert (a mount that is listed
+  #                            but dead, which `mount` alone cannot see)
+  #   not mounted           -> mount it, if the NAS answers
+  # One alert when it goes down and one when it is back, mini only: a laptop
+  # away from home is not an outage.
+  #
+  # An inline module only so this agent can sit outside the mini-only mkIf
+  # below while sharing this file's let-bindings.
+  #
+  # Mount it now:
+  #   launchctl kickstart gui/$(id -u)/org.nixos.billfiler-mount
+  imports = [
+    {
+      launchd.user.agents.billfiler-mount = {
+        serviceConfig = {
+          RunAtLoad = true;
+          StartInterval = 300;
+          ProcessType = "Background";
+          StandardOutPath = logPath;
+          StandardErrorPath = logPath;
+        };
+        command = toString (pkgs.writeScript "billfiler-mount" ''
+          #!/bin/bash
+          set -u
+          PATH=/usr/bin:/bin:/sbin
+          # The mini is always home, so a share it cannot reach is an outage.
+          # A laptop may just be away: it logs, never alerts.
+          alert=${lib.boolToString (machine.hostname == "mini")}
+          flag="${home}/Library/Application Support/billfiler/share-down"
+          # A push needs the tailnet; the flag changes only after one goes
+          # through, so a failed push is retried on the next run.
+          notify() {
+            curl -fsS -m 10 -H "Title: $1" -H "Priority: $2" -H "Tags: $3" \
+              -d "$4" ${alerts} >/dev/null
+          }
+          down() {
+            echo "$(date '+%F %T') $1"
+            if [ "$alert" = true ] && [ ! -e "$flag" ]; then
+              notify "Bill Filer: UNAS share down" high warning \
+                "$1. Nothing files until it is back; this job retries every 5 minutes." \
+                && mkdir -p "$(dirname "$flag")" && touch "$flag"
+            fi
+            exit 1
+          }
+          up() {
+            if [ -e "$flag" ]; then
+              notify "Bill Filer: UNAS share back" default white_check_mark \
+                "The share is mounted again." && rm -f "$flag"
+            fi
+            exit 0
+          }
+          # Only /Volumes/Data counts: a stale directory left there makes
+          # macOS mount at /Volumes/Data-1, which the mover and mirror ignore,
+          # so that case reports as down instead of passing quietly.
+          mounted() { mount | grep -q ' on /Volumes/Data (smbfs'; }
+
+          if mounted; then
+            # Same check the mirror trusts before it runs.
+            [ -d "${archive}/Bills" ] && up
+            down "/Volumes/Data is mounted but ${archive}/Bills is not readable"
+          fi
+
+          # WHY probe before mounting: away from home the NAS is unreachable
+          # (LAN-only, not on the tailnet), and this keeps a laptop from
+          # logging a failure every 5 minutes. Caveat, same as the mbp backup:
+          # a foreign network that also has an SMB server at this address
+          # would be offered the bill-filer login. SMB sends a challenge
+          # response, not the password, but a hostile server could try to
+          # crack it offline. Accepted for a LAN-only household share.
+          if ! nc -z -G 3 ${nas} 445 >/dev/null 2>&1; then
+            [ "$alert" = true ] && down "the NAS at ${nas} is not answering on SMB"
+            exit 0
+          fi
+
+          osascript -e 'mount volume "smb://bill-filer@${nas}/Data"' >/dev/null \
+            && mounted && up
+          down "could not mount //bill-filer@${nas}/Data on /Volumes/Data"
+        '');
+      };
+    }
+  ];
+
   # The mover, on the mini only -- see the header for why that is structural.
   #
   # Keyed on the hostname, NOT on `primaryUse == "server"`: that role has held
@@ -75,38 +168,6 @@ in {
   # leaves the mover down at the unlock screen. Nothing is lost -- the PDFs
   # sit in the inbox and the next run takes them.
   launchd.user.agents = lib.mkIf (machine.hostname == "mini") {
-    # Mounts the share at login. It was mounted once by hand and nothing
-    # brought it back after a reboot: the mover would log "archive offline"
-    # every run and the mirror would do nothing.
-    # Retries for 5 minutes because the network can come up after login.
-    # Uses the bill-filer password already in the login Keychain.
-    #
-    # Mount it now, on mini:
-    #   launchctl kickstart gui/$(id -u)/org.nixos.billfiler-mount
-    billfiler-mount = {
-      serviceConfig = {
-        RunAtLoad = true;
-        ProcessType = "Background";
-        StandardOutPath = logPath;
-        StandardErrorPath = logPath;
-      };
-      command = toString (pkgs.writeScript "billfiler-mount" ''
-        #!/bin/bash
-        set -u
-        PATH=/usr/bin:/bin:/sbin
-        for _ in 1 2 3 4 5 6 7 8 9 10; do
-          mount | grep -q ' on /Volumes/Data (smbfs' && exit 0
-          # Success only at /Volumes/Data: a stale directory left there makes
-          # macOS mount at /Volumes/Data-1, which the mover and mirror ignore.
-          osascript -e 'mount volume "smb://bill-filer@${nas}/Data"' >/dev/null \
-            && mount | grep -q ' on /Volumes/Data (smbfs' && exit 0
-          sleep 30
-        done
-        echo "$(date '+%F %T') could not mount //bill-filer@${nas}/Data on /Volumes/Data"
-        exit 1
-      '');
-    };
-
     billfiler = {
       serviceConfig = {
         ProgramArguments = ["${billfiler}/bin/billfiler" "run"];
