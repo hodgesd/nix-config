@@ -3,11 +3,11 @@
     "billfiler": {
       "flake": false,
       "locked": {
-        "lastModified": 1794477434,
-        "narHash": "sha256-X6TfgQIlykhBmwGksG4IFvxC9F4/vB0IvrKfdowbK9A=",
+        "lastModified": 1794842188,
+        "narHash": "sha256-BFAWGkAXO1kBn7ZH9mMr97wNiSra3XYpOtX6QyoRVY0=",
         "ref": "main",
-        "rev": "a452d814fea0f1bac0c9cb5134280517b205f291",
-        "revCount": 11,
+        "rev": "e3a2c025cbb46232c3f94c9dd2680ad02808e14e",
+        "revCount": 13,
         "type": "git",
         "url": "ssh://git@github.com/hodgesd/billfiler"
       },
