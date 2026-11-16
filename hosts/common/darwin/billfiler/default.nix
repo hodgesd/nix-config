@@ -125,27 +125,29 @@ in {
           # so that case reports as down instead of passing quietly.
           mounted() { mount | grep -q ' on /Volumes/Data (smbfs'; }
 
-          if mounted; then
-            # Same check the mirror trusts before it runs.
-            [ -d "${archive}/Bills" ] && up
-            down "/Volumes/Data is mounted but ${archive}/Bills is not readable"
+          if ! mounted; then
+            # WHY probe before mounting: away from home the NAS is unreachable
+            # (LAN-only, not on the tailnet), and this keeps a laptop from
+            # logging a failure every 5 minutes. Caveat, same as the mbp
+            # backup: a foreign network that also has an SMB server at this
+            # address would be offered the bill-filer login. SMB sends a
+            # challenge response, not the password, but a hostile server
+            # could try to crack it offline. Accepted for a LAN-only
+            # household share.
+            if ! nc -z -G 3 ${nas} 445 >/dev/null 2>&1; then
+              [ "$alert" = true ] && down "the NAS at ${nas} is not answering on SMB"
+              exit 0
+            fi
+            if ! osascript -e 'mount volume "smb://bill-filer@${nas}/Data"' >/dev/null \
+              || ! mounted; then
+              down "could not mount //bill-filer@${nas}/Data on /Volumes/Data"
+            fi
           fi
 
-          # WHY probe before mounting: away from home the NAS is unreachable
-          # (LAN-only, not on the tailnet), and this keeps a laptop from
-          # logging a failure every 5 minutes. Caveat, same as the mbp backup:
-          # a foreign network that also has an SMB server at this address
-          # would be offered the bill-filer login. SMB sends a challenge
-          # response, not the password, but a hostile server could try to
-          # crack it offline. Accepted for a LAN-only household share.
-          if ! nc -z -G 3 ${nas} 445 >/dev/null 2>&1; then
-            [ "$alert" = true ] && down "the NAS at ${nas} is not answering on SMB"
-            exit 0
-          fi
-
-          osascript -e 'mount volume "smb://bill-filer@${nas}/Data"' >/dev/null \
-            && mounted && up
-          down "could not mount //bill-filer@${nas}/Data on /Volumes/Data"
+          # Same check the mirror trusts before it runs, so a fresh mount is
+          # not reported as recovered until the archive is really there.
+          [ -d "${archive}/Bills" ] && up
+          down "/Volumes/Data is mounted but ${archive}/Bills is not readable"
         '');
       };
     }
