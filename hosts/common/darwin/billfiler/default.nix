@@ -22,6 +22,11 @@
 #     Those live on the share on purpose so both Macs read one copy; managing
 #     them here would give each Mac its own and leave the shared copy
 #     ambiguous.
+#   - Full Disk Access for SwiftBar, on every Mac that shows the menu. Without
+#     it the menu reads "[Errno 1] Operation not permitted" on vendors.yaml.
+#     Only System Settings or an MDM profile can grant it. The grant is tied to
+#     the exact app, so give it to /Applications/SwiftBar.app (the cask) and
+#     redo it if SwiftBar ever comes from somewhere else.
 {
   config,
   inputs,
