@@ -142,6 +142,9 @@ in {
               || ! mounted; then
               down "could not mount //bill-filer@${nas}/Data on /Volumes/Data"
             fi
+            # The menu refreshes every 4h; without this it shows the
+            # share-offline error for hours after the share is back.
+            open -g "swiftbar://refreshplugin?name=bills" || true
           fi
 
           # Same check the mirror trusts before it runs, so a fresh mount is
