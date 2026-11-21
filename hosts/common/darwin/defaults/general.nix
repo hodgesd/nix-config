@@ -14,5 +14,8 @@
     NSGlobalDomain.NSAutomaticSpellingCorrectionEnabled = false;
     LaunchServices.LSQuarantine = false;
     loginwindow.GuestEnabled = false;
+    # Double-clicking a title bar fills the screen instead of zooming or
+    # entering full screen. nix-darwin has no typed option for this key.
+    CustomUserPreferences.NSGlobalDomain.AppleActionOnDoubleClick = "Fill";
   };
 }
