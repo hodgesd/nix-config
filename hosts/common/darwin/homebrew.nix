@@ -178,6 +178,7 @@
         "git-credential-manager"
         "google-chrome"
         "google-gemini"
+        "helium-browser" # ungoogled-chromium based; trial alongside Vivaldi (2026-11)
         "launchbar"
         "libreoffice"
         "licecap"
