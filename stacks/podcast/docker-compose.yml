@@ -19,10 +19,12 @@ services:
     environment:
       # Article text is untrusted. Upstream's kill switches for treating
       # input as markup ("[voice:…]" speaker switches, SSML) are for
-      # exactly this case; the web player is a UI nobody here uses.
+      # exactly this case; the web player and v0.10.0's websocket TTS
+      # routes are surfaces nothing here uses.
       ENABLE_VOICE_TAGS: "false"
       ENABLE_SSML: "false"
       ENABLE_WEB_PLAYER: "false"
+      ENABLE_WEBSOCKET_TTS: "false"
       CORS_ENABLED: "false"
     # Synthesis takes every core it can get (4 vCPUs, ~2.4x real time).
     # A quarter of the default weight makes it yield to the household's
