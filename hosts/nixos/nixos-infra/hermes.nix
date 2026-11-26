@@ -345,9 +345,13 @@ in {
   # came up seconds before MagicDNS answered, which parked apple + vault
   # for five morning briefs. Never fails: if the mini is really down,
   # after 60 s the agent starts anyway (Telegram, mail and unifi still work).
+  # The bound is wall-clock, with each lookup capped at 2 s: a resolver
+  # that hangs instead of failing must not push preStart past systemd's
+  # 90 s start timeout and into a restart loop.
   systemd.services.hermes-agent.preStart = lib.mkBefore ''
-    for _ in $(seq 60); do
-      ${pkgs.getent}/bin/getent hosts mini.jaguar-duckbill.ts.net >/dev/null && break
+    end=$((SECONDS + 60))
+    until ${pkgs.coreutils}/bin/timeout 2 ${pkgs.getent}/bin/getent hosts mini.jaguar-duckbill.ts.net >/dev/null \
+      || [ "$SECONDS" -ge "$end" ]; do
       sleep 1
     done
   '';
