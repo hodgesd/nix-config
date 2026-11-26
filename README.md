@@ -15,7 +15,7 @@ Cachix.
 | Host | Machine | Role | Activate | Config |
 |---|---|---|---|---|
 | `mbp` | MacBook Pro 14" M3 Pro, 18 GB / 1 TB | daily driver; NAS backup, Gulfstream pubs watcher | `just`, on the box | `hosts/darwin/mbp/` |
-| `mini` | Mac mini M2 Pro, user `derrickhodges` | always-on; Hermes bridges (vault-mcp, apple-mcp) | `just`, on the box only | `hosts/darwin/mini/` |
+| `mini` | Mac mini M2 Pro, user `derrickhodges` | always-on; Hermes bridges (vault-mcp, apple-mcp), T3 Code server for darwin builds (`t3agent`) | `just`, on the box only | `hosts/darwin/mini/` |
 | `air` | MacBook Air 13" M1, 16 GB / 500 GB | spare laptop | `just`, on the box | common only |
 | `nixos-infra` | Proxmox VM, 2 vCPU, 39 GB disk | homelab: Docker apps behind tailnet sidecars, Gatus, Hermes, easy-afd, 21.hdgs.me, agent workbench | `just deploy`, from a Mac | `hosts/nixos/nixos-infra/` |
 | `t3-code` | Proxmox VM 101, 4 vCPU, 12 GB / 64 GB | T3 Code remote server, kept apart from the homelab | `just deploy t3-code switch <ssh-dest>` | `hosts/nixos/t3-code/` |
