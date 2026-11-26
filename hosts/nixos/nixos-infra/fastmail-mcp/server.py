@@ -18,6 +18,7 @@
 # loopback 127.0.0.1:9102.
 # env: FASTMAIL_TOKEN (sops, read-only scope)
 import os
+from urllib.parse import quote
 
 import httpx
 from fastmcp import FastMCP
@@ -58,7 +59,17 @@ def _mailbox_id(name: str) -> str:
     raise ValueError(f"no mailbox named {name!r}")
 
 
-_META = ["id", "subject", "from", "receivedAt", "preview", "mailboxIds"]
+_META = ["id", "messageId", "subject", "from", "receivedAt", "preview", "mailboxIds"]
+
+
+def _url(e: dict) -> str | None:
+    """Fastmail web link for the brief's hyperlinks: a Message-ID search,
+    which lands on the one message. Built from JMAP's bracket-less
+    messageId; no account data in it, the link only works once signed in."""
+    mids = e.get("messageId") or []
+    if not mids:
+        return None
+    return "https://app.fastmail.com/mail/search:msgid:" + quote(mids[0], safe="")
 
 
 def _meta(filter_: dict, limit: int) -> list[dict]:
@@ -88,6 +99,7 @@ def _meta(filter_: dict, limit: int) -> list[dict]:
                 (box_names.get(k, "?") for k in (e.get("mailboxIds") or {})), "?"
             ),
             "snippet": (e.get("preview") or "")[:200],
+            "url": _url(e),
         })
     return out
 
@@ -159,6 +171,7 @@ def get_email(email_id: str) -> dict:
         "to": [a.get("email") for a in (e.get("to") or [])],
         "subject": e.get("subject"),
         "received": e.get("receivedAt"),
+        "url": _url(e),
         "body": body[:MAX_BODY] or "(no text body)",
     }
 
