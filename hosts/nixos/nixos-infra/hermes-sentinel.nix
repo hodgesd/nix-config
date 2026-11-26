@@ -20,6 +20,8 @@
 #   brief                        after 05:40 local: today's morning-brief
 #                                produced its output file AND the gateway
 #                                logged no "no delivery target" warning
+#   brief-sections               ...and none of its sections says
+#                                "unavailable" (a parked MCP server)
 #   backup-vm                    the nightly homelab-backup didn't fail
 #
 # Edge-triggered per check (flag file in the state dir): one alert on
@@ -165,6 +167,18 @@ in {
           report brief fail "No morning-brief output for $today — the 05:30 job did not run. Check hermes cron list / gateway health."
         else
           report brief fail "Morning brief for $today was composed but NOT delivered (no delivery target). Recreate the job with --deliver telegram:<chat_id>."
+        fi
+        # A delivered brief can still be hollow: the prompt writes a
+        # section as "unavailable" when its tool is missing. Parked
+        # apple/vault bridges hid behind a healthy "brief ok" for five
+        # days (2026-11-22..26) this way.
+        if [ -n "$out" ]; then
+          missing=$(sed -n '/^## Response/,$p' "$out" | grep -i "unavailable" | head -3 | cut -c1-120 | tr "\n" " " || true)
+          if [ -z "$missing" ]; then
+            report brief-sections ok "Morning brief for $today has every section again."
+          else
+            report brief-sections fail "Morning brief for $today has unavailable sections: $missing. Likely a parked MCP server: grep 'parking' /var/lib/hermes/.hermes/logs/errors.log, then systemctl restart hermes-agent."
+          fi
         fi
       fi
 
