@@ -42,7 +42,11 @@
 # Disable: drop this file from default.nix's imports, then
 # `tailscale serve --https=8324 off`. The user and its home stay (nix-darwin
 # does not delete users); remove with `sudo sysadminctl -deleteUser t3agent`.
-{pkgs, ...}: let
+{
+  pkgs,
+  unstablePkgs,
+  ...
+}: let
   user = "t3agent";
   id = 510; # uid and gid; 501/502 are the human accounts
   home = "/Users/${user}";
@@ -71,7 +75,10 @@ in {
     ];
     # What agents and the one-time install need. claude-code matches the VM
     # (store-pinned; update with the flake, not claude's own updater).
-    packages = with pkgs; [nodejs_22 claude-code git gh jq just];
+    # codex is T3's Codex provider (Sol). unstablePkgs, not llm-agents: same
+    # version the VM runs, but from cache.nixos.org, since this host does not
+    # trust numtide's cache and would otherwise build it from source.
+    packages = with pkgs; [nodejs_22 claude-code unstablePkgs.codex git gh jq just];
   };
 
   launchd.daemons.t3-server.serviceConfig = {
