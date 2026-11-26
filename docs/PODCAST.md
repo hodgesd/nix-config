@@ -110,7 +110,12 @@ present), 11 GiB RAM, 16 GB free on `/`.
 - **Speed**: a 58.2 s clip (171 words, `af_heart`) took 24.0 s and 23.6 s
   to generate, **2.4–2.5× real time**. A 20-minute article is ready in
   about 8 minutes.
-- **Memory**: Kokoro peaks at 1.7 GiB.
+- **Memory** (2026-11-26, replaying the four articles of 2026-11-25,
+  about 57 minutes of audio, one after another): v0.10.0 peaked at
+  2.4 GiB and fell back to 1.3 GiB idle. v0.9.2 had passed 3.4 GiB
+  within the first article and, in production, kept 6 GiB idle after
+  the same four; its glibc allocator never gave memory back. Compose
+  caps the container at 4 GiB as a guard against a regression.
 - **Disk**: the Kokoro image is about 3 GB; MP3s are about 0.5 MB a
   minute and pruned at 30 days.
 
