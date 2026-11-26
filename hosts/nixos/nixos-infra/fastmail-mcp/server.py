@@ -64,7 +64,8 @@ _META = ["id", "messageId", "subject", "from", "receivedAt", "preview", "mailbox
 
 def _url(e: dict) -> str | None:
     """Fastmail web link for the brief's hyperlinks: a Message-ID search,
-    which lands on the one message. Built from JMAP's bracket-less
+    which opens a one-result search in the web app (checked 2026-11-26,
+    GitHub IDs with / included). Built from JMAP's bracket-less
     messageId; no account data in it, the link only works once signed in."""
     mids = e.get("messageId") or []
     if not mids:
