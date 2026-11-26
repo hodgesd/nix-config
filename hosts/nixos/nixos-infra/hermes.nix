@@ -339,6 +339,23 @@ in {
     (builtins.toJSON config.services.hermes-agent.settings)
   ];
 
+  # Wait (bounded) for MagicDNS to resolve the mini before the gateway
+  # starts. A failed FIRST connect parks an MCP server until a manual
+  # reconnect, with no self-probe. On the 2026-11-21 reboot the gateway
+  # came up seconds before MagicDNS answered, which parked apple + vault
+  # for five morning briefs. Never fails: if the mini is really down,
+  # after 60 s the agent starts anyway (Telegram, mail and unifi still work).
+  # The bound is wall-clock, with each lookup capped at 2 s: a resolver
+  # that hangs instead of failing must not push preStart past systemd's
+  # 90 s start timeout and into a restart loop.
+  systemd.services.hermes-agent.preStart = lib.mkBefore ''
+    end=$((SECONDS + 60))
+    until ${pkgs.coreutils}/bin/timeout 2 ${pkgs.getent}/bin/getent hosts mini.jaguar-duckbill.ts.net >/dev/null \
+      || [ "$SECONDS" -ge "$end" ]; do
+      sleep 1
+    done
+  '';
+
   # The hook writes audit.jsonl inside the container's bind mount; hooks
   # can't reach the host journal from in there, so a host-side tail bridges
   # the file into journald under a stable identifier. -n0 skips history on
