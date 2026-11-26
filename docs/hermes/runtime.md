@@ -162,8 +162,12 @@ WAN + daily note), operator-
 managed via the `hermes cron` CLI. Operational notes: hermes parks an MCP
 server after 3 failed connects until a reconnect is requested — VM-local
 servers must be ordered `Before=` the gateway (unifi.nix), and remote
-ones (the mini bridge) simply need to be up; a parked server recovers on
-gateway restart. **Redeploying a bridge with NEW tools requires
+ones (the mini bridge) need to be up AND resolvable: the gateway's
+preStart waits up to 60 s for MagicDNS to resolve the mini (hermes.nix),
+because a failed first connect parks with no self-probe (2026-11-21
+reboot → apple + vault dark for five briefs). A parked server recovers on
+gateway restart; the symptom is `parking until a reconnect is requested`
+in `/var/lib/hermes/.hermes/logs/errors.log`. **Redeploying a bridge with NEW tools requires
 `systemctl restart hermes-agent`** — the gateway only refreshes an MCP
 server's tool catalog on restart/reconnect, so hermes will truthfully
 claim the tool doesn't exist until bounced (learned live with
