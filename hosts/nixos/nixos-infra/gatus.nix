@@ -154,6 +154,19 @@ in {
                 }
               ];
             })
+          # The mini's T3 Code server (hosts/darwin/mini/t3-server.nix), via
+          # its tailscale serve port, so the daemon, the launcher and the
+          # serve config are exercised together. Same threshold 5 as the
+          # ping above: a locked mini after a power cut fails both.
+          ((http "mini" "t3-server" "https://mini.jaguar-duckbill.ts.net:8324/" [])
+            // {
+              alerts = [
+                {
+                  type = "ntfy";
+                  failure-threshold = 5;
+                }
+              ];
+            })
           # The T3 Code VM (hosts/nixos/t3-code). Reachability only, same
           # threshold 5 as the Macs' tailnet pings. Its app is a user
           # service behind `tailscale serve`, outside Nix, so there is no
